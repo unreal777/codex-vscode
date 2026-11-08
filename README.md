@@ -19,8 +19,7 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - **Ctrl+Alt+C** opens the panel (secondary side bar on VS Code 1.106+, activity bar before that). Enter sends, Shift+Enter inserts a newline.
 - Context chip above the input: the active editor file. Right-click selected code > **Codexter: Ask / Explain / Fix selection**.
 - **@** in the input picks files and folders of the chat's folder (recently opened files first, then ranked matches).
-- Drag files, folders or editor tabs onto the chat while holding **Shift** (VS Code blocks drags over webviews without Shift); files from the Windows Explorer drop without Shift.
-  **Attach files** (a tiny area under the chat) is a fallback drop target without Shift.
+- Drag files, folders or editor tabs onto **Attached files** under the input. That list shows what is attached to the chat (x removes an item). Files from the Windows Explorer can also be dropped onto the chat.
   Right-click > **Add to Codexter chat** (Explorer, also multi-select and folders; editor; editor tab) always works.
 - History (clock button) lists chats of all projects; type to search, pick a project to filter; archive, unarchive and delete chats.
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).

@@ -104,8 +104,9 @@ test('package.json: the three settings and the attach-files drop target', () => 
   assert.equal(v.codexPanel[0].initialSize, 12);
   assert.equal(v.codexPanel[1].initialSize, 1);
   assert.equal(v.codexPanelSecondary[0].name, 'Chat');
-  assert.ok(!pkg.contributes.commands.some((c: any) => c.command === 'codexPanel.removeAttachment'));
-  assert.equal(pkg.contributes.menus['view/item/context'], undefined);
+  assert.ok(pkg.contributes.commands.some((c: any) => c.command === 'codexPanel.removeAttachment'));
+  assert.equal(pkg.contributes.menus['view/item/context'][0].group, 'inline');
+  assert.equal(v.codexPanel[1].name, 'Attached files');
   assert.equal(pkg.displayName.startsWith('Codexter'), true);
 });
 

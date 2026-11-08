@@ -31,9 +31,8 @@
     mentionTitle: 'Files of the project (type @ in the message)',
     dropHint: 'Drop files here to add them as context',
     dropNoPaths: 'The browser does not tell Eclipse where dropped files are. Use @ in the input, or right-click a file > Add to Codexter chat.',
-    // VS Code only gives a webview the dragged files when Shift is held; the panel itself reads the drop there
     dropHintVscode: 'Drop files here to add them as context',
-    dropNoPathsVscode: 'No file path in the drop. Hold Shift while dropping files or editor tabs on the chat, use @ in the input, or right-click a file > Add to Codexter chat.',
+    dropNoPathsVscode: 'No file path in the drop. Drop files and editor tabs on Attached files below the input, use @, or right-click a file > Add to Codexter chat.',
     removeChip: 'Remove',
     emptyTitle: 'Ask Codex about your project',
     emptyHint: 'Enter to send, Shift+Enter for a new line.',
@@ -886,13 +885,26 @@
   function renderChips() {
     const box = $('#chips');
     box.innerHTML = '';
-    state.contexts.forEach((c) => box.append(chipEl(c, true)));
+    // VS Code lists attached files and folders (and the active file) in the native "Attached files" tree under the input
+    const shown = state.contexts.filter((c) => !(host === 'vscode' && (c.kind === 'mention' || c.kind === 'file')));
+    shown.forEach((c) => box.append(chipEl(c, true)));
     state.images.forEach((im) => {
       const x = h('button', { type: 'button', text: '\u00d7', title: STR.removeImage, 'aria-label': STR.removeImage });
       x.addEventListener('click', () => { state.images = state.images.filter((o) => o !== im); renderChips(); updateRunning(); });
       box.append(h('span', { class: 'chip imgchip', title: im.name }, h('img', { src: im.url, alt: '' }), h('span', { class: 'n', text: im.name }), x));
     });
-    box.classList.toggle('hidden', !state.contexts.length && !state.images.length);
+    box.classList.toggle('hidden', !shown.length && !state.images.length);
+    postChips();
+  }
+  // The attached file/folder list for the host's tree (VS Code only); posted when it changed (or when forced after init).
+  let lastChips = null;
+  function postChips(force) {
+    if (host !== 'vscode') return;
+    const items = state.contexts.filter((c) => c.kind === 'mention' || c.kind === 'file').map((c) => ({ path: c.path, name: c.name || basename(c.path), folder: !!c.folder, kind: c.kind }));
+    const key = JSON.stringify(items);
+    if (!force && key === lastChips) return;
+    lastChips = key;
+    bridge.post({ type: 'chips', items });
   }
 
   // ---------- footer ----------
@@ -2060,6 +2072,7 @@
         applyTheme(ev.theme);
         if (ev.prefs) Object.assign(state.prefs, ev.prefs);
         setProject(ev.project, ev.cwd);
+        postChips(true);
         if (ev.openProjects) hist.openProjects = ev.openProjects;
         if (ev.historyQuery != null) hist.query = ev.historyQuery;
         if (ev.historyManual) { hist.manual = true; hist.cwds = ev.historyCwds || []; }   // the user's own selection survives a re-created view
@@ -2126,6 +2139,12 @@
         } else if (ev.action === 'addPaths') {
           (ev.items || []).forEach(addContextFile);
         } else if (ev.action === 'clear') state.contexts = [];
+        else if (ev.action === 'removePath') {
+          const n = normPath(ev.path);
+          const hit = state.contexts.find((c) => (c.kind === 'mention' || c.kind === 'file') && normPath(c.path) === n);
+          if (hit && hit.kind === 'file') state.dismissedFile = hit.path;
+          state.contexts = state.contexts.filter((c) => !(c.kind === 'mention' && normPath(c.path) === n));
+        }
         syncActive(); break;
       }
       case 'error': errorCard(ev.title, ev.message, ev.actions); state.pending = false; updateRunning(); break;

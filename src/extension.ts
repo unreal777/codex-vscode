@@ -3,10 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiffProvider } from './diff';
-import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
+import { DROP_VIEW_IDS, DropTarget, REMOVE_COMMAND } from './dropTarget';
 import { MentionSearch } from './mentions';
 import { supportsSecondarySidebar } from './core/vscodeVersion';
-import { CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
+import { ChipItem, CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
 import { processProxyEnv, proxyConfig } from './proxy';
 import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
@@ -69,7 +69,12 @@ export function activate(ctx: vscode.ExtensionContext): void {
   void vscode.commands.executeCommand('setContext', NO_SECONDARY_KEY, !secondary);
   const providers = [VIEW_ID, VIEW_ID_SECONDARY].map((id) => new CodexViewProvider(id, ctx, s, ws, mentions, diffs, prefs, log));
   let lastActive = providers[secondary ? 1 : 0];
-  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; });
+  const latestItems = new Map<CodexViewProvider, ChipItem[]>();
+  const drop: DropTarget = new DropTarget((found) => { void showView().then((p) => p.handleDrop(found)); }, log);
+  providers.forEach((p) => {
+    p.onActive = (x) => { lastActive = x; drop.setItems(latestItems.get(current()) ?? []); };
+    p.onChips = (items) => { latestItems.set(p, items); if (p === current()) drop.setItems(items); };
+  });
   /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
   const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
 
@@ -82,7 +87,6 @@ export function activate(ctx: vscode.ExtensionContext): void {
   };
 
   // Native drop target: workbench drags (editor tabs, VS Code Explorer) never reach the webview, but they reach a tree view.
-  const drop = new DropTarget((found) => { void showView().then((p) => p.handleDrop(found)); }, log);
 
   ctx.subscriptions.push(
     out,
@@ -95,6 +99,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
     ...providers.map((p) => vscode.window.registerWebviewViewProvider(p.viewId, p, { webviewOptions: { retainContextWhenHidden: true } })),
 
     vscode.commands.registerCommand('codexPanel.open', showView),
+    vscode.commands.registerCommand(REMOVE_COMMAND, (el?: ChipItem) => { if (el?.path) current().removePath(el.path); }),
     vscode.commands.registerCommand('codexPanel.newChat', async () => {
       (await showView()).newChat();
     }),

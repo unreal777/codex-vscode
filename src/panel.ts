@@ -66,6 +66,9 @@ const orEmpty = (s: string | null | undefined): string => s ?? '';
 
 /** One attached file or folder of the page's composer. */
 
+/** One attached file or folder as the page lists it (the drop target tree shows these). */
+export interface ChipItem { path: string; name: string; folder: boolean; kind: 'mention' | 'file' }
+
 export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private view?: vscode.WebviewView;
   private queue: Json[] = [];
@@ -221,6 +224,14 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.post({ kind: 'showSettings' });
   }
 
+  /** The page's attached files changed; the "Attached files" tree lists them. */
+  onChips: (items: ChipItem[]) => void = () => {};
+
+  /** Removes an attached path from the page's chips (tree view action). */
+  removePath(p: string): void {
+    this.post({ kind: 'context', action: 'removePath', path: p });
+  }
+
   private postActiveFile(ed: vscode.TextEditor | undefined): void {
     const p = this.ws.filePath(ed);
     const ev: Json = { kind: 'context', action: 'activeFile', item: null };
@@ -351,6 +362,13 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         if ((a === 'archive' || a === 'unarchive' || a === 'delete') && id) this.session.threadAction(a, id);
         break;
       }
+      case 'chips':
+        this.onChips(Array.isArray(m.items)
+          ? (m.items as Json[])
+            .filter((i) => i && typeof i.path === 'string' && i.path !== '' && (i.kind === 'mention' || i.kind === 'file'))
+            .map((i) => ({ path: i.path as string, name: typeof i.name === 'string' ? i.name : '', folder: i.folder === true, kind: i.kind as 'mention' | 'file' }))
+          : []);
+        break;
       case 'retry':
         this.session.reconnect();
         break;
