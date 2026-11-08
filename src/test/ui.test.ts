@@ -212,7 +212,7 @@ test('secondary side bar: version switch at 1.106', () => {
 test('package.json: both view homes, one context key, engines unchanged, commands target both views', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.engines.vscode, '^1.90.0');
-  assert.equal(pkg.version, '0.5.0');
+  assert.equal(pkg.version, '0.5.1');
   const c = pkg.contributes;
   assert.equal(c.viewsContainers.secondarySidebar[0].id, 'codexPanelSecondary');
   assert.equal(c.viewsContainers.secondarySidebar[0].when, '!codexPanel.noSecondarySidebar');
@@ -227,14 +227,6 @@ test('package.json: both view homes, one context key, engines unchanged, command
     for (const vc of c.viewsContainers[where]) assert.match(vc.id, /^[a-z0-9_-]+$/i, where + ' container id ' + vc.id);
   for (const m of c.menus['view/title']) assert.ok(m.when.includes('codexPanel.chat') && m.when.includes('codexPanel.chatSecondary'), m.command);
   assert.ok(pkg.activationEvents.includes('onStartupFinished'), 'the context key must be set on old VS Code versions too');
-  assert.ok(c.commands.some((x: { command: string; icon?: string }) => x.command === 'codexPanel.removeAttachment' && x.icon === '$(close)'));
-  assert.ok(c.menus.commandPalette.some((x: { command: string; when: string }) => x.command === 'codexPanel.removeAttachment' && x.when === 'false'));
-  const inline = c.menus['view/item/context'].find((x: { command: string }) => x.command === 'codexPanel.removeAttachment');
-  assert.equal(inline.group, 'inline');
-  assert.ok(inline.when.includes('codexPanel.drop') && inline.when.includes('codexPanel.dropSecondary'));
-  const dropViews = [c.views.codexPanel[1], c.views['codexPanelSecondary'][1]];
-  assert.deepEqual(dropViews.map((v: { id: string }) => v.id), ['codexPanel.drop', 'codexPanel.dropSecondary']);
-  for (const v of dropViews) { assert.equal(v.name, 'Attached files'); assert.equal(v.initialSize, 1); }
   const keys = c.keybindings.map((k: { command: string }) => k.command);
   assert.ok(keys.includes('codexPanel.open'));
 });

@@ -1,67 +1,43 @@
-// A compact native tree under the chat webview. VS Code never delivers workbench drags (editor tabs, Explorer items) to a webview view,
-// but it does to a tree view with a drag-and-drop controller. The tree is also THE list of files and folders attached to the chat.
-import * as path from 'node:path';
+// A small native tree under the chat webview. VS Code never delivers drags from its own editor tabs / Explorer to a webview view (the iframe
+// gets pointer-events:none during a workbench drag; with Shift nothing arrived either on the user's Windows machine), but it does deliver them
+// to a tree view with a drag-and-drop controller. The tree has no items (the chips stay in the chat); VS Code keeps every extension view at
+// least ~120 px high (ViewPane default minimumBodySize), so it can not be smaller.
 import * as vscode from 'vscode';
 import { candidatesOf } from './core/dropUris';
 import { fsPathOf } from './workspace';
-import type { ChipItem } from './panel';
 
 export const DROP_VIEW_IDS = ['codexPanel.drop', 'codexPanel.dropSecondary'];
-export const REMOVE_COMMAND = 'codexPanel.removeAttachment';
 
 const MIMES = ['text/uri-list', 'application/vnd.code.uri-list', 'resourceurls', 'codeeditors', 'files', 'text/plain'];
-const HINT_EMPTY = 'Drop files, folders or editor tabs here.';
+const HINT = 'Drop files, folders or editor tabs here to attach them.';
 
-export class DropTarget implements vscode.TreeDataProvider<ChipItem>, vscode.TreeDragAndDropController<ChipItem>, vscode.Disposable {
+export class DropTarget implements vscode.TreeDataProvider<never>, vscode.TreeDragAndDropController<never>, vscode.Disposable {
   readonly dropMimeTypes = MIMES;
   readonly dragMimeTypes: string[] = [];
-  private items: ChipItem[] = [];
-  private readonly changed = new vscode.EventEmitter<void>();
-  readonly onDidChangeTreeData = this.changed.event;
-  private readonly views: vscode.TreeView<ChipItem>[] = [];
+  private readonly views: vscode.TreeView<never>[] = [];
 
   /** @param onDrop receives the candidate paths / URIs; the owner resolves them like any other drop and reveals the chat */
   constructor(private readonly onDrop: (candidates: string[]) => void, private readonly log: (line: string) => void) {}
 
+  readonly onDidChangeTreeData = new vscode.EventEmitter<void>().event;
+
   /** Creates the tree view for one of the two containers. */
-  createView(id: string): vscode.TreeView<ChipItem> {
-    const v = vscode.window.createTreeView<ChipItem>(id, { treeDataProvider: this, dragAndDropController: this, showCollapseAll: false, canSelectMany: false });
+  createView(id: string): vscode.TreeView<never> {
+    const v = vscode.window.createTreeView<never>(id, { treeDataProvider: this, dragAndDropController: this, showCollapseAll: false, canSelectMany: false });
     this.views.push(v);
-    v.message = this.message();
+    v.message = HINT;
     return v;
   }
 
-  setItems(items: ChipItem[]): void {
-    this.items = items;
-    for (const v of this.views) v.message = this.message();
-    this.changed.fire();
+  getChildren(): never[] {
+    return [];
   }
 
-  private message(): string | undefined {
-    return this.items.length === 0 ? HINT_EMPTY : undefined;
+  getTreeItem(el: never): vscode.TreeItem {
+    return el;
   }
 
-  getChildren(): ChipItem[] {
-    return this.items;
-  }
-
-  getTreeItem(el: ChipItem): vscode.TreeItem {
-    const uri = vscode.Uri.file(el.path);
-    const t = new vscode.TreeItem(el.name || path.basename(el.path) || el.path);
-    t.resourceUri = uri;
-    t.iconPath = el.folder ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
-    // folder relative to the workspace (empty at its root); outside the workspace the full folder
-    const rel = vscode.workspace.asRelativePath(el.path, false);
-    const dir = rel === el.path ? path.dirname(el.path) : path.dirname(rel);
-    const where = dir === '.' ? '' : dir;
-    t.description = el.kind === 'file' ? (where ? where + ' · active file' : 'active file') : where;
-    t.tooltip = el.path;
-    t.contextValue = 'codexAttachment';
-    if (!el.folder) t.command = { command: 'vscode.open', title: 'Open', arguments: [uri] };
-    return t;
-  }
-
-  async handleDrop(_target: ChipItem | undefined, dt: vscode.DataTransfer): Promise<void> {
+  async handleDrop(_target: never | undefined, dt: vscode.DataTransfer): Promise<void> {
     const values = new Map<string, string>();
     const files: string[] = [];
     for (const [mime, item] of dt) {
@@ -79,6 +55,5 @@ export class DropTarget implements vscode.TreeDataProvider<ChipItem>, vscode.Tre
 
   dispose(): void {
     this.views.forEach((v) => v.dispose());
-    this.changed.dispose();
   }
 }

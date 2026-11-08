@@ -28,9 +28,10 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 - **Einstellungen (Zahnrad im Panel):** *Default model* und *Default reasoning effort*, mit denen ein neuer Chat startet, und welche *Models*
   in der Modellliste unter dem Eingabefeld erscheinen (mindestens eines bleibt). *More settings…* öffnet die VS-Code-Einstellungen der Erweiterung.
 - **Dateien zum Chat hinzufügen.** **@** in der Nachricht tippen und eine Datei wählen, oder den **+**-Knopf > *Files and folders* nutzen.
-  Oder Dateien, Ordner oder Editor-Tabs auf **Attached files** unter dem Eingabefeld ziehen (VS Code lässt Ziehen aus dem
-  eigenen Explorer oder von Tabs nicht bis in den Chat selbst). Diese Liste zeigt, was angehängt ist; das x entfernt einen Eintrag.
-  Dateien aus dem Windows-Explorer kannst du auch direkt auf den Chat ziehen.
+  Oder Dateien, Ordner oder Editor-Tabs aus VS Code auf **Attach files** ziehen, den kleinen Bereich unter dem Chat (VS Code lässt Ziehen aus dem
+  eigenen Explorer oder von Tabs nicht bis in den Chat selbst). Dateien aus dem Windows-Explorer kannst du direkt auf den Chat ziehen.
+  Oder einen Dateipfad ins Eingabefeld einfügen: Rechtsklick auf Tab oder Datei > *Copy Path* (Umschalt+Alt+C), im Windows-Explorer *Als Pfad kopieren*.
+  Sie erscheinen als Chips über dem Eingabefeld.
   Passiert beim Ablegen nichts, bitte Ansicht > Ausgabe > **Codexter** öffnen: Jedes Ablegen schreibt die mitgelieferten Formate (`[drop] ...`-Zeilen); schick sie uns.
 - **Add to Codexter chat:** Dateien oder Ordner im Explorer (auch mehrere), im Editor oder auf einem Editor-Tab mit Rechtsklick >
   **Add to Codexter chat**. Das hilft, falls Ziehen bei dir nicht klappt.
@@ -56,7 +57,7 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 | Problem | Lösung |
 |---|---|
 | Download von Codex schlägt fehl | `http.proxy` in den Einstellungen prüfen (`https://registry.npmjs.org` muss erreichbar sein). Oder Codex selbst installieren, unter Codexter > Codex Source „own“ wählen und den Pfad zu `codex.exe` eintragen. |
-| Abgelegte Datei bewirkt nichts | Auf **Attached files** unter dem Eingabefeld ziehen, oder **Add to Codexter chat** / `@` benutzen. |
+| Abgelegte Datei bewirkt nichts | Auf **Attach files** unter dem Chat ziehen, den Pfad einfügen, oder **Add to Codexter chat** / `@` benutzen. |
 | Anmeldung wird nicht fertig | Auf Cancel klicken und neu anmelden. Port 1455 auf localhost muss frei sein. |
 | Panel ist leer | **Developer: Reload Window** ausführen; den Ausgabekanal **Codexter** ansehen. |
 | Sonstiges | Die letzten Zeilen des Ausgabekanals **Codexter** schicken. |

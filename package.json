@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -46,7 +46,7 @@
         },
         {
           "id": "codexPanel.drop",
-          "name": "Attached files",
+          "name": "Attach files",
           "when": "codexPanel.noSecondarySidebar",
           "initialSize": 1
         }
@@ -61,7 +61,7 @@
         },
         {
           "id": "codexPanel.dropSecondary",
-          "name": "Attached files",
+          "name": "Attach files",
           "when": "!codexPanel.noSecondarySidebar",
           "initialSize": 1
         }
@@ -101,11 +101,6 @@
       {
         "command": "codexPanel.checkUpdates",
         "title": "Codexter: Check for Codex updates"
-      },
-      {
-        "command": "codexPanel.removeAttachment",
-        "title": "Remove from chat",
-        "icon": "$(close)"
       }
     ],
     "keybindings": [
@@ -172,17 +167,6 @@
         {
           "command": "codexPanel.fixSelection",
           "when": "editorHasSelection"
-        },
-        {
-          "command": "codexPanel.removeAttachment",
-          "when": "false"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "codexPanel.removeAttachment",
-          "when": "view == codexPanel.drop || view == codexPanel.dropSecondary",
-          "group": "inline"
         }
       ]
     },

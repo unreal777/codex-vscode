@@ -28,9 +28,10 @@ the extension downloads Codex and lets you sign in.
 - **Settings (gear button in the panel):** the *Default model* and *Default reasoning effort* a new chat starts with, and which *Models*
   appear in the model list under the input (at least one stays). *More settings…* opens the VS Code settings of the extension.
 - **Add files to the chat.** Type **@** in the message and pick a file, or use the **+** button > *Files and folders*.
-  Or drag files, folders or editor tabs onto **Attached files** under the input (VS Code does not let a
-  drag from its own Explorer or tabs reach the chat itself). That list shows what is attached; the x removes an item.
-  Files from the Windows Explorer can also be dropped onto the chat.
+  Or drag files, folders or editor tabs from VS Code onto **Attach files**, the small area under the chat (VS Code does not let a
+  drag from its own Explorer or tabs reach the chat itself). Files from the Windows Explorer can be dropped right onto the chat.
+  Or paste a file path into the input: right-click a tab or file > *Copy Path* (Shift+Alt+C), or *Copy as path* in the Windows Explorer.
+  They show as chips above the input.
   If a drop does nothing, open View > Output > **Codexter**: every drop writes the formats it carried (`[drop] ...` lines); send them to us.
 - **Add to Codexter chat:** right-click files or folders in the Explorer (several at once work), an editor, or an editor tab >
   **Add to Codexter chat**. Use this if dragging does not work for you.
@@ -56,7 +57,7 @@ the extension downloads Codex and lets you sign in.
 | Problem | Fix |
 |---|---|
 | Codex download fails | Check `http.proxy` in Settings (`https://registry.npmjs.org` must be reachable). Or install Codex yourself and set Codexter > Codex Source to "own" and the path to `codex.exe`. |
-| Dropped file does nothing | Drop it on **Attached files** under the input, or use **Add to Codexter chat** / `@`. |
+| Dropped file does nothing | Drop it on **Attach files** under the chat, paste its path, or use **Add to Codexter chat** / `@`. |
 | Sign-in does not finish | Click Cancel, then sign in again. Port 1455 on localhost must be free. |
 | Panel is blank | Run **Developer: Reload Window**; check the Output channel **Codexter**. |
 | Anything else | Send the last lines of the Output channel **Codexter**. |

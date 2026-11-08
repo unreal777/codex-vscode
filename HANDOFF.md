@@ -5,30 +5,36 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.0)
+## Status (0.5.1)
 
-- 0.5.0 = 0.4.0 + the native "Attached files" tree as the list of attachments (see 0.5.0 below). 0.4.0 = 0.3.0 (own web UI, history archive/delete, drop target, in-panel settings) + the Codexter rename and UI cleanup below.
-  `npm run compile` 0 errors, `npm test` 46 tests, `npm run package` gives `dist\codex-panel-0.5.0.vsix`. 0.3.0 was verified live in the
+- 0.5.1: back to the 0.4.0 layout (chips in the chat, message-only **Attach files** under it) plus pasted paths become chips. See "0.5.1".
+
+- 0.4.0 = 0.3.0 (own web UI, history archive/delete, drop target, in-panel settings) + the Codexter rename and UI cleanup below.
+  `npm run compile` 0 errors, `npm test` 46 tests, `npm run package` gives `dist\codex-panel-0.4.0.vsix`. 0.3.0 was verified live in the
   isolated VS Code; 0.4.0 is tested by the user in their own VS Code (they asked to test manually instead of the isolated instance).
 - Git: this folder is its own repository (branch `main`), separate from the Eclipse plugin.
-- Open: does Shift + drag of editor tabs / VS Code Explorer items onto the chat work with a real mouse (synthetic CDP drags could not prove it)?
+- Answered: Shift + drag onto the chat does NOT work on the user's Windows VS Code (no `[drop]` line from the page at all, only `[drop-tree]`).
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
 
-## 0.5.0
+## 0.5.1
 
-- Shift+drop into the webview does not work on the user's Windows VS Code: no `[drop]` line from the page at all, only `[drop-tree]`. VS Code never delivers its own editor-tab / Explorer drags to a webview view.
-- Extension views have a fixed 120 px minimum body (`ViewPane` default `minimumBodySize`), so the small drop tree cannot shrink. It is now THE list of attachments: view "Attached files" (`codexPanel.drop` / `dropSecondary`, `initialSize` 12 / 1).
-- Page (VS Code only): `#chips` no longer shows file/folder chips (`mention`, active-file `file`), only selection and image chips (plugin chips unchanged). It posts `chips {items:[{path,name,folder,kind}]}` on change and once after init. Host event `context removePath` removes the mention (or dismisses the active file) and calls `syncActive()`. Sending is unchanged. The browser dev page keeps all chips.
-- Host: `panel.ts` `onChips` / `removePath`; `extension.ts` keeps the latest items per provider and feeds the tree from `current()` (refreshed on `onActive`); `dropTarget.ts` lists them (file icon theme via `resourceUri`, description = folder + " . active file"), inline action `codexPanel.removeAttachment`.
-- Copilot Chat accepts these drags because it is a native part of VS Code, not a webview.
+- 0.5.0 (commit 8122a61, reverted) turned Attach files into the list of attached files; the user wants the chips in the chat and only a small drop area,
+  so 0.5.1 restores the 0.4.0 layout. Attach files can not be smaller: VS Code gives every extension view a minimum body of ~120 px
+  (`ViewPane` default `minimumBodySize`). Its message no longer mentions Shift.
+- Why the chat (incl. the chip row) can not take the drop while the tree below it can: the chat is a webview; during a drag that starts inside
+  VS Code the workbench sets the webview iframe to `pointer-events:none` (`WebviewWindowDragMonitor`, unblocks only for drag/dragover with
+  shiftKey, which did not work here). The tree is native workbench UI. Copilot Chat works because it is native too. The data format does not
+  matter (links instead of files would not help): the page receives no event at all.
+- Workaround in the page: pasting text whose lines are all file paths / file: URIs (quotes stripped, max 50) posts `dropText`; the host makes
+  chips of existing files/folders and puts anything else back into the input (`insertText`).
 
 ## 0.4.0
 
 - Rename (visible names only): package.json titles `Codexter: ...`, "Add to Codexter chat", output channel "Codexter".
 - The page's `#btn-new` / `#btn-set` are hidden in VS Code (`media/vscode.css`; the view title has + and a gear). `showSettings` TOGGLES the settings view; closing it focuses the gear if visible, else the input.
-- Drops: VS Code blocks webview views during workbench drags unless Shift is held (webview iframe gets pointer-events:none on drag/dragover without shiftKey), so Shift+drop on the chat was thought to be the main way (it is not, see 0.5.0). The tree showed no items and chip mirroring was removed here; 0.5.0 brings it back.
+- Drops: VS Code blocks webview views during workbench drags unless Shift is held (webview iframe gets pointer-events:none on drag/dragover without shiftKey), so Shift+drop on the chat is the main way. The `Attach files` tree (`dropTarget.ts`) shows no items any more (message only), `initialSize` 1 vs chat 12. Chip mirroring (`chips` message, `onChips`, `removeAttachment`, page `removePath`) was removed.
 
 ## 0.3.0
 
