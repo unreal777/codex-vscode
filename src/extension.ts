@@ -98,6 +98,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('codexPanel.newChat', async () => {
       (await showView()).newChat();
     }),
+    vscode.commands.registerCommand('codexPanel.attachFiles', async () => {
+      const picked = await vscode.window.showOpenDialog({ canSelectMany: true, canSelectFiles: true, canSelectFolders: false, openLabel: 'Attach' });
+      const paths = (picked ?? []).filter((u) => u.scheme === 'file').map((u) => fsPathOf(u));
+      if (paths.length > 0) (await showView()).addFiles(paths);
+    }),
     vscode.commands.registerCommand('codexPanel.openSettings', async () => (await showView()).showSettings()),
     vscode.commands.registerCommand('codexPanel.checkUpdates', () =>
       vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Codex: checking for updates...' }, async () => {

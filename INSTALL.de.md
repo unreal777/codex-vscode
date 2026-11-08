@@ -28,7 +28,8 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 - **Einstellungen (Zahnrad im Panel):** *Default model* und *Default reasoning effort*, mit denen ein neuer Chat startet, und welche *Models*
   in der Modellliste unter dem Eingabefeld erscheinen (mindestens eines bleibt). *More settings…* öffnet die VS-Code-Einstellungen der Erweiterung.
 - **Dateien zum Chat hinzufügen.** **@** in der Nachricht tippen und eine Datei wählen, oder den **+**-Knopf > *Files and folders* nutzen.
-  Oder Dateien, Ordner oder Editor-Tabs aus VS Code auf **Attach files** ziehen, den kleinen Bereich unter dem Chat (VS Code lässt Ziehen aus dem
+  Oder Dateien, Ordner oder Editor-Tabs aus VS Code auf **Attach files** ziehen, den kleinen Bereich unter dem Chat, oder dort *Choose files...*
+  anklicken (VS Code lässt Ziehen aus dem
   eigenen Explorer oder von Tabs nicht bis in den Chat selbst). Dateien aus dem Windows-Explorer kannst du direkt auf den Chat ziehen.
   Oder einen Dateipfad ins Eingabefeld einfügen: Rechtsklick auf Tab oder Datei > *Copy Path* (Umschalt+Alt+C), im Windows-Explorer *Als Pfad kopieren*.
   Sie erscheinen als Chips über dem Eingabefeld.

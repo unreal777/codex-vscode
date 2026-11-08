@@ -28,7 +28,8 @@ the extension downloads Codex and lets you sign in.
 - **Settings (gear button in the panel):** the *Default model* and *Default reasoning effort* a new chat starts with, and which *Models*
   appear in the model list under the input (at least one stays). *More settings…* opens the VS Code settings of the extension.
 - **Add files to the chat.** Type **@** in the message and pick a file, or use the **+** button > *Files and folders*.
-  Or drag files, folders or editor tabs from VS Code onto **Attach files**, the small area under the chat (VS Code does not let a
+  Or drag files, folders or editor tabs from VS Code onto **Attach files**, the small area under the chat, or click *Choose files...* there
+  (VS Code does not let a
   drag from its own Explorer or tabs reach the chat itself). Files from the Windows Explorer can be dropped right onto the chat.
   Or paste a file path into the input: right-click a tab or file > *Copy Path* (Shift+Alt+C), or *Copy as path* in the Windows Explorer.
   They show as chips above the input.

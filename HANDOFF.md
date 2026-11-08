@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.1)
+## Status (0.5.2)
+
+- 0.5.2: **Attach files** shows two fixed rows (drop hint, "Choose files...") so it reads as a drop area. See "0.5.2".
 
 - 0.5.1: back to the 0.4.0 layout (chips in the chat, message-only **Attach files** under it) plus pasted paths become chips. See "0.5.1".
 
@@ -17,6 +19,17 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.2
+
+- The user wanted Attach files to look like a drop area when empty (and chips there instead of in the chat if possible). Native views take
+  no custom CSS and can not draw chips, so the chips stay in the chat.
+- Tried `viewsWelcome` (centred column, codicons): VS Code hides the tree (`.pane-body.welcome > :not(.welcome-view) { display: none }`)
+  and a drop on the welcome content reaches nobody (proven with `tools/drag-probe.mjs`, no `[drop-tree]` line). Do not use it.
+- Now the tree has two fixed rows: `$(cloud-upload)` "Drop files, folders or editor tabs here" and `$(folder-opened)` "Choose files..."
+  (command `codexPanel.attachFiles`, `showOpenDialog` with files only, then `addFiles`). Drops on a row and on the empty space below both
+  work (proven with drag-probe, chip appeared). `TreeView.message` is plain text in the 1.90 API, so it was dropped.
+- Fixed `package-lock.json`: the 0.5.1 version bump had also changed `asynckit` to 0.5.1; it is 0.4.0 again.
 
 ## 0.5.1
 
