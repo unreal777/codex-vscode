@@ -1,0 +1,273 @@
+{
+  "name": "codex-panel",
+  "displayName": "Codex Panel",
+  "description": "OpenAI Codex chat panel for VS Code (secondary side bar): same panel as the Codex Panel plugin for Eclipse.",
+  "version": "0.3.0",
+  "publisher": "codexpanel",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexPanel",
+          "title": "Codex",
+          "icon": "media/codex.svg",
+          "when": "codexPanel.noSecondarySidebar"
+        }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "codexPanelSecondary",
+          "title": "Codex",
+          "icon": "media/codex.svg",
+          "when": "!codexPanel.noSecondarySidebar"
+        }
+      ]
+    },
+    "views": {
+      "codexPanel": [
+        {
+          "type": "webview",
+          "id": "codexPanel.chat",
+          "name": "Codex",
+          "when": "codexPanel.noSecondarySidebar",
+          "initialSize": 4
+        },
+        {
+          "id": "codexPanel.drop",
+          "name": "Attach files",
+          "when": "codexPanel.noSecondarySidebar",
+          "initialSize": 1
+        }
+      ],
+      "codexPanelSecondary": [
+        {
+          "type": "webview",
+          "id": "codexPanel.chatSecondary",
+          "name": "Codex",
+          "when": "!codexPanel.noSecondarySidebar",
+          "initialSize": 4
+        },
+        {
+          "id": "codexPanel.dropSecondary",
+          "name": "Attach files",
+          "when": "!codexPanel.noSecondarySidebar",
+          "initialSize": 1
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "codexPanel.open",
+        "title": "Codex: Open Codex panel"
+      },
+      {
+        "command": "codexPanel.newChat",
+        "title": "Codex: New chat",
+        "icon": "$(add)"
+      },
+      {
+        "command": "codexPanel.addToChat",
+        "title": "Add to Codex chat"
+      },
+      {
+        "command": "codexPanel.askSelection",
+        "title": "Codex: Ask about selection"
+      },
+      {
+        "command": "codexPanel.explainSelection",
+        "title": "Codex: Explain selection"
+      },
+      {
+        "command": "codexPanel.fixSelection",
+        "title": "Codex: Fix selection"
+      },
+      {
+        "command": "codexPanel.openSettings",
+        "title": "Codex: Open settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "codexPanel.checkUpdates",
+        "title": "Codex: Check for Codex updates"
+      },
+      {
+        "command": "codexPanel.removeAttachment",
+        "title": "Remove from chat",
+        "icon": "$(close)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "codexPanel.open",
+        "key": "ctrl+alt+c"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codexPanel.newChat",
+          "when": "view == codexPanel.chat || view == codexPanel.chatSecondary",
+          "group": "navigation@1"
+        },
+        {
+          "command": "codexPanel.openSettings",
+          "when": "view == codexPanel.chat || view == codexPanel.chatSecondary",
+          "group": "navigation@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "codexPanel.addToChat",
+          "group": "7_modification@99"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "codexPanel.askSelection",
+          "when": "editorHasSelection",
+          "group": "9_codex@1"
+        },
+        {
+          "command": "codexPanel.explainSelection",
+          "when": "editorHasSelection",
+          "group": "9_codex@2"
+        },
+        {
+          "command": "codexPanel.fixSelection",
+          "when": "editorHasSelection",
+          "group": "9_codex@3"
+        },
+        {
+          "command": "codexPanel.addToChat",
+          "group": "9_codex@4"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "codexPanel.addToChat",
+          "group": "1_codex"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "codexPanel.askSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "codexPanel.explainSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "codexPanel.fixSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "codexPanel.removeAttachment",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codexPanel.removeAttachment",
+          "when": "view == codexPanel.drop || view == codexPanel.dropSecondary",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Codex Panel",
+      "properties": {
+        "codexPanel.codexPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to `codex.exe`. Empty = use the managed copy (or `CODEX_EXECUTABLE`, npm global, `PATH`)."
+        },
+        "codexPanel.codexSource": {
+          "type": "string",
+          "enum": [
+            "managed",
+            "own"
+          ],
+          "enumDescriptions": [
+            "Download and update Codex from the npm registry (shared with the Eclipse plugin).",
+            "Use only the path above, CODEX_EXECUTABLE, npm global or PATH."
+          ],
+          "default": "managed",
+          "description": "Where Codex comes from."
+        },
+        "codexPanel.updateIntervalDays": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 7,
+          "description": "Days between automatic Codex update checks (0 = never)."
+        },
+        "codexPanel.autosave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save modified editors of the workspace folder before sending a message."
+        },
+        "codexPanel.defaultModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Model a new chat starts with. Empty = the Codex default. Can also be changed with the gear in the Codex panel."
+        },
+        "codexPanel.defaultReasoningEffort": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "enumDescriptions": [
+            "The model's default",
+            "None",
+            "Minimal",
+            "Low",
+            "Medium",
+            "High",
+            "Extra high"
+          ],
+          "markdownDescription": "Reasoning effort a new chat starts with. Empty = the model's default."
+        },
+        "codexPanel.hiddenModels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Models that are hidden from the model picker (ids as Codex lists them). Can also be changed with the gear in the Codex panel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "sync-web": "node scripts/sync-web.mjs",
+    "compile": "node scripts/sync-web.mjs && tsc -p ./",
+    "test": "node --test \"out/test/*.test.js\"",
+    "smoke": "node out/smoke/smoke.js",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.5.0"
+  }
+}

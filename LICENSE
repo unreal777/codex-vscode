@@ -1,0 +1,5 @@
+Codex Panel for VS Code
+Copyright (c) the Codex Panel authors. All rights reserved.
+
+Internal tool, distributed as a .vsix to the team. No licence to redistribute is granted.
+Bundled third-party components keep their own licences (see media/web/vendor/LICENSE-*.txt).

@@ -1,0 +1,1395 @@
+[
+ {
+  "id": 2,
+  "result": {
+   "data": [
+    {
+     "id": "gpt-6.1-sol",
+     "model": "gpt-6.1-sol",
+     "availabilityNux": {
+      "message": "Maximize usage with GPT-6.1 Sol. Try it on complex work for near-Astra performance at a lower cost."
+     },
+     "displayName": "GPT-6.1-Sol",
+     "description": "Latest workhorse model for coding and everyday work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "2x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": true
+    },
+    {
+     "id": "gpt-6.1-terra",
+     "model": "gpt-6.1-terra",
+     "displayName": "GPT-6.1 Terra",
+     "description": "GPT-6.1 Terra Codex model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "low",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "defaultServiceTier": "priority",
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-astra",
+     "model": "gpt-6-astra",
+     "displayName": "GPT-6-Astra",
+     "description": "Frontier intelligence for the most demanding work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "low",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "2x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-sol",
+     "model": "gpt-6-sol",
+     "displayName": "GPT-6-Sol",
+     "description": "Previous generation workhorse model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-luna",
+     "model": "gpt-6-luna",
+     "displayName": "GPT-6-Luna",
+     "description": "Fast and affordable model for easier tasks.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-sol",
+     "model": "gpt-5.6-sol",
+     "displayName": "GPT-5.6-Sol",
+     "description": "Older generation workhorse model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-terra",
+     "model": "gpt-5.6-terra",
+     "displayName": "GPT-5.6-Terra",
+     "description": "Older balanced model for straightforward work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-luna",
+     "model": "gpt-5.6-luna",
+     "displayName": "GPT-5.6-Luna",
+     "description": "Older fast and efficient model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v1",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    }
+   ]
+  },
+  "_recvMs": 550
+ },
+ {
+  "method": "thread/status/changed",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "status": {
+    "type": "active",
+    "activeFlags": []
+   }
+  },
+  "emittedAtMs": 1793791492938,
+  "_recvMs": 2960
+ },
+ {
+  "method": "turn/started",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turn": {
+    "id": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+    "rootTurnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+    "items": [],
+    "itemsView": "notLoaded",
+    "status": "inProgress",
+    "startedAt": 1793791492
+   }
+  },
+  "emittedAtMs": 1793791492938,
+  "_recvMs": 2961
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "userMessage",
+    "id": "01a1a64e-0dd2-7e83-a783-97c565575241",
+    "content": [
+     {
+      "type": "text",
+      "text": "How many primes are below 60? Reason it through carefully, then answer in one short line.",
+      "text_elements": []
+     }
+    ],
+    "startedAtMs": 1793791495648
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "startedAtMs": 1793791495648
+  },
+  "emittedAtMs": 1793791495648,
+  "_recvMs": 5672
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "userMessage",
+    "id": "01a1a64e-0dd2-7e83-a783-97c565575241",
+    "content": [
+     {
+      "type": "text",
+      "text": "How many primes are below 60? Reason it through carefully, then answer in one short line.",
+      "text_elements": []
+     }
+    ],
+    "startedAtMs": 1793791495648,
+    "completedAtMs": 1793791495648
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "completedAtMs": 1793791495648
+  },
+  "emittedAtMs": 1793791495664,
+  "_recvMs": 5687
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "reasoning",
+    "id": "rs_018d7675b500b871016aeb160a7c7487d2a10180d9da83c0e1",
+    "summary": [],
+    "content": [],
+    "startedAtMs": 1793791497268
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "startedAtMs": 1793791497268
+  },
+  "emittedAtMs": 1793791497268,
+  "_recvMs": 7291
+ },
+ {
+  "method": "item/reasoning/summaryPartAdded",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "rs_018d7675b500b871016aeb160a7c7487d2a10180d9da83c0e1",
+   "summaryIndex": 0
+  },
+  "emittedAtMs": 1793791500659,
+  "_recvMs": 10682
+ },
+ {
+  "method": "item/reasoning/summaryTextDelta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "rs_018d7675b500b871016aeb160a7c7487d2a10180d9da83c0e1",
+   "delta": "**Counting primes below 60**",
+   "summaryIndex": 0
+  },
+  "emittedAtMs": 1793791500659,
+  "_recvMs": 10682
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "reasoning",
+    "id": "rs_018d7675b500b871016aeb160a7c7487d2a10180d9da83c0e1",
+    "summary": [
+     "**Counting primes below 60**"
+    ],
+    "content": [],
+    "startedAtMs": 1793791497268,
+    "completedAtMs": 1793791500680
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "completedAtMs": 1793791500680
+  },
+  "emittedAtMs": 1793791500697,
+  "_recvMs": 10720
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+    "text": "",
+    "phase": "final_answer",
+    "startedAtMs": 1793791500709
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "startedAtMs": 1793791500709
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10732
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "The"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10732
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " primes"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10732
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " below"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "60"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " are"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "2"
+  },
+  "emittedAtMs": 1793791500709,
+  "_recvMs": 10733
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500711,
+  "_recvMs": 10734
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500711,
+  "_recvMs": 10734
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "3"
+  },
+  "emittedAtMs": 1793791500711,
+  "_recvMs": 10734
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500716,
+  "_recvMs": 10739
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500719,
+  "_recvMs": 10741
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "5"
+  },
+  "emittedAtMs": 1793791500720,
+  "_recvMs": 10743
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500725,
+  "_recvMs": 10748
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500736,
+  "_recvMs": 10759
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "7"
+  },
+  "emittedAtMs": 1793791500736,
+  "_recvMs": 10759
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500736,
+  "_recvMs": 10759
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500736,
+  "_recvMs": 10760
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "11"
+  },
+  "emittedAtMs": 1793791500739,
+  "_recvMs": 10762
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500741,
+  "_recvMs": 10764
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500743,
+  "_recvMs": 10765
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "13"
+  },
+  "emittedAtMs": 1793791500746,
+  "_recvMs": 10768
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500746,
+  "_recvMs": 10768
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500750,
+  "_recvMs": 10772
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "17"
+  },
+  "emittedAtMs": 1793791500752,
+  "_recvMs": 10775
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500757,
+  "_recvMs": 10780
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10796
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "19"
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10796
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10796
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10796
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "23"
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10796
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10797
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10797
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "29"
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10797
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10797
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500773,
+  "_recvMs": 10797
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "31"
+  },
+  "emittedAtMs": 1793791500786,
+  "_recvMs": 10808
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500786,
+  "_recvMs": 10809
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500786,
+  "_recvMs": 10809
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "37"
+  },
+  "emittedAtMs": 1793791500787,
+  "_recvMs": 10810
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "41"
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "43"
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500803,
+  "_recvMs": 10826
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "47"
+  },
+  "emittedAtMs": 1793791500808,
+  "_recvMs": 10831
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500808,
+  "_recvMs": 10831
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500808,
+  "_recvMs": 10831
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "53"
+  },
+  "emittedAtMs": 1793791500811,
+  "_recvMs": 10834
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": ","
+  },
+  "emittedAtMs": 1793791500816,
+  "_recvMs": 10838
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " and"
+  },
+  "emittedAtMs": 1793791500816,
+  "_recvMs": 10839
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " "
+  },
+  "emittedAtMs": 1793791500818,
+  "_recvMs": 10841
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "59"
+  },
+  "emittedAtMs": 1793791500820,
+  "_recvMs": 10842
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "—"
+  },
+  "emittedAtMs": 1793791500824,
+  "_recvMs": 10847
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "17"
+  },
+  "emittedAtMs": 1793791500825,
+  "_recvMs": 10847
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " in"
+  },
+  "emittedAtMs": 1793791500826,
+  "_recvMs": 10849
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": " total"
+  },
+  "emittedAtMs": 1793791500829,
+  "_recvMs": 10852
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "itemId": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+   "delta": "."
+  },
+  "emittedAtMs": 1793791500831,
+  "_recvMs": 10853
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+    "text": "The primes below 60 are 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, and 59—17 in total.",
+    "phase": "final_answer",
+    "startedAtMs": 1793791500709,
+    "completedAtMs": 1793791500916
+   },
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "completedAtMs": 1793791500916
+  },
+  "emittedAtMs": 1793791500929,
+  "_recvMs": 10952
+ },
+ {
+  "method": "thread/tokenUsage/updated",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+   "tokenUsage": {
+    "total": {
+     "totalTokens": 22970,
+     "inputTokens": 22784,
+     "cachedInputTokens": 0,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 186,
+     "reasoningOutputTokens": 118
+    },
+    "last": {
+     "totalTokens": 22970,
+     "inputTokens": 22784,
+     "cachedInputTokens": 0,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 186,
+     "reasoningOutputTokens": 118
+    },
+    "modelContextWindow": 258400
+   }
+  },
+  "emittedAtMs": 1793791501051,
+  "_recvMs": 11075
+ },
+ {
+  "method": "account/rateLimits/updated",
+  "params": {
+   "rateLimits": {
+    "limitId": "codex",
+    "primary": {
+     "usedPercent": 40,
+     "windowDurationMins": 300,
+     "resetsAt": 1793799407
+    },
+    "secondary": {
+     "usedPercent": 39,
+     "windowDurationMins": 10080,
+     "resetsAt": 1793798264
+    },
+    "credits": {
+     "hasCredits": false,
+     "unlimited": false
+    },
+    "planType": "team"
+   }
+  },
+  "emittedAtMs": 1793791501051,
+  "_recvMs": 11075
+ },
+ {
+  "method": "thread/status/changed",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "status": {
+    "type": "idle"
+   }
+  },
+  "emittedAtMs": 1793791501073,
+  "_recvMs": 11096
+ },
+ {
+  "method": "turn/completed",
+  "params": {
+   "threadId": "01a1a64d-f9f1-7c43-bfb8-deffb6d537fd",
+   "turn": {
+    "id": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+    "rootTurnId": "01a1a64e-01af-7190-9a9a-52e4907c82d8",
+    "items": [
+     {
+      "type": "agentMessage",
+      "id": "msg_018d7675b500b871016aeb160de37087d2a7d99d91f351a7b2",
+      "text": "The primes below 60 are 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, and 59—17 in total.",
+      "phase": "final_answer",
+      "startedAtMs": 1793791500709,
+      "completedAtMs": 1793791500916
+     }
+    ],
+    "itemsView": "summary",
+    "status": "completed",
+    "startedAt": 1793791492,
+    "completedAt": 1793791501,
+    "durationMs": 8464
+   }
+  },
+  "emittedAtMs": 1793791501073,
+  "_recvMs": 11096
+ }
+]

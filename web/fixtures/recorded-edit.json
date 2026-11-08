@@ -1,0 +1,1087 @@
+[
+ {
+  "id": 2,
+  "result": {
+   "data": [
+    {
+     "id": "gpt-6.1-sol",
+     "model": "gpt-6.1-sol",
+     "availabilityNux": {
+      "message": "Maximize usage with GPT-6.1 Sol. Try it on complex work for near-Astra performance at a lower cost."
+     },
+     "displayName": "GPT-6.1-Sol",
+     "description": "Latest workhorse model for coding and everyday work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "2x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": true
+    },
+    {
+     "id": "gpt-6.1-terra",
+     "model": "gpt-6.1-terra",
+     "displayName": "GPT-6.1 Terra",
+     "description": "GPT-6.1 Terra Codex model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "low",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "defaultServiceTier": "priority",
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-astra",
+     "model": "gpt-6-astra",
+     "displayName": "GPT-6-Astra",
+     "description": "Frontier intelligence for the most demanding work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "low",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "2x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-sol",
+     "model": "gpt-6-sol",
+     "displayName": "GPT-6-Sol",
+     "description": "Previous generation workhorse model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-6-luna",
+     "model": "gpt-6-luna",
+     "displayName": "GPT-6-Luna",
+     "description": "Fast and affordable model for easier tasks.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-sol",
+     "model": "gpt-5.6-sol",
+     "displayName": "GPT-5.6-Sol",
+     "description": "Older generation workhorse model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-terra",
+     "model": "gpt-5.6-terra",
+     "displayName": "GPT-5.6-Terra",
+     "description": "Older balanced model for straightforward work.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      },
+      {
+       "reasoningEffort": "ultra",
+       "description": "Maximum reasoning with automatic task delegation"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v2",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    },
+    {
+     "id": "gpt-5.6-luna",
+     "model": "gpt-5.6-luna",
+     "displayName": "GPT-5.6-Luna",
+     "description": "Older fast and efficient model.",
+     "hidden": false,
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "Fast responses with lighter reasoning"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "Balances speed and reasoning depth for everyday tasks"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "Greater reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "xhigh",
+       "description": "Extra high reasoning depth for complex problems"
+      },
+      {
+       "reasoningEffort": "max",
+       "description": "Maximum reasoning depth for the hardest problems"
+      }
+     ],
+     "defaultReasoningEffort": "medium",
+     "inputModalities": [
+      "text",
+      "image"
+     ],
+     "supportsPersonality": false,
+     "multiAgentVersion": "v1",
+     "additionalSpeedTiers": [
+      "fast"
+     ],
+     "serviceTiers": [
+      {
+       "id": "priority",
+       "name": "Fast",
+       "description": "1.5x speed, increased usage"
+      }
+     ],
+     "availableAccessPrograms": {
+      "cyber": [
+       "standard"
+      ]
+     },
+     "isDefault": false
+    }
+   ]
+  },
+  "_recvMs": 1147
+ },
+ {
+  "method": "thread/status/changed",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "status": {
+    "type": "active",
+    "activeFlags": []
+   }
+  },
+  "emittedAtMs": 1793791431276,
+  "_recvMs": 4416
+ },
+ {
+  "method": "turn/started",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turn": {
+    "id": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+    "rootTurnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+    "items": [],
+    "itemsView": "notLoaded",
+    "status": "inProgress",
+    "startedAt": 1793791430
+   }
+  },
+  "emittedAtMs": 1793791431276,
+  "_recvMs": 4416
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "userMessage",
+    "id": "01a1a64d-1ba3-7991-afd1-817b8a3b2df6",
+    "content": [
+     {
+      "type": "text",
+      "text": "Do these in order, tersely: (1) use the plan tool with 3 short steps; (2) run the shell command `Get-ChildItem` ; (3) with apply_patch change line 2 of notes.txt from beta to BETA and create hello.txt containing the single line hi. Then say done.",
+      "text_elements": []
+     }
+    ],
+    "startedAtMs": 1793791433858
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "startedAtMs": 1793791433858
+  },
+  "emittedAtMs": 1793791433858,
+  "_recvMs": 6998
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "userMessage",
+    "id": "01a1a64d-1ba3-7991-afd1-817b8a3b2df6",
+    "content": [
+     {
+      "type": "text",
+      "text": "Do these in order, tersely: (1) use the plan tool with 3 short steps; (2) run the shell command `Get-ChildItem` ; (3) with apply_patch change line 2 of notes.txt from beta to BETA and create hello.txt containing the single line hi. Then say done.",
+      "text_elements": []
+     }
+    ],
+    "startedAtMs": 1793791433858,
+    "completedAtMs": 1793791433858
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "completedAtMs": 1793791433858
+  },
+  "emittedAtMs": 1793791434067,
+  "_recvMs": 7207
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "commandExecution",
+    "id": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+    "command": "\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command Get-ChildItem",
+    "cwd": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255",
+    "processId": "80108",
+    "source": "unifiedExecStartup",
+    "status": "inProgress",
+    "commandActions": [
+     {
+      "type": "unknown",
+      "command": "Get-ChildItem"
+     }
+    ],
+    "startedAtMs": 1793791448437
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "startedAtMs": 1793791448437
+  },
+  "emittedAtMs": 1793791448438,
+  "_recvMs": 21578
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "    Verzeichnis: C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448730,
+  "_recvMs": 21870
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "Mode                 LastWriteTime         Length Name                                                                 "
+  },
+  "emittedAtMs": 1793791448732,
+  "_recvMs": 21871
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448732,
+  "_recvMs": 21871
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "----                 -------------         ------ ----                                                                 "
+  },
+  "emittedAtMs": 1793791448732,
+  "_recvMs": 21872
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448732,
+  "_recvMs": 21872
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "-a----        04.11.2026     12:23             17 notes.txt                                                            "
+  },
+  "emittedAtMs": 1793791448733,
+  "_recvMs": 21872
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448733,
+  "_recvMs": 21872
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448733,
+  "_recvMs": 21873
+ },
+ {
+  "method": "item/commandExecution/outputDelta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+   "delta": "\r\n"
+  },
+  "emittedAtMs": 1793791448733,
+  "_recvMs": 21873
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "commandExecution",
+    "id": "exec-36cc9694-b0e5-49dd-b6c4-4e7e91f9d28e",
+    "command": "\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command Get-ChildItem",
+    "cwd": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255",
+    "processId": "80108",
+    "source": "unifiedExecStartup",
+    "status": "completed",
+    "commandActions": [
+     {
+      "type": "unknown",
+      "command": "Get-ChildItem"
+     }
+    ],
+    "aggregatedOutput": "\r\n\r\n    Verzeichnis: C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255\r\n\r\n\r\nMode                 LastWriteTime         Length Name                                                                 \r\n----                 -------------         ------ ----                                                                 \r\n-a----        04.11.2026     12:23             17 notes.txt                                                            \r\n\r\n\r\n",
+    "exitCode": 0,
+    "durationMs": 316,
+    "startedAtMs": 1793791448437,
+    "completedAtMs": 1793791448754
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "completedAtMs": 1793791448754
+  },
+  "emittedAtMs": 1793791448898,
+  "_recvMs": 22038
+ },
+ {
+  "method": "thread/tokenUsage/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "tokenUsage": {
+    "total": {
+     "totalTokens": 23328,
+     "inputTokens": 23170,
+     "cachedInputTokens": 0,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 158,
+     "reasoningOutputTokens": 0
+    },
+    "last": {
+     "totalTokens": 23328,
+     "inputTokens": 23170,
+     "cachedInputTokens": 0,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 158,
+     "reasoningOutputTokens": 0
+    },
+    "modelContextWindow": 258400
+   }
+  },
+  "emittedAtMs": 1793791448936,
+  "_recvMs": 22076
+ },
+ {
+  "method": "account/rateLimits/updated",
+  "params": {
+   "rateLimits": {
+    "limitId": "codex",
+    "primary": {
+     "usedPercent": 40,
+     "windowDurationMins": 300,
+     "resetsAt": 1793799406
+    },
+    "secondary": {
+     "usedPercent": 39,
+     "windowDurationMins": 10080,
+     "resetsAt": 1793798263
+    },
+    "credits": {
+     "hasCredits": false,
+     "unlimited": false
+    },
+    "planType": "team"
+   }
+  },
+  "emittedAtMs": 1793791448936,
+  "_recvMs": 22076
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "fileChange",
+    "id": "exec-fed2b908-9910-4e23-bcd4-37630a015697",
+    "changes": [
+     {
+      "path": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255\\hello.txt",
+      "kind": {
+       "type": "add"
+      },
+      "diff": "hi\n"
+     },
+     {
+      "path": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255\\notes.txt",
+      "kind": {
+       "type": "update"
+      },
+      "diff": "@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+     }
+    ],
+    "status": "inProgress",
+    "startedAtMs": 1793791452564
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "startedAtMs": 1793791452564
+  },
+  "emittedAtMs": 1793791452569,
+  "_recvMs": 25709
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "fileChange",
+    "id": "exec-fed2b908-9910-4e23-bcd4-37630a015697",
+    "changes": [
+     {
+      "path": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255\\hello.txt",
+      "kind": {
+       "type": "add"
+      },
+      "diff": "hi\n"
+     },
+     {
+      "path": "C:\\Users\\dev\\AppData\\Local\\Temp\\codex-harness-10961731526100019255\\notes.txt",
+      "kind": {
+       "type": "update"
+      },
+      "diff": "@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+     }
+    ],
+    "status": "completed",
+    "startedAtMs": 1793791452564,
+    "completedAtMs": 1793791463416
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "completedAtMs": 1793791463416
+  },
+  "emittedAtMs": 1793791463430,
+  "_recvMs": 36570
+ },
+ {
+  "method": "turn/diff/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "diff": "diff --git a/hello.txt b/hello.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..45b983be36b73c0788dc9cbcb76cbb80fc7bb057\n--- /dev/null\n+++ b/hello.txt\n@@ -0,0 +1 @@\n+hi\ndiff --git a/notes.txt b/notes.txt\nindex 85c30401ce288f253613cb07ee32e62128089caa..e50310a98706747e5f83d131572570985b069064\n--- a/notes.txt\n+++ b/notes.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+  },
+  "emittedAtMs": 1793791463430,
+  "_recvMs": 36570
+ },
+ {
+  "method": "thread/tokenUsage/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "tokenUsage": {
+    "total": {
+     "totalTokens": 47865,
+     "inputTokens": 47599,
+     "cachedInputTokens": 23040,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 266,
+     "reasoningOutputTokens": 0
+    },
+    "last": {
+     "totalTokens": 24537,
+     "inputTokens": 24429,
+     "cachedInputTokens": 23040,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 108,
+     "reasoningOutputTokens": 0
+    },
+    "modelContextWindow": 258400
+   }
+  },
+  "emittedAtMs": 1793791463461,
+  "_recvMs": 36601
+ },
+ {
+  "method": "account/rateLimits/updated",
+  "params": {
+   "rateLimits": {
+    "limitId": "codex",
+    "primary": {
+     "usedPercent": 40,
+     "windowDurationMins": 300,
+     "resetsAt": 1793799406
+    },
+    "secondary": {
+     "usedPercent": 39,
+     "windowDurationMins": 10080,
+     "resetsAt": 1793798263
+    },
+    "credits": {
+     "hasCredits": false,
+     "unlimited": false,
+     "balance": "0"
+    },
+    "planType": "team"
+   }
+  },
+  "emittedAtMs": 1793791463461,
+  "_recvMs": 36601
+ },
+ {
+  "method": "turn/diff/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "diff": "diff --git a/hello.txt b/hello.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..45b983be36b73c0788dc9cbcb76cbb80fc7bb057\n--- /dev/null\n+++ b/hello.txt\n@@ -0,0 +1 @@\n+hi\ndiff --git a/notes.txt b/notes.txt\nindex 85c30401ce288f253613cb07ee32e62128089caa..e50310a98706747e5f83d131572570985b069064\n--- a/notes.txt\n+++ b/notes.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+  },
+  "emittedAtMs": 1793791463461,
+  "_recvMs": 36601
+ },
+ {
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "msg_063ba43d8aca5bda016aeb15e9efa487d2ab606a22b985064c",
+    "text": "",
+    "phase": "final_answer",
+    "startedAtMs": 1793791464708
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "startedAtMs": 1793791464708
+  },
+  "emittedAtMs": 1793791464708,
+  "_recvMs": 37847
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "msg_063ba43d8aca5bda016aeb15e9efa487d2ab606a22b985064c",
+   "delta": "Done"
+  },
+  "emittedAtMs": 1793791464723,
+  "_recvMs": 37862
+ },
+ {
+  "method": "item/agentMessage/delta",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "itemId": "msg_063ba43d8aca5bda016aeb15e9efa487d2ab606a22b985064c",
+   "delta": "."
+  },
+  "emittedAtMs": 1793791464742,
+  "_recvMs": 37882
+ },
+ {
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "msg_063ba43d8aca5bda016aeb15e9efa487d2ab606a22b985064c",
+    "text": "Done.",
+    "phase": "final_answer",
+    "startedAtMs": 1793791464708,
+    "completedAtMs": 1793791464848
+   },
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "completedAtMs": 1793791464848
+  },
+  "emittedAtMs": 1793791464862,
+  "_recvMs": 38002
+ },
+ {
+  "method": "thread/tokenUsage/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "tokenUsage": {
+    "total": {
+     "totalTokens": 72432,
+     "inputTokens": 72160,
+     "cachedInputTokens": 47360,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 272,
+     "reasoningOutputTokens": 0
+    },
+    "last": {
+     "totalTokens": 24567,
+     "inputTokens": 24561,
+     "cachedInputTokens": 24320,
+     "cacheWriteInputTokens": 0,
+     "outputTokens": 6,
+     "reasoningOutputTokens": 0
+    },
+    "modelContextWindow": 258400
+   }
+  },
+  "emittedAtMs": 1793791465028,
+  "_recvMs": 38167
+ },
+ {
+  "method": "account/rateLimits/updated",
+  "params": {
+   "rateLimits": {
+    "limitId": "codex",
+    "primary": {
+     "usedPercent": 40,
+     "windowDurationMins": 300,
+     "resetsAt": 1793799406
+    },
+    "secondary": {
+     "usedPercent": 39,
+     "windowDurationMins": 10080,
+     "resetsAt": 1793798263
+    },
+    "credits": {
+     "hasCredits": false,
+     "unlimited": false
+    },
+    "planType": "team"
+   }
+  },
+  "emittedAtMs": 1793791465028,
+  "_recvMs": 38167
+ },
+ {
+  "method": "turn/diff/updated",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+   "diff": "diff --git a/hello.txt b/hello.txt\nnew file mode 100644\nindex 0000000000000000000000000000000000000000..45b983be36b73c0788dc9cbcb76cbb80fc7bb057\n--- /dev/null\n+++ b/hello.txt\n@@ -0,0 +1 @@\n+hi\ndiff --git a/notes.txt b/notes.txt\nindex 85c30401ce288f253613cb07ee32e62128089caa..e50310a98706747e5f83d131572570985b069064\n--- a/notes.txt\n+++ b/notes.txt\n@@ -1,3 +1,3 @@\n alpha\n-beta\n+BETA\n gamma\n"
+  },
+  "emittedAtMs": 1793791465028,
+  "_recvMs": 38168
+ },
+ {
+  "method": "thread/status/changed",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "status": {
+    "type": "idle"
+   }
+  },
+  "emittedAtMs": 1793791465049,
+  "_recvMs": 38188
+ },
+ {
+  "method": "turn/completed",
+  "params": {
+   "threadId": "01a1a64d-05bd-74f2-bc79-87544590954e",
+   "turn": {
+    "id": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+    "rootTurnId": "01a1a64d-0ff7-7a10-b0e7-a8ae6da71d7b",
+    "items": [
+     {
+      "type": "agentMessage",
+      "id": "msg_063ba43d8aca5bda016aeb15e9efa487d2ab606a22b985064c",
+      "text": "Done.",
+      "phase": "final_answer",
+      "startedAtMs": 1793791464708,
+      "completedAtMs": 1793791464848
+     }
+    ],
+    "itemsView": "summary",
+    "status": "completed",
+    "startedAt": 1793791430,
+    "completedAt": 1793791465,
+    "durationMs": 34317
+   }
+  },
+  "emittedAtMs": 1793791465049,
+  "_recvMs": 38189
+ }
+]

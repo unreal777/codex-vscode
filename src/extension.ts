@@ -1,0 +1,144 @@
+// Codex Panel for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { DiffProvider } from './diff';
+import { DROP_VIEW_IDS, DropTarget, REMOVE_COMMAND } from './dropTarget';
+import { MentionSearch } from './mentions';
+import { supportsSecondarySidebar } from './core/vscodeVersion';
+import { ChipItem, CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
+import { processProxyEnv, proxyConfig } from './proxy';
+import { CodexSession, SessionHost } from './session';
+import { fsPathOf, WorkspaceBridge } from './workspace';
+
+let session: CodexSession | undefined;
+
+/**
+ * Directory holding the managed Codex copy (<base>/codex/...): %LOCALAPPDATA%\CodexPanel, the same folder the Eclipse plugin uses,
+ * because Codex is ~500 MB and both IDEs must not break each other. Falls back to the extension's global storage.
+ */
+function codexBase(ctx: vscode.ExtensionContext): string {
+  const local = process.env.LOCALAPPDATA;
+  if (local && local.trim()) {
+    const shared = path.join(local, 'CodexPanel');
+    try {
+      fs.mkdirSync(shared, { recursive: true });
+      return shared;
+    } catch { /* fall back below */ }
+  }
+  fs.mkdirSync(ctx.globalStorageUri.fsPath, { recursive: true });
+  return ctx.globalStorageUri.fsPath;
+}
+
+export function activate(ctx: vscode.ExtensionContext): void {
+  const out = vscode.window.createOutputChannel('Codex Panel', { log: true });
+  const log = (line: string) => {
+    if (line.startsWith('[warn] ')) out.warn(line.substring(7));
+    else if (line.startsWith('[error] ')) out.error(line.substring(8));
+    else out.info(line);
+  };
+  const cfg = () => vscode.workspace.getConfiguration('codexPanel');
+  const prefs = new Prefs(ctx.globalState);
+  const ws = new WorkspaceBridge();
+
+  const host: SessionHost = {
+    codexBase: codexBase(ctx),
+    version: String(ctx.extension.packageJSON.version ?? '0.0.0'),
+    codexPath: () => cfg().get<string>('codexPath', '').trim(),
+    managedEnabled: () => cfg().get<string>('codexSource', 'managed') !== 'own',
+    updateDays: () => cfg().get<number>('updateIntervalDays', 7),
+    permissionsPref: () => prefs.permissions(),
+    imageDir: () => path.join(ctx.globalStorageUri.fsPath, 'images'),
+    proxy: proxyConfig,
+    processEnv: processProxyEnv,
+    workspaceDir: () => ws.workspaceDir(),
+    projectName: (d) => ws.projectName(d),
+    openExternal: (url) => { void vscode.env.openExternal(vscode.Uri.parse(url, true)); },
+    refreshHook: () => { /* VS Code watches the file system itself */ },
+    log,
+    checked: (when) => { void ctx.globalState.update('codexPanel.lastUpdateCheck', when.toISOString()); },
+  };
+  session = new CodexSession(host);
+  const s = session;
+  const mentions = new MentionSearch(ws, log);
+  const diffs = new DiffProvider(log);
+
+  // The view has two homes with the same logic: the secondary side bar (VS Code 1.106+, next to the other chats) and, before that, the
+  // activity bar. package.json shows exactly one of them, switched by the context key below.
+  const secondary = supportsSecondarySidebar(vscode.version);
+  void vscode.commands.executeCommand('setContext', NO_SECONDARY_KEY, !secondary);
+  const providers = [VIEW_ID, VIEW_ID_SECONDARY].map((id) => new CodexViewProvider(id, ctx, s, ws, mentions, diffs, prefs, log));
+  let lastActive = providers[secondary ? 1 : 0];
+  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; });
+  /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
+  const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
+
+  // remember editors from the start (feeds "recent files first" in the "@" popup)
+  ws.rememberEditor(vscode.window.activeTextEditor);
+
+  const showView = async (): Promise<CodexViewProvider> => {
+    await providers[secondary ? 1 : 0].reveal();
+    return current();
+  };
+
+  // Native drop target: workbench drags (editor tabs, VS Code Explorer) never reach the webview, but they reach a tree view.
+  const drop = new DropTarget((found) => { void showView().then((p) => p.handleDrop(found)); }, log);
+  providers.forEach((p) => { p.onChips = (items) => { if (p === current()) drop.setItems(items); }; });
+
+  ctx.subscriptions.push(
+    out,
+    drop,
+    ...DROP_VIEW_IDS.map((id) => drop.createView(id)),
+    vscode.commands.registerCommand(REMOVE_COMMAND, (el?: ChipItem) => { if (el?.path) current().removePath(el.path); }),
+    mentions,
+    diffs,
+    ...providers,
+    { dispose: () => s.dispose() },
+    ...providers.map((p) => vscode.window.registerWebviewViewProvider(p.viewId, p, { webviewOptions: { retainContextWhenHidden: true } })),
+
+    vscode.commands.registerCommand('codexPanel.open', showView),
+    vscode.commands.registerCommand('codexPanel.newChat', async () => {
+      (await showView()).newChat();
+    }),
+    vscode.commands.registerCommand('codexPanel.openSettings', async () => (await showView()).showSettings()),
+    vscode.commands.registerCommand('codexPanel.checkUpdates', () =>
+      vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Codex: checking for updates...' }, async () => {
+        const msg = await s.checkCodexNow();
+        if (msg.startsWith('Failed')) void vscode.window.showWarningMessage('Codex: ' + msg);
+        else void vscode.window.showInformationMessage('Codex: ' + msg + '. ' + s.codexSummary());
+      })),
+
+    // Explorer: (clicked, all selected); editor title tab / editor body: (uri) or nothing -> the active editor's file
+    vscode.commands.registerCommand('codexPanel.addToChat', async (clicked?: vscode.Uri, selected?: vscode.Uri[]) => {
+      const uris = selected && selected.length > 0 ? selected : clicked instanceof vscode.Uri ? [clicked] : [];
+      let paths = uris.filter((u) => u.scheme === 'file').map((u) => fsPathOf(u));
+      if (paths.length === 0) {
+        const p = ws.filePath(vscode.window.activeTextEditor);
+        if (p) paths = [p];
+      }
+      if (paths.length === 0) return;
+      (await showView()).addFiles(paths);
+    }),
+    ...(['ask', 'explain', 'fix'] as const).map((mode) =>
+      vscode.commands.registerCommand(`codexPanel.${mode === 'ask' ? 'askSelection' : mode + 'Selection'}`, async () => {
+        const ed = vscode.window.activeTextEditor;
+        const file = ws.filePath(ed);
+        if (!ed || !file || ed.selection.isEmpty) return;
+        const sel = ed.selection;
+        // a selection that ends at column 0 of a line does not include that line
+        const endLine = (sel.end.character === 0 && sel.end.line > sel.start.line ? sel.end.line - 1 : sel.end.line) + 1;
+        (await showView()).addSelection(file, ed.document.getText(sel), sel.start.line + 1, endLine, mode);
+      })),
+
+    // changing the Codex source / path takes effect with a fresh app-server (Eclipse: after the preferences dialog)
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if ((e.affectsConfiguration('codexPanel.codexPath') || e.affectsConfiguration('codexPanel.codexSource')) && !s.isRunning) s.reconnect();
+    }),
+  );
+  log('Codex Panel ' + host.version + ' activated, managed Codex folder: ' + host.codexBase);
+}
+
+export function deactivate(): void {
+  session?.dispose();
+  session = undefined;
+}

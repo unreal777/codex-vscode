@@ -1,0 +1,9 @@
+**
+!package.json
+!README.md
+!INSTALL.md
+!INSTALL.de.md
+!LICENSE
+!media/**
+!out/*.js
+!out/core/*.js

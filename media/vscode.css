@@ -1,0 +1,17 @@
+/* Maps the VS Code theme variables onto the page's own variables (see the top of web/app.css). Loaded after app.css.
+   html:root.vscode is more specific than app.css's :root:not([data-theme]) and :root[data-theme] rules. */
+html:root.vscode {
+  --bg: var(--vscode-sideBar-background, var(--vscode-editor-background, #1e1e1e));
+  --fg: var(--vscode-foreground, #cccccc);
+  --accent: var(--vscode-textLink-foreground, var(--vscode-focusBorder, #4da3ff));
+  --ok: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
+  --err: var(--vscode-errorForeground, var(--vscode-editorError-foreground, #f85149));
+  --warn: var(--vscode-editorWarning-foreground, var(--vscode-charts-yellow, #d29922));
+  --font: var(--vscode-font-family, "Segoe UI", system-ui, sans-serif);
+  --mono: var(--vscode-editor-font-family, "Cascadia Code", Consolas, monospace);
+}
+html:root.vscode body { font-size: var(--vscode-font-size, 13px); }
+html:root.vscode textarea, html:root.vscode input, html:root.vscode select { font-family: var(--font); }
+html:root.vscode ::selection { background: var(--vscode-editor-selectionBackground); }
+/* VS Code's default webview styles pad the body by about 20px on each side: the page fills the view like in Eclipse */
+html:root.vscode body { margin: 0; padding: 0; }

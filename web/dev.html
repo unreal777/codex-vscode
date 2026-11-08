@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex (dev, mock bridge)</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  /* dev only: show the panel at a realistic side-panel width */
+  html { background: #888; }
+  body { max-width: 520px; margin: 0 auto; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+</style>
+</head>
+<body>
+<!-- Same UI as index.html. dev-bridge.js provides window.__codexPost and replays web/fixtures.
+     Query: ?fixture=recorded-edit|recorded-hello|recorded-think|synthetic-approval|synthetic-autoreview  &speed=2  &autoplay=0  &theme=dark|light -->
+<div id="app"></div>
+<script src="vendor/marked.min.js"></script>
+<script src="vendor/highlight.min.js"></script>
+<script src="dev-bridge.js"></script>
+<script src="filelinks.js"></script>
+<script src="dropdata.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
