@@ -1,8 +1,8 @@
 {
   "name": "codex-panel",
-  "displayName": "Codex Panel",
-  "description": "OpenAI Codex chat panel for VS Code (secondary side bar): same panel as the Codex Panel plugin for Eclipse.",
-  "version": "0.3.0",
+  "displayName": "Codexter (Codex Subscription Chat with better UI)",
+  "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
+  "version": "0.4.0",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -21,7 +21,7 @@
       "activitybar": [
         {
           "id": "codexPanel",
-          "title": "Codex",
+          "title": "Codexter",
           "icon": "media/codex.svg",
           "when": "codexPanel.noSecondarySidebar"
         }
@@ -29,7 +29,7 @@
       "secondarySidebar": [
         {
           "id": "codexPanelSecondary",
-          "title": "Codex",
+          "title": "Codexter",
           "icon": "media/codex.svg",
           "when": "!codexPanel.noSecondarySidebar"
         }
@@ -40,9 +40,9 @@
         {
           "type": "webview",
           "id": "codexPanel.chat",
-          "name": "Codex",
+          "name": "Chat",
           "when": "codexPanel.noSecondarySidebar",
-          "initialSize": 4
+          "initialSize": 12
         },
         {
           "id": "codexPanel.drop",
@@ -55,9 +55,9 @@
         {
           "type": "webview",
           "id": "codexPanel.chatSecondary",
-          "name": "Codex",
+          "name": "Chat",
           "when": "!codexPanel.noSecondarySidebar",
-          "initialSize": 4
+          "initialSize": 12
         },
         {
           "id": "codexPanel.dropSecondary",
@@ -70,42 +70,37 @@
     "commands": [
       {
         "command": "codexPanel.open",
-        "title": "Codex: Open Codex panel"
+        "title": "Codexter: Open panel"
       },
       {
         "command": "codexPanel.newChat",
-        "title": "Codex: New chat",
+        "title": "Codexter: New chat",
         "icon": "$(add)"
       },
       {
         "command": "codexPanel.addToChat",
-        "title": "Add to Codex chat"
+        "title": "Add to Codexter chat"
       },
       {
         "command": "codexPanel.askSelection",
-        "title": "Codex: Ask about selection"
+        "title": "Codexter: Ask about selection"
       },
       {
         "command": "codexPanel.explainSelection",
-        "title": "Codex: Explain selection"
+        "title": "Codexter: Explain selection"
       },
       {
         "command": "codexPanel.fixSelection",
-        "title": "Codex: Fix selection"
+        "title": "Codexter: Fix selection"
       },
       {
         "command": "codexPanel.openSettings",
-        "title": "Codex: Open settings",
+        "title": "Codexter: Open settings",
         "icon": "$(gear)"
       },
       {
         "command": "codexPanel.checkUpdates",
-        "title": "Codex: Check for Codex updates"
-      },
-      {
-        "command": "codexPanel.removeAttachment",
-        "title": "Remove from chat",
-        "icon": "$(close)"
+        "title": "Codexter: Check for Codex updates"
       }
     ],
     "keybindings": [
@@ -172,22 +167,11 @@
         {
           "command": "codexPanel.fixSelection",
           "when": "editorHasSelection"
-        },
-        {
-          "command": "codexPanel.removeAttachment",
-          "when": "false"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "codexPanel.removeAttachment",
-          "when": "view == codexPanel.drop || view == codexPanel.dropSecondary",
-          "group": "inline"
         }
       ]
     },
     "configuration": {
-      "title": "Codex Panel",
+      "title": "Codexter",
       "properties": {
         "codexPanel.codexPath": {
           "type": "string",
@@ -221,7 +205,7 @@
         "codexPanel.defaultModel": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Model a new chat starts with. Empty = the Codex default. Can also be changed with the gear in the Codex panel."
+          "markdownDescription": "Model a new chat starts with. Empty = the Codex default. Can also be changed with the gear in the Codexter panel."
         },
         "codexPanel.defaultReasoningEffort": {
           "type": "string",
@@ -252,7 +236,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Models that are hidden from the model picker (ids as Codex lists them). Can also be changed with the gear in the Codex panel."
+          "markdownDescription": "Models that are hidden from the model picker (ids as Codex lists them). Can also be changed with the gear in the Codexter panel."
         }
       }
     }

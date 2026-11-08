@@ -1,8 +1,10 @@
-# Codex Panel for VS Code
+# Codexter (Codex Panel for VS Code)
+
+Codexter is the visible name since 0.4.0. The extension id stays `codexpanel.codex-panel`, the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
 
 A Codex chat panel for VS Code (it started as a port of the Codex Panel plugin for Eclipse; the two are separate projects now): streaming answers, reasoning
 accordion, command and file-change cards, approval buttons, plan checklist, diffs, clickable file links, history search across all projects,
-`@` file mentions, drag and drop, "Add to Codex chat", goals, plan mode, images and plugins. It talks to `codex app-server` (JSON-RPC over stdio).
+`@` file mentions, drag and drop, "Add to Codexter chat", goals, plan mode, images and plugins. It talks to `codex app-server` (JSON-RPC over stdio).
 The page lives in `web/` (`app.js`, `app.css`, `filelinks.js`, `dropdata.js`); design notes are in `CONCEPT.md`.
 
 Codex itself is downloaded from the npm registry and kept up to date by the extension, into `%LOCALAPPDATA%\CodexPanel\codex`
@@ -15,19 +17,19 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 ## Usage
 
 - **Ctrl+Alt+C** opens the panel (secondary side bar on VS Code 1.106+, activity bar before that). Enter sends, Shift+Enter inserts a newline.
-- Context chip above the input: the active editor file. Right-click selected code > **Codex: Ask / Explain / Fix selection**.
+- Context chip above the input: the active editor file. Right-click selected code > **Codexter: Ask / Explain / Fix selection**.
 - **@** in the input picks files and folders of the chat's folder (recently opened files first, then ranked matches).
-- Drag files, folders or editor tabs onto **Attach files** (a small tree view under the chat: VS Code never passes its own drags to a webview);
-  files from the Windows Explorer can also be dropped onto the chat itself.
-  Right-click > **Add to Codex chat** (Explorer, also multi-select and folders; editor; editor tab) always works.
+- Drag files, folders or editor tabs onto the chat while holding **Shift** (VS Code blocks drags over webviews without Shift); files from the Windows Explorer drop without Shift.
+  **Attach files** (a tiny area under the chat) is a fallback drop target without Shift.
+  Right-click > **Add to Codexter chat** (Explorer, also multi-select and folders; editor; editor tab) always works.
 - History (clock button) lists chats of all projects; type to search, pick a project to filter; archive, unarchive and delete chats.
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
-- Commands: Codex: Open Codex panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codex chat.
+- Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
 - Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `hiddenModels`.
   Model, reasoning effort and permissions (Ask for approval / Approve for me / Full access / Custom) are chosen in the panel and remembered per user (globalState).
 - **+** button in the input: files and folders, goal, plan mode, sketch (and pasted images), installed plugins.
 - Proxy: `http.proxy` / `http.proxyStrictSSL` (or `HTTPS_PROXY`) for the download; the proxy is handed to the Codex process as well.
-- Log: Output > **Codex Panel**.
+- Log: Output > **Codexter**.
 
 ## Build (developers)
 
@@ -36,7 +38,7 @@ npm install
 npm run compile     # copies web\ into media\web, then tsc -> out\
 npm test            # node:test, no VS Code needed
 npm run smoke       # real codex app-server, read-only (account/read, model/list, thread/list); creates, archives and deletes nothing
-npm run package     # dist\codex-panel-0.3.0.vsix
+npm run package     # dist\codex-panel-0.4.0.vsix
 ```
 
 Run it from source: open this folder in VS Code and press F5 (Extension Development Host).
@@ -47,5 +49,5 @@ For an isolated test instance use `code --user-data-dir <tmp> --extensions-dir <
 - `src/core/` no vscode imports: `jsonrpc`, `appServer`, `locator`, `installer`, `tar`, `http` (proxy tunnelling), `fileLinks`, `fileIndex`, `threadRows`,
   `droppedPaths`, `unifiedDiff`. Ports of the Java classes of the same name.
 - `src/session.ts`, `src/updater.ts` (no vscode imports): port of `CodexSession` / `CodexUpdater`.
-- `src/extension.ts`, `panel.ts` (webview view), `dropTarget.ts` (Attach files tree), `workspace.ts`, `mentions.ts`, `diff.ts`, `proxy.ts`: the VS Code glue.
+- `src/extension.ts`, `panel.ts` (webview view), `dropTarget.ts` (Attach files drop target), `workspace.ts`, `mentions.ts`, `diff.ts`, `proxy.ts`: the VS Code glue.
 - `media/vscode-bridge.js`, `media/vscode.css`, `media/codex.svg`; `media/web/` is generated by `scripts/sync-web.mjs` (do not edit).

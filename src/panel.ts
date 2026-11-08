@@ -65,7 +65,6 @@ const intOf = (o: Json, k: string): number => (o && typeof o[k] === 'number' ? M
 const orEmpty = (s: string | null | undefined): string => s ?? '';
 
 /** One attached file or folder of the page's composer. */
-export interface ChipItem { path: string; name: string; folder: boolean }
 
 export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private view?: vscode.WebviewView;
@@ -217,17 +216,9 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     }
   }
 
-  /** The view title gear: the page shows its own settings dialog. */
+  /** The view title gear: the page toggles its own settings view. */
   showSettings(): void {
     this.post({ kind: 'showSettings' });
-  }
-
-  /** The page's attached chips changed; the drop target tree lists them. */
-  onChips: (items: ChipItem[]) => void = () => {};
-
-  /** Removes an attached path from the page's chips (drop target tree). */
-  removePath(p: string): void {
-    this.post({ kind: 'context', action: 'removePath', path: p });
   }
 
   private postActiveFile(ed: vscode.TextEditor | undefined): void {
@@ -360,11 +351,6 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         if ((a === 'archive' || a === 'unarchive' || a === 'delete') && id) this.session.threadAction(a, id);
         break;
       }
-      case 'chips':
-        this.onChips(Array.isArray(m.items)
-          ? (m.items as Json[]).filter((i) => i && typeof i.path === 'string').map((i) => ({ path: i.path as string, name: str(i, 'name') ?? '', folder: i.folder === true }))
-          : []);
-        break;
       case 'retry':
         this.session.reconnect();
         break;
@@ -404,7 +390,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.session.listThreads(intOf(m, 'requestId'), orEmpty(str(m, 'query')), cwds, m.manual === true, str(m, 'cursor'), m.projects === true, m.archived === true);
   }
 
-  /** Debug aid for drops: what the webview received (formats and the start of each), written to the "Codex Panel" output channel. */
+  /** Debug aid for drops: what the webview received (formats and the start of each), written to the "Codexter" output channel. */
   private logDrop(info: unknown): void {
     const i = (info && typeof info === 'object' ? info : {}) as Json;
     const types: string[] = Array.isArray(i.types) ? i.types.map(String) : [];
@@ -427,14 +413,14 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     if (process.platform !== 'darwin') {
       const pick = await vscode.window.showQuickPick(
         [{ label: '$(file) Files', files: true }, { label: '$(folder) Folders', files: false }],
-        { placeHolder: 'Add to the Codex chat', title: 'Files and folders' });
+        { placeHolder: 'Add to the Codexter chat', title: 'Files and folders' });
       if (!pick) return;
       files = pick.files;
       folders = !pick.files;
     }
     const uris = await vscode.window.showOpenDialog({
       canSelectMany: true, canSelectFiles: files, canSelectFolders: folders,
-      defaultUri: vscode.Uri.file(base), openLabel: 'Add to chat', title: 'Add files and folders to the Codex chat',
+      defaultUri: vscode.Uri.file(base), openLabel: 'Add to chat', title: 'Add files and folders to the Codexter chat',
     });
     if (!uris || uris.length === 0) return;
     this.handleDrop(uris.filter((u) => u.scheme === 'file').map((u) => fsPathOf(u)));
@@ -445,7 +431,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
   }
 
   /**
-   * The one entry point for every way a file reaches the chat from outside the page: a drop on the panel, the "Add to Codex chat"
+   * The one entry point for every way a file reaches the chat from outside the page: a drop on the panel, the "Add to Codexter chat"
    * commands, a pasted path. Accepts strings with one path or file: URI per line. Folders become folder chips.
    */
   handleDrop(candidates: unknown[]): void {
@@ -471,7 +457,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.post({ kind: 'focus' });
   }
 
-  /** "Add to Codex chat" from a menu: files and folders of the Explorer, or the file of the editor. */
+  /** "Add to Codexter chat" from a menu: files and folders of the Explorer, or the file of the editor. */
   addFiles(paths: string[]): void {
     this.handleDrop(paths);
   }
@@ -511,7 +497,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         const p = relative(str(c, 'path'), cwd);
         if (c.kind === 'selection') {
           prompt += 'Selected code in ' + p + ' (lines ' + c.startLine + '-' + c.endLine + '):\n```\n' + orEmpty(str(c, 'text')) + '\n```\n\n';
-        } else if (c.kind === 'mention') { // "@" picks, drops and "Add to Codex chat": by path only, like the active file
+        } else if (c.kind === 'mention') { // "@" picks, drops and "Add to Codexter chat": by path only, like the active file
           referenced.push(p + (c.folder === true ? ' (folder)' : ''));
         } else {
           prompt += 'Active file: ' + p + '\n\n';

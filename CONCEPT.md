@@ -1,4 +1,6 @@
-# Codex Panel for VS Code: concept
+# Codexter (Codex Panel for VS Code): concept
+
+Visible name since 0.4.0: Codexter. The extension id stays `codexpanel.codex-panel`, the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
 
 Goal: a Codex chat panel for VS Code. It started as a one-to-one port of the Eclipse plugin (`..\codex-panel`); the Java code is still
 a useful reference for the core (session, installer, history), but the two are separate projects now and VS Code gets its own features.
@@ -33,13 +35,13 @@ a useful reference for the core (session, installer, history), but the two are s
 | file links (`openFile`) | `vscode.window.showTextDocument` at line/column; paths resolved like `FileLinks.java` |
 | `CompareHelper` diffs | `vscode.diff` with virtual documents (`codexpanel-diff:` scheme) built from the unified diff like `UnifiedDiff.java` |
 | `MentionSearch` / `FileIndex` | `vscode.workspace.findFiles` + `FileSystemWatcher`; ranking ported from `FileIndex.java` |
-| `PanelDrop` (SWT overlay) | two drop targets. Drags from outside VS Code (Windows Explorer) reach the webview: the page reads them with `dropdata.js` and posts `dropText`. Drags from inside VS Code (editor tabs, VS Code Explorer) never reach a webview view (VS Code blocks the iframe during a workbench drag), so a small native tree view **Attach files** (`codexPanel.drop` / `codexPanel.dropSecondary`, `TreeDragAndDropController`) sits under the chat in both view containers; it reads `text/uri-list`, `application/vnd.code.uri-list`, `resourceurls`, `codeeditors`, `files` and lists the attached chips (mirrored from the page). Both paths end in `handleDrop`, resolved like `DroppedPaths.java` |
-| "Add to Codex chat" menu, `AskSelectionHandler` | commands in `explorer/context`, `editor/context`, `editor/title/context` |
+| `PanelDrop` (SWT overlay) | two drop targets. Drags from outside VS Code (Windows Explorer) reach the webview: the page reads them with `dropdata.js` and posts `dropText`. Drags from inside VS Code (editor tabs, VS Code Explorer) never reach a webview view (VS Code blocks the iframe during a workbench drag), so (0.4.0: Shift+drop on the chat is the main way, VS Code lets Shift-drags through) a tiny native tree view **Attach files** (`codexPanel.drop` / `codexPanel.dropSecondary`, `TreeDragAndDropController`) sits under the chat in both view containers; it reads `text/uri-list`, `application/vnd.code.uri-list`, `resourceurls`, `codeeditors`, `files` and shows no items (a fallback target only). Both paths end in `handleDrop`, resolved like `DroppedPaths.java` |
+| "Add to Codexter chat" menu, `AskSelectionHandler` | commands in `explorer/context`, `editor/context`, `editor/title/context` |
 | `Ctrl+Alt+C` | focus the Codex view |
 | Preferences page (`Prefs`) | `contributes.configuration` `codexPanel.*` (codex path, source managed/own, update interval days, autosave, and since 0.3.0 `defaultModel`, `defaultReasoningEffort`, `hiddenModels`); the panel's gear opens an in-panel settings view for the last three ("More settings…" opens VS Code's settings); the current model/effort/permissions are kept in `globalState` (0.2.0: permissions replaces mode + approvals, migrated) |
 | — (VS Code only) | history actions: archive, unarchive, delete (`thread/archive`, `thread/unarchive`, `thread/delete`), "Show archived" (`thread/list archived:true`) |
 | `EclipseProxy` | VS Code `http.proxy` / `http.proxyStrictSSL` and `HTTPS_PROXY` env for the download; passed on to the Codex process like the Java code does |
-| Eclipse log | `LogOutputChannel` "Codex Panel" |
+| Eclipse log | `LogOutputChannel` "Codexter" |
 | sign-in | `account/login/start` URL opened with `vscode.env.openExternal` |
 
 ## Tests

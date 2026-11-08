@@ -6,9 +6,9 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 
 ## Installation
 
-1. Die Datei `codex-panel-0.3.0.vsix` besorgen.
+1. Die Datei `codex-panel-0.4.0.vsix` besorgen.
 2. In VS Code die Erweiterungen öffnen, oben rechts im Menü **...** auf **Aus VSIX installieren...** (Install from VSIX...) klicken und die Datei wählen.
-   (Oder im Terminal: `code --install-extension codex-panel-0.3.0.vsix`.) Ein Update geht genauso.
+   (Oder im Terminal: `code --install-extension codex-panel-0.4.0.vsix`.) Ein Update geht genauso.
 3. Panel öffnen mit **Strg+Alt+C**. Es liegt in der **sekundären Seitenleiste** rechts, neben anderen Chats wie Copilot
    (VS Code 1.106 oder neuer; ältere Versionen zeigen stattdessen ein **Codex**-Symbol in der Aktivitätsleiste). Du kannst die Ansicht auch woandershin ziehen.
 4. Auf **Sign in with ChatGPT** klicken. Beim ersten Start lädt die Erweiterung auch Codex herunter (ca. 170 MB).
@@ -18,8 +18,8 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 
 - **Updates laufen automatisch.** Etwa einmal pro Woche prüft die Erweiterung die offizielle npm-Registry auf eine neue
   Codex-Version und installiert sie im Hintergrund. Sie wird bei **New chat** oder nach dem Neuladen des Fensters
-  aktiv, nie mitten in einer Antwort. Befehlspalette > **Codex: Check for Codex updates** prüft sofort.
-  Intervall oder eine eigene Codex-Installation stellst du unter Einstellungen > Codex Panel ein.
+  aktiv, nie mitten in einer Antwort. Befehlspalette > **Codexter: Check for Codex updates** prüft sofort.
+  Intervall oder eine eigene Codex-Installation stellst du unter Einstellungen > Codexter ein.
 - **Dateilinks sind klickbar.** Ein Link in der Antwort öffnet die Datei an der richtigen Zeile. Links auf Ordner markieren den Ordner im Explorer.
 - **Der Verlauf findet alte Chats.** Der Uhr-Knopf zeigt die Chats aller Projekte, der Projektname steht vorn.
   Einfach tippen, um zu suchen, oder in der Liste ein Projekt wählen; die Auswahl bleibt bis zum Schließen des Fensters erhalten.
@@ -28,14 +28,15 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 - **Einstellungen (Zahnrad im Panel):** *Default model* und *Default reasoning effort*, mit denen ein neuer Chat startet, und welche *Models*
   in der Modellliste unter dem Eingabefeld erscheinen (mindestens eines bleibt). *More settings…* öffnet die VS-Code-Einstellungen der Erweiterung.
 - **Dateien zum Chat hinzufügen.** **@** in der Nachricht tippen und eine Datei wählen, oder den **+**-Knopf > *Files and folders* nutzen.
-  Oder Dateien, Ordner oder Editor-Tabs aus VS Code auf **Attach files** ziehen, den kleinen Bereich unter dem Chat (VS Code lässt Ziehen aus dem
+  Oder Dateien, Ordner oder Editor-Tabs aus VS Code bei gedrückter **Umschalttaste (Shift)** auf den Chat ziehen (VS Code blockiert Ziehen über dem Chat ohne Shift),
+  oder ohne Shift auf **Attach files**, den winzigen Bereich unter dem Chat. (VS Code lässt Ziehen aus dem
   eigenen Explorer oder von Tabs nicht bis in den Chat selbst). Dateien aus dem Windows-Explorer kannst du direkt auf den Chat ziehen.
-  Sie erscheinen als Chips über dem Eingabefeld und in der Liste unter Attach files (× entfernt eine).
-  Passiert beim Ablegen nichts, bitte Ansicht > Ausgabe > **Codex Panel** öffnen: Jedes Ablegen schreibt die mitgelieferten Formate (`[drop] ...`-Zeilen); schick sie uns.
-- **Add to Codex chat:** Dateien oder Ordner im Explorer (auch mehrere), im Editor oder auf einem Editor-Tab mit Rechtsklick >
-  **Add to Codex chat**. Das hilft, falls Ziehen bei dir nicht klappt.
+  Sie erscheinen als Chips über dem Eingabefeld.
+  Passiert beim Ablegen nichts, bitte Ansicht > Ausgabe > **Codexter** öffnen: Jedes Ablegen schreibt die mitgelieferten Formate (`[drop] ...`-Zeilen); schick sie uns.
+- **Add to Codexter chat:** Dateien oder Ordner im Explorer (auch mehrere), im Editor oder auf einem Editor-Tab mit Rechtsklick >
+  **Add to Codexter chat**. Das hilft, falls Ziehen bei dir nicht klappt.
 - **Ein Chat gehört zu einem Ordner.** Wechselst du zu einer Datei aus einem anderen Workspace-Ordner, bietet ein Hinweis **New chat there** an.
-- **Kontextmenü im Editor:** Code markieren > Rechtsklick > **Codex: Ask / Explain / Fix selection**.
+- **Kontextmenü im Editor:** Code markieren > Rechtsklick > **Codexter: Ask / Explain / Fix selection**.
 - **Berechtigungen (eine Liste unter dem Eingabefeld).** *Ask for approval* (Codex fragt, bevor es Dateien außerhalb des Projekts ändert oder das
   Internet nutzt), *Approve for me* (Codex fragt nur bei Aktionen, die es für potenziell unsicher hält), *Full access* (keine Sandbox, keine Fragen;
   in Warnfarbe) oder *Custom (config.toml)* (das Panel sendet nichts, Codex nimmt deine `config.toml`). Alte Einstellungen werden umgestellt:
@@ -49,14 +50,14 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 - Codex liegt einmal pro Windows-Benutzer in `%LOCALAPPDATA%\CodexPanel` (ca. 500 MB). Das Eclipse-Plugin nutzt denselben Ordner,
   ein von einem der beiden geladenes Codex gilt also für beide.
 - Firmen-Proxy: Der Download nutzt die VS-Code-Einstellung `http.proxy` (oder `HTTPS_PROXY`), und Codex bekommt sie ebenfalls.
-- Protokoll: Ansicht > Ausgabe > **Codex Panel**.
+- Protokoll: Ansicht > Ausgabe > **Codexter**.
 
 ## Probleme
 
 | Problem | Lösung |
 |---|---|
-| Download von Codex schlägt fehl | `http.proxy` in den Einstellungen prüfen (`https://registry.npmjs.org` muss erreichbar sein). Oder Codex selbst installieren, unter Codex Panel > Codex Source „own“ wählen und den Pfad zu `codex.exe` eintragen. |
-| Abgelegte Datei bewirkt nichts | Auf **Attach files** unter dem Chat ziehen, oder **Add to Codex chat** / `@` benutzen. |
+| Download von Codex schlägt fehl | `http.proxy` in den Einstellungen prüfen (`https://registry.npmjs.org` muss erreichbar sein). Oder Codex selbst installieren, unter Codexter > Codex Source „own“ wählen und den Pfad zu `codex.exe` eintragen. |
+| Abgelegte Datei bewirkt nichts | Bei gedrückter Shift-Taste auf den Chat ziehen, oder **Add to Codexter chat** / `@` benutzen. |
 | Anmeldung wird nicht fertig | Auf Cancel klicken und neu anmelden. Port 1455 auf localhost muss frei sein. |
-| Panel ist leer | **Developer: Reload Window** ausführen; den Ausgabekanal **Codex Panel** ansehen. |
-| Sonstiges | Die letzten Zeilen des Ausgabekanals **Codex Panel** schicken. |
+| Panel ist leer | **Developer: Reload Window** ausführen; den Ausgabekanal **Codexter** ansehen. |
+| Sonstiges | Die letzten Zeilen des Ausgabekanals **Codexter** schicken. |

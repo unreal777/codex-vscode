@@ -1,12 +1,12 @@
-// Codex Panel for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
+// Codexter (Codex Panel) for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { DiffProvider } from './diff';
-import { DROP_VIEW_IDS, DropTarget, REMOVE_COMMAND } from './dropTarget';
+import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
 import { MentionSearch } from './mentions';
 import { supportsSecondarySidebar } from './core/vscodeVersion';
-import { ChipItem, CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
+import { CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
 import { processProxyEnv, proxyConfig } from './proxy';
 import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
@@ -31,7 +31,7 @@ function codexBase(ctx: vscode.ExtensionContext): string {
 }
 
 export function activate(ctx: vscode.ExtensionContext): void {
-  const out = vscode.window.createOutputChannel('Codex Panel', { log: true });
+  const out = vscode.window.createOutputChannel('Codexter', { log: true });
   const log = (line: string) => {
     if (line.startsWith('[warn] ')) out.warn(line.substring(7));
     else if (line.startsWith('[error] ')) out.error(line.substring(8));
@@ -83,13 +83,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
   // Native drop target: workbench drags (editor tabs, VS Code Explorer) never reach the webview, but they reach a tree view.
   const drop = new DropTarget((found) => { void showView().then((p) => p.handleDrop(found)); }, log);
-  providers.forEach((p) => { p.onChips = (items) => { if (p === current()) drop.setItems(items); }; });
 
   ctx.subscriptions.push(
     out,
     drop,
     ...DROP_VIEW_IDS.map((id) => drop.createView(id)),
-    vscode.commands.registerCommand(REMOVE_COMMAND, (el?: ChipItem) => { if (el?.path) current().removePath(el.path); }),
     mentions,
     diffs,
     ...providers,
@@ -135,7 +133,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
       if ((e.affectsConfiguration('codexPanel.codexPath') || e.affectsConfiguration('codexPanel.codexSource')) && !s.isRunning) s.reconnect();
     }),
   );
-  log('Codex Panel ' + host.version + ' activated, managed Codex folder: ' + host.codexBase);
+  log('Codexter ' + host.version + ' activated, managed Codex folder: ' + host.codexBase);
 }
 
 export function deactivate(): void {

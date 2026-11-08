@@ -15,3 +15,5 @@ html:root.vscode textarea, html:root.vscode input, html:root.vscode select { fon
 html:root.vscode ::selection { background: var(--vscode-editor-selectionBackground); }
 /* VS Code's default webview styles pad the body by about 20px on each side: the page fills the view like in Eclipse */
 html:root.vscode body { margin: 0; padding: 0; }
+/* the view title already has + (new chat) and the gear (settings): hide the page's own copies in VS Code (kept in the browser dev page) */
+html:root.vscode #btn-new, html:root.vscode #btn-set { display: none; }

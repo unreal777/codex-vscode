@@ -1,4 +1,4 @@
-/* Codex Panel UI (vanilla JS, no build step).
+/* Codexter UI (vanilla JS, no build step).
  *   Java -> JS : window.codexUi.receive([event, ...])
  *   JS -> Java : window.__codexPost(JSON.stringify({type, ...}))
  * Events: {kind: init|openProjects|status|models|settings|showSettings|threads|threadAction|historyProjects|mentions|thread|newChat|notification|serverRequest|rateLimits|context|error|idle|focus|insertText|theme}
@@ -30,10 +30,10 @@
     mentionNone: 'No matching files',
     mentionTitle: 'Files of the project (type @ in the message)',
     dropHint: 'Drop files here to add them as context',
-    dropNoPaths: 'The browser does not tell Eclipse where dropped files are. Use @ in the input, or right-click a file > Add to Codex chat.',
+    dropNoPaths: 'The browser does not tell Eclipse where dropped files are. Use @ in the input, or right-click a file > Add to Codexter chat.',
     // VS Code only gives a webview the dragged files when Shift is held; the panel itself reads the drop there
     dropHintVscode: 'Drop files here to add them as context',
-    dropNoPathsVscode: 'No file path in the drop. Drop files and editor tabs on "Attach files" below the chat, use @ in the input, or right-click a file > Add to Codex chat.',
+    dropNoPathsVscode: 'No file path in the drop. Hold Shift while dropping files or editor tabs on the chat, use @ in the input, or right-click a file > Add to Codexter chat.',
     removeChip: 'Remove',
     emptyTitle: 'Ask Codex about your project',
     emptyHint: 'Enter to send, Shift+Enter for a new line.',
@@ -893,16 +893,6 @@
       box.append(h('span', { class: 'chip imgchip', title: im.name }, h('img', { src: im.url, alt: '' }), h('span', { class: 'n', text: im.name }), x));
     });
     box.classList.toggle('hidden', !state.contexts.length && !state.images.length);
-    postChips();
-  }
-  // The host mirrors the attached files and folders in a native tree view: tell it whenever they change.
-  let lastChips = '[]';
-  function postChips() {
-    const items = state.contexts.filter((c) => c.kind === 'mention' && c.path).map((c) => ({ path: c.path, name: c.name || basename(c.path), folder: !!c.folder }));
-    const key = JSON.stringify(items);
-    if (key === lastChips) return;
-    lastChips = key;
-    bridge.post({ type: 'chips', items });
   }
 
   // ---------- footer ----------
@@ -1409,7 +1399,7 @@
       closePops(false);
       renderSettings();
       $('#set-back').focus();
-    } else if (!quiet) gearBtn.focus();
+    } else if (!quiet) (gearBtn.offsetParent !== null ? gearBtn : input).focus();
   }
   $('#set-back').addEventListener('click', () => toggleSettings(false));
   setBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); toggleSettings(false); } });
@@ -1849,7 +1839,7 @@
   });
   document.addEventListener('dragleave', () => { if (!pageDrag && --dragDepth <= 0) setDragState(false); });
   // VS Code: the page gets the drop itself. Explorer items and editor tabs arrive in several formats (see dropdata.js); the host logs
-  // what arrived ("dropDebug") so a drop that yields nothing can be diagnosed from the "Codex Panel" output channel.
+  // what arrived ("dropDebug") so a drop that yields nothing can be diagnosed from the "Codexter" output channel.
   document.addEventListener('drop', (e) => {
     if (pageDrag) return;
     e.preventDefault();
@@ -2095,7 +2085,7 @@
         renderSettings();
         break;
       }
-      case 'showSettings': toggleSettings(true); break;
+      case 'showSettings': toggleSettings(); break;
       case 'prefs': Object.assign(state.prefs, ev.prefs); fillModels(); fillPerm(); break;
       case 'plugins': onPlugins(ev); break;
       case 'goal': state.goal = ev.goal || null; renderGoal(); break;
@@ -2135,9 +2125,6 @@
           state.contexts.push(Object.assign({ kind: 'selection' }, ev.item));
         } else if (ev.action === 'addPaths') {
           (ev.items || []).forEach(addContextFile);
-        } else if (ev.action === 'removePath') {
-          const k = normPath(ev.path);
-          state.contexts = state.contexts.filter((c) => !(c.kind === 'mention' && normPath(c.path) === k));
         } else if (ev.action === 'clear') state.contexts = [];
         syncActive(); break;
       }

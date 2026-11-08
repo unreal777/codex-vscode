@@ -264,7 +264,7 @@ export class CodexSession {
       }
       this.client = c;
       await c.start();
-      await withTimeout(c.initialize('codex-panel-vscode', 'Codex Panel for VS Code', this.host.version), 90_000, 'initialize');
+      await withTimeout(c.initialize('codex-panel-vscode', 'Codexter for VS Code', this.host.version), 90_000, 'initialize');
       this.runningVersion = codex.version;
       this.connected = true;
       this.status('ready', 'Connected (' + codex.source + ')');
@@ -281,10 +281,10 @@ export class CodexSession {
       if (e instanceof Reported) {
         this.status('error', e.message);
         this.error('Could not download Codex', e.message +
-          '\nCheck the proxy settings (VS Code setting "http.proxy"), or point the Codex Panel settings to your own codex.exe.', true);
+          '\nCheck the proxy settings (VS Code setting "http.proxy"), or point the Codexter settings to your own codex.exe.', true);
       } else if (e instanceof NotFoundError) {
         this.status('error', 'codex not found');
-        this.error('codex was not found', e.message + '\nSet the path to codex.exe in the Codex Panel settings.', true);
+        this.error('codex was not found', e.message + '\nSet the path to codex.exe in the Codexter settings.', true);
       } else {
         this.status('error', describe(e));
         this.error('Could not start Codex', describe(e) + this.lastLog(), true);

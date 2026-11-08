@@ -320,7 +320,6 @@
       settings = { defaultModel: m.defaultModel || '', defaultReasoningEffort: m.defaultReasoningEffort || '', hiddenModels: m.hiddenModels || [] };
       setTimeout(() => window.codexUi.receive([{ kind: 'settings', settings }]), 60);
     },
-    chips(m) { console.log('[dev] chips', JSON.stringify(m.items)); },
     mentionSearch(m) {
       const items = rankFiles(m.query || '', 40).map((f) => ({
         path: CWD + '\\' + f.path.replace(/\//g, '\\'), name: nameOf(f.path), dir: f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '', folder: f.folder, project: 'shop'

@@ -1,16 +1,26 @@
-# Codex Panel for VS Code: handoff
+# Codexter (Codex Panel for VS Code): handoff
+
+Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.codex-panel`, the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
 
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.3.0)
+## Status (0.4.0)
 
-- 0.3.0 = own web UI (`web/`) + history archive/delete + native drop target + in-panel settings. `npm run compile` 0 errors, `npm test` 46 tests,
-  `npm run smoke` (read-only, real managed Codex) OK, `npm run package` gives `dist\codex-panel-0.3.0.vsix` (~181 KB).
-  Verified live in the isolated VS Code (see "0.3.0" below). The user's own VS Code still has 0.2.0 until they agree to install 0.3.0.
+- 0.4.0 = 0.3.0 (own web UI, history archive/delete, drop target, in-panel settings) + the Codexter rename and UI cleanup below.
+  `npm run compile` 0 errors, `npm test` 46 tests, `npm run package` gives `dist\codex-panel-0.4.0.vsix`. 0.3.0 was verified live in the
+  isolated VS Code; 0.4.0 is tested by the user in their own VS Code (they asked to test manually instead of the isolated instance).
+- Git: this folder is its own repository (branch `main`), separate from the Eclipse plugin.
+- Open: does Shift + drag of editor tabs / VS Code Explorer items onto the chat work with a real mouse (synthetic CDP drags could not prove it)?
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.4.0
+
+- Rename (visible names only): package.json titles `Codexter: ...`, "Add to Codexter chat", output channel "Codexter".
+- The page's `#btn-new` / `#btn-set` are hidden in VS Code (`media/vscode.css`; the view title has + and a gear). `showSettings` TOGGLES the settings view; closing it focuses the gear if visible, else the input.
+- Drops: VS Code blocks webview views during workbench drags unless Shift is held (webview iframe gets pointer-events:none on drag/dragover without shiftKey), so Shift+drop on the chat is the main way. The `Attach files` tree (`dropTarget.ts`) shows no items any more (message only), `initialSize` 1 vs chat 12. Chip mirroring (`chips` message, `onChips`, `removeAttachment`, page `removePath`) was removed.
 
 ## 0.3.0
 
@@ -74,7 +84,7 @@ never edit that folder from here (its Java core is still a useful reference for 
   add to chat, new chat, ask/explain/fix, settings) goes through `showView()`/`current()`. `post()` drops events while a provider has no view.
 - **Drops.** The page's `document` listeners cover the whole view and call `preventDefault` on dragenter/dragover for every type. Official extension (read only): its webview does not parse VS Code's
   CodeEditors/ResourceURLs formats at all; it only uses `dataTransfer.files` (File objects, plus Electron `getPathForFile`) and text/uri-list in libraries (ProseMirror, a URL-list helper). So our parsing of
-  CodeEditors etc. goes beyond it. The debug output of the next real test: View > Output > "Codex Panel", lines `[drop] dragenter, formats: ...`, `[drop] dataTransfer types ...`, `[drop]   <type> = "<first 300 chars>"`, `[drop] files (...)`.
+  CodeEditors etc. goes beyond it. The debug output of the next real test: View > Output > "Codexter", lines `[drop] dragenter, formats: ...`, `[drop] dataTransfer types ...`, `[drop]   <type> = "<first 300 chars>"`, `[drop] files (...)`.
 - **"+" > Files and folders** (`pickFiles`): `showOpenDialog` can not combine files and folders on Windows/Linux (falls back to folders), so there a quick pick "Files / Folders" comes first; macOS gets one dialog with both.
 - Prefs: `globalState` `codexPanel.permissions` (`Prefs.permissions()` migrates the old `mode`/`approvals` keys when it was never set; they are not deleted).
 - Images folder for the `localImage` fallback: `<globalStorage>/images`.
