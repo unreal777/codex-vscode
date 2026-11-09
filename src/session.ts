@@ -10,7 +10,7 @@ import { Json, RpcError } from './core/jsonrpc';
 import { locate, Located, NotFoundError } from './core/locator';
 import { permissionSettings, PermissionSettings } from './core/permissions';
 import { mapPlugins } from './core/plugins';
-import { cwdKey, expandCwds, isListable, str, threadMatches, threadTitle } from './core/threadRows';
+import { cwdKey, expandCwds, isListable, str, threadMatches, threadPreview, threadTitle } from './core/threadRows';
 import { normalizeDrive } from './core/winPath';
 import { CodexUpdater, errorMessage } from './updater';
 
@@ -712,7 +712,9 @@ export class CodexSession {
               projectByCwd.set(key, project);
             }
             const title = threadTitle(str(thread, 'name'), str(thread, 'preview'));
-            if (threadMatches(q, title, project)) rows.push({ id: thread.id, title, updatedAt: thread.updatedAt ?? null, cwd, project });
+            if (threadMatches(q, title, project)) {
+              rows.push({ id: thread.id, title, preview: threadPreview(str(thread, 'preview')), updatedAt: thread.updatedAt ?? null, cwd, project });
+            }
           }
           next = str(page, 'nextCursor');
         } while (next !== null && rows.length < HISTORY_WANTED && pages < HISTORY_MAX_SCAN_PAGES);

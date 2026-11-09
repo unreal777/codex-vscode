@@ -10,7 +10,7 @@ import { resolveDropped, MAX_ITEMS, toPath } from '../core/droppedPaths';
 import { FileIndex, FileIndexBuilder, isBinaryFile, isIgnoredFolder, MAX_ENTRIES, scanFolder } from '../core/fileIndex';
 import { parseFileLink, resolveFileLink } from '../core/fileLinks';
 import { RpcError } from '../core/jsonrpc';
-import { cwdKey, expandCwds, folderName, isListable, threadMatches, threadTitle } from '../core/threadRows';
+import { cwdKey, expandCwds, folderName, isListable, MAX_PREVIEW, threadMatches, threadPreview, threadTitle } from '../core/threadRows';
 import { normalizeDrive } from '../core/winPath';
 import { deletedContent, diffPath, parseGitDiff, reverseApply } from '../core/unifiedDiff';
 import { bypassProxy, resolveProxy } from '../core/http';
@@ -86,6 +86,14 @@ test('thread titles', () => {
   assert.notEqual(threadTitle(null, 'Active file: a.txt\n\n'), '', 'a preview that is only extension context stays visible');
   const long = 'x'.repeat(500);
   assert.ok(threadTitle(null, long).length <= 160 && threadTitle(null, long).endsWith('\u2026'));
+});
+
+test('thread preview (History tooltip): context stripped, line breaks kept, cut at ~500', () => {
+  assert.equal(threadPreview('Active file: a.txt\n\nLine one  \r\nLine two\n\n\n\nLast'), 'Line one\nLine two\n\nLast');
+  assert.equal(threadPreview(null), '');
+  const p = threadPreview('y'.repeat(MAX_PREVIEW + 50));
+  assert.equal(p.length, MAX_PREVIEW);
+  assert.ok(p.endsWith('\u2026'));
 });
 
 test('thread folder names, cwd keys, search, listable', () => {

@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.6)
+## Status (0.5.7)
+
+- 0.5.7: History rows show the first message (up to 500 characters) as tooltip.
 
 - 0.5.6: last used chat per git branch. See "0.5.6".
 
@@ -27,6 +29,12 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.7
+
+- `threadPreview()` in core/threadRows.ts: thread/list `preview` without the extension's context lines, line breaks kept, cut at 500
+  (`MAX_PREVIEW`). Sent as `preview` in every `threads` row; the page uses it plus the cwd as the row's `title` tooltip.
+- How long Codex's own `preview` is was not checked; if Codex shortens it, the tooltip is shorter too.
 
 ## 0.5.6
 

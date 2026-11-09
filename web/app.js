@@ -1122,7 +1122,9 @@
     hist.sel = Math.max(0, Math.min(hist.sel, hist.rows.length - 1));
     hist.rows.forEach((t, i) => {
       const asking = hist.confirm === t.id, busy = hist.busy.has(t.id);
-      const row = h('div', { class: 'row' + (t.id === state.threadId ? ' current' : '') + (i === hist.sel ? ' sel' : '') + (asking ? ' asking' : '') + (busy ? ' busy' : ''), title: t.cwd || '', role: 'option', 'data-id': t.id, 'aria-busy': busy ? 'true' : null },
+      // tooltip: the first message (up to ~500 characters, from the host) and the project folder
+      const tip = [t.preview || '', t.cwd || ''].filter(Boolean).join('\n\n');
+      const row = h('div', { class: 'row' + (t.id === state.threadId ? ' current' : '') + (i === hist.sel ? ' sel' : '') + (asking ? ' asking' : '') + (busy ? ' busy' : ''), title: tip, role: 'option', 'data-id': t.id, 'aria-busy': busy ? 'true' : null },
         h('span', { class: 'proj' }, highlight(badgeText(t, dup), words)),
         h('span', { class: 't' }, highlight(t.title || STR.untitled, words)),
         h('span', { class: 'when', text: relTimeAgo(t.updatedAt) }));

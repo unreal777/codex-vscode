@@ -19,6 +19,17 @@ export function threadTitle(name: string | null | undefined, preview: string | n
   return shorten(text.trim() === '' ? preview : text);
 }
 
+/** Longest first-message text of the History tooltip. */
+export const MAX_PREVIEW = 500;
+
+/** Tooltip text of a History row: the first message without the extension's own context lines, line breaks kept (blank runs folded). */
+export function threadPreview(preview: string | null | undefined, max = MAX_PREVIEW): string {
+  if (!preview) return '';
+  const stripped = preview.replace(PLUGIN_PREAMBLE, '');
+  const text = (stripped.trim() === '' ? preview : stripped).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return text.length > max ? text.substring(0, max - 1).trimEnd() + '…' : text;
+}
+
 function normalizeCwd(cwd: string): string {
   let p = cwd.replace(/\\/g, '/');
   if (p.startsWith('//?/')) p = p.substring(4);
