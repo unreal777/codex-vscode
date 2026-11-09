@@ -17,7 +17,7 @@ const send = (m) => process.stdout.write(JSON.stringify(m) + '\\n');
 rl.on('line', (line) => {
   const m = JSON.parse(line);
   if (m.id === undefined) return;
-  if (m.method === 'thread/delete' && m.params.threadId === 'bad') send({ id: m.id, error: { code: -32000, message: 'no such thread' } });
+  if (m.params && m.params.threadId === 'bad') send({ id: m.id, error: { code: -32000, message: 'no such thread' } });
   else send({ id: m.id, result: { method: m.method, echo: m.params, data: [], nextCursor: null, thread: { id: m.params && m.params.threadId } } });
 });
 `;
@@ -79,6 +79,36 @@ test('session threadAction: ok event, error event, open chat is forgotten, surve
     assert.equal(bad.ok, false);
     assert.equal(bad.error, 'no such thread');
     assert.equal(s.threadId, 'other', 'a failed action or another chat leaves the open chat alone');
+  } finally {
+    c.close();
+  }
+});
+
+test('last chat: open / new chat report threadChanged; a quiet reopen fails silently and skips when a chat is open', async () => {
+  const c = await server();
+  const changed: (string | null)[] = [];
+  const host = { log: () => {}, projectName: (d: string | null) => d ?? '', version: '0', codexBase: '',
+    permissionsPref: () => 'ask', threadChanged: (id: string | null) => changed.push(id) } as unknown as SessionHost;
+  const s = new CodexSession(host);
+  const priv = s as any;
+  priv.client = c;
+  priv.connected = true;
+  const events: any[] = [];
+  s.addSink((e) => events.push(e));
+  try {
+    await s.resume('t1', true);
+    assert.equal(s.threadId, 't1');
+    assert.deepEqual(changed, ['t1']);
+    await s.resume('t2', true);
+    assert.equal(s.threadId, 't1', 'a quiet reopen never replaces an open chat');
+    s.newChat();
+    assert.deepEqual(changed, ['t1', null]);
+    await s.resume('bad', true);
+    assert.equal(s.threadId, null);
+    assert.deepEqual(changed, ['t1', null, null]);
+    assert.ok(!events.some((e) => e.kind === 'error'), 'no error shown for a quiet reopen');
+    await s.resume('bad');
+    assert.ok(events.some((e) => e.kind === 'error'), 'opening from the history still shows the error');
   } finally {
     c.close();
   }

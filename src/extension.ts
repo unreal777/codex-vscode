@@ -12,6 +12,8 @@ import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
 
 let session: CodexSession | undefined;
+/** workspaceState key: id of the chat that was open in this project. */
+const LAST_THREAD_KEY = 'codexPanel.lastThread';
 
 /**
  * Directory holding the managed Codex copy (<base>/codex/...): %LOCALAPPDATA%\CodexPanel, the same folder the Eclipse plugin uses,
@@ -40,6 +42,15 @@ export function activate(ctx: vscode.ExtensionContext): void {
   const cfg = () => vscode.workspace.getConfiguration('codexPanel');
   const prefs = new Prefs(ctx.globalState);
   const ws = new WorkspaceBridge();
+  // The chat that was open in this project (workspaceState is per folder / workspace), reopened once when the window starts.
+  // Any chat change before that (New chat, a first message) wins over the remembered one.
+  let lastThreadTaken = false;
+  const takeLastThread = (): string | null => {
+    if (lastThreadTaken) return null;
+    lastThreadTaken = true;
+    if (!vscode.workspace.workspaceFolders?.length) return null;
+    return ctx.workspaceState.get<string>(LAST_THREAD_KEY) ?? null;
+  };
 
   const host: SessionHost = {
     codexBase: codexBase(ctx),
@@ -57,6 +68,10 @@ export function activate(ctx: vscode.ExtensionContext): void {
     refreshHook: () => { /* VS Code watches the file system itself */ },
     log,
     checked: (when) => { void ctx.globalState.update('codexPanel.lastUpdateCheck', when.toISOString()); },
+    threadChanged: (id) => {
+      lastThreadTaken = true;
+      void ctx.workspaceState.update(LAST_THREAD_KEY, id ?? undefined);
+    },
   };
   session = new CodexSession(host);
   const s = session;
@@ -69,7 +84,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   void vscode.commands.executeCommand('setContext', NO_SECONDARY_KEY, !secondary);
   const providers = [VIEW_ID, VIEW_ID_SECONDARY].map((id) => new CodexViewProvider(id, ctx, s, ws, mentions, diffs, prefs, log));
   let lastActive = providers[secondary ? 1 : 0];
-  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; });
+  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; });
   /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
   const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
 

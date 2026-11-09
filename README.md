@@ -19,6 +19,7 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - **Ctrl+Alt+C** opens the panel (secondary side bar on VS Code 1.106+, activity bar before that). Enter sends, Shift+Enter inserts a newline.
 - Context chip above the input: the active editor file. Right-click selected code > **Codexter: Ask / Explain / Fix selection**.
 - **@** in the input picks files and folders of the chat's folder (recently opened files first, then ranked matches).
+- Opening a project reopens the chat that was open there when VS Code was closed (New chat starts a fresh one).
 - Drag files, folders or editor tabs onto **Attach files** (the small area under the chat, or click *Choose files...* there; VS Code never passes its own drags to the chat
   webview). Files from the Windows Explorer can be dropped onto the chat itself. Pasting file paths into the input (VS Code *Copy Path*,
   Windows Explorer *Copy as path*, file: URIs) also turns them into chips.

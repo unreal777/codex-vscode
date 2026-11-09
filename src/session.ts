@@ -36,6 +36,8 @@ export interface SessionHost {
   refreshHook(cwd: string | null): void;
   log(line: string): void;
   checked?(when: Date): void;
+  /** The open chat changed: started, opened from the history (id) or New chat / archived / deleted (null). The host remembers it per project. */
+  threadChanged?(id: string | null): void;
 }
 
 export type Sink = (event: Json) => void;
@@ -490,6 +492,7 @@ export class CodexSession {
       const r = await withTimeout(c.startThread(cwd, model, ps.approvalPolicy, ps.sandbox, ps.reviewer), 60_000, 'thread/start');
       this._threadCwd = cwd;
       this._threadId = r.thread.id;
+      this.host.threadChanged?.(this._threadId);
       this.emit(this.threadEvent(r.thread, null, true));
     } else if (this.needsResume) {
       await withTimeout(c.resumeThread(this._threadId, this._threadCwd, ps.approvalPolicy, ps.sandbox, ps.reviewer), 60_000, 'thread/resume');
@@ -648,6 +651,7 @@ export class CodexSession {
     this._threadCwd = null;
     this.needsResume = false;
     this.pendingApprovals.clear();
+    this.host.threadChanged?.(null);
     this.emit(ev('newChat'));
     if (idle && this.connected && this.codexUpdatePending()) { // a newer Codex is on disk and no turn is running: switch now
       this.emit(ev('codexUpdated'));
@@ -800,8 +804,11 @@ export class CodexSession {
     }
   }
 
-  resume(id: string): void {
-    void this.submit(async () => {
+  /** Opens a chat. quiet: reopening the project's last chat at startup; on failure (deleted elsewhere, ...) it only logs and forgets
+   *  the id, and it does nothing if another chat was opened or started in the meantime. */
+  resume(id: string, quiet = false): Promise<void> {
+    return this.submit(async () => {
+      if (quiet && this._threadId !== null) return;
       try {
         const c = await this.connectBlocking();
         if (this.turnId !== null) this.interrupt();
@@ -816,6 +823,7 @@ export class CodexSession {
         this._threadCwd = typeof r.cwd === 'string' ? r.cwd : null;
         this.needsResume = false;
         this.turnId = null;
+        this.host.threadChanged?.(id);
         const e = this.threadEvent(thread, turns, false);
         try { // the chat's goal, if it has one (best effort: older Codex versions may not know goals)
           const g = await withTimeout(c.getGoal(id), 10_000, 'thread/goal/get');
@@ -823,7 +831,12 @@ export class CodexSession {
         } catch { /* no goal info */ }
         this.emit(e);
       } catch (e) {
-        this.error('Could not open the chat', describe(e), false);
+        if (!quiet) {
+          this.error('Could not open the chat', describe(e), false);
+        } else {
+          this.log('[warn] could not reopen the last chat ' + id + ': ' + describe(e));
+          this.host.threadChanged?.(null);
+        }
       }
     });
   }

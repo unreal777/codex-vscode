@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {

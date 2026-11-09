@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.2)
+## Status (0.5.3)
+
+- 0.5.3: opening a project reopens the chat that was open there last. See "0.5.3".
 
 - 0.5.2: **Attach files** shows two fixed rows (drop hint, "Choose files...") so it reads as a drop area. See "0.5.2".
 
@@ -19,6 +21,14 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.3
+
+- The id of the open chat is kept in `workspaceState` (`codexPanel.lastThread`, so per folder / workspace). `SessionHost.threadChanged(id|null)`
+  is called on thread/start, on a successful resume and on New chat (also archive / delete of the open chat, which go through newChat).
+- The first page of a window with a workspace folder asks `takeLastThread()` (once per window; any chat change before it wins) and calls
+  `session.resume(id, quiet=true)`. Quiet: skipped if a chat is already open, and on failure (deleted elsewhere, ...) it only logs a warning
+  and forgets the id instead of showing an error. Not checked live against the real Codex (resume of a real thread); unit test in history.test.ts.
 
 ## 0.5.2
 

@@ -76,6 +76,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   private readonly subs: vscode.Disposable[] = [];
   /** Set by the owner: told when this view became the one in use (resolved or visible). */
   onActive: (p: CodexViewProvider) => void = () => {};
+  /** Set by the owner: the project's last open chat, handed out once per window (null afterwards). */
+  takeLastThread: () => string | null = () => null;
 
   constructor(
     readonly viewId: string,
@@ -264,7 +266,12 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.session.connect();
     this.ws.rememberEditor(vscode.window.activeTextEditor);
     this.postActiveFile(vscode.window.activeTextEditor);
-    if (this.session.threadId !== null && !this.session.isRunning) this.session.resume(this.session.threadId);
+    if (this.session.threadId !== null) {
+      if (!this.session.isRunning) void this.session.resume(this.session.threadId);
+    } else {
+      const last = this.takeLastThread(); // first page of this window: reopen the chat that was open when the project was closed
+      if (last) void this.session.resume(last, true);
+    }
   }
 
   // ---- page -> host ----
@@ -316,7 +323,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         this.handleDrop([orEmpty(str(m, 'text'))]);
         break;
       case 'resumeThread':
-        if (str(m, 'threadId')) this.session.resume(str(m, 'threadId') as string);
+        if (str(m, 'threadId')) void this.session.resume(str(m, 'threadId') as string);
         break;
       case 'approval':
         this.session.approve(String(m.requestId), orEmpty(str(m, 'decision')));
