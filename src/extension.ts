@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { BranchChats } from './branchChats';
 import { generateCommitMessage } from './commitMessage';
+import { mcpServerNames, readCodexConfig } from './core/commitMessage';
 import { locate } from './core/locator';
 import { DiffProvider } from './diff';
 import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
@@ -137,8 +138,10 @@ export function activate(ctx: vscode.ExtensionContext): void {
         }
       },
       env: () => ({ ...process.env, ...host.processEnv() }),
-      model: () => cfg().get<string>('defaultModel', '').trim(),
-      effort: () => cfg().get<string>('defaultReasoningEffort', '').trim(),
+      // own model / effort for commit messages (a fast one); the model falls back to the chat's default model
+      model: () => cfg().get<string>('commitMessageModel', '').trim() || cfg().get<string>('defaultModel', '').trim(),
+      effort: () => cfg().get<string>('commitMessageEffort', 'low').trim(),
+      mcpOff: () => mcpServerNames(readCodexConfig({ ...process.env, ...host.processEnv() })),
       log,
     }, arg)),
     vscode.commands.registerCommand('codexPanel.newChat', async () => {

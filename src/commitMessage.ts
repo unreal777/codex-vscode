@@ -23,9 +23,11 @@ const UNTRACKED = 7; // git extension Status.UNTRACKED
 export interface CommitDeps {
   locateCodex(): Located;
   env(): NodeJS.ProcessEnv;
-  /** model / effort of the Codexter settings ('' = Codex default) */
+  /** model / effort for commit messages ('' = Codex default) */
   model(): string;
   effort(): string;
+  /** MCP servers to switch off for the run */
+  mcpOff(): string[];
   log(line: string): void;
 }
 
@@ -87,7 +89,7 @@ export async function generateCommitMessage(deps: CommitDeps, arg?: unknown): Pr
         const located = deps.locateCodex();
         const msg = await runCodexExec({
           command: located.command(), cwd: root, env: deps.env(), prompt: buildPrompt({ diff, staged, untracked, recentSubjects: recent }),
-          model: deps.model(), effort: deps.effort(), timeoutMs: 180_000, log: deps.log,
+          model: deps.model(), effort: deps.effort(), mcpOff: deps.mcpOff(), timeoutMs: 180_000, log: deps.log,
         });
         r.inputBox.value = msg;
       }));

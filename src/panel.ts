@@ -48,8 +48,11 @@ export class Prefs {
   }
 }
 
-export interface PanelSettings { defaultModel: string; defaultReasoningEffort: string; defaultPermissions: string; hiddenModels: string[]; fontSize: number }
-const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize'];
+export interface PanelSettings {
+  defaultModel: string; defaultReasoningEffort: string; defaultPermissions: string; hiddenModels: string[]; fontSize: number;
+  commitMessageModel: string; commitMessageEffort: string;
+}
+const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 /** '' = a new chat keeps the permissions used last */
 const PERMISSIONS = ['', 'ask', 'auto', 'full', 'custom'];
@@ -61,7 +64,8 @@ export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
   const perms = s(o?.defaultPermissions);
   const hidden = Array.isArray(o?.hiddenModels) ? (o?.hiddenModels as unknown[]).map(s).filter((x) => x !== '') : [];
   return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '',
-    defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize) };
+    defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize),
+    commitMessageModel: s(o?.commitMessageModel), commitMessageEffort: EFFORTS.includes(s(o?.commitMessageEffort)) ? s(o?.commitMessageEffort) : '' };
 }
 
 /** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
@@ -101,6 +105,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   ) {
     this.subs.push(
       vscode.window.onDidChangeActiveColorTheme(() => this.post(this.themeEvent())),
+      // the page keeps the input open while VS Code itself is in the background (Alt+Tab), see autoGrow in app.js
+      vscode.window.onDidChangeWindowState((s) => this.post({ kind: 'windowFocus', focused: s.focused })),
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (SETTING_KEYS.some((k) => e.affectsConfiguration('codexPanel.' + k))) this.post(this.settingsEvent());
       }),

@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -88,7 +88,10 @@
       {
         "command": "codexPanel.generateCommitMessage",
         "title": "Codexter: Generate commit message",
-        "icon": "$(terminal)"
+        "icon": {
+          "light": "media/commit-light.svg",
+          "dark": "media/commit-dark.svg"
+        }
       },
       {
         "command": "codexPanel.askSelection",
@@ -264,6 +267,34 @@
             "Custom (config.toml)"
           ],
           "markdownDescription": "Permissions a new chat starts with. Empty = keep the permissions used last."
+        },
+        "codexPanel.commitMessageModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Model for *Generate commit message* (a fast one is enough). Empty = `#codexPanel.defaultModel#`, else the Codex default."
+        },
+        "codexPanel.commitMessageEffort": {
+          "type": "string",
+          "default": "low",
+          "enum": [
+            "",
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "enumDescriptions": [
+            "The model's default",
+            "None",
+            "Minimal",
+            "Low",
+            "Medium",
+            "High",
+            "Extra high"
+          ],
+          "markdownDescription": "Reasoning effort for *Generate commit message*. Low is fast and enough for a commit message."
         },
         "codexPanel.fontSize": {
           "type": "number",

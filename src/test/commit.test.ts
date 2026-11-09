@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { buildPrompt, cleanMessage, execArgs, MAX_DIFF_CHARS, runCodexExec } from '../core/commitMessage';
+import { buildPrompt, cleanMessage, execArgs, MAX_DIFF_CHARS, mcpServerNames, runCodexExec } from '../core/commitMessage';
 import { tmpDir } from './helpers';
 
 test('buildPrompt: staged / all changes, recent subjects, untracked files, long diffs are cut', () => {
@@ -31,6 +31,22 @@ test('cleanMessage: fences, labels, quotes, trailing spaces', () => {
 test('execArgs: ephemeral read-only run, answer to a file, prompt on stdin; model and effort only when set', () => {
   assert.deepEqual(execArgs('o.txt', '', ''), ['exec', '--ephemeral', '--skip-git-repo-check', '-s', 'read-only', '-o', 'o.txt', '-']);
   assert.deepEqual(execArgs('o.txt', 'gpt-x', 'low').slice(7), ['-m', 'gpt-x', '-c', 'model_reasoning_effort="low"', '-']);
+  assert.deepEqual(execArgs('o.txt', '', '', ['drawio', 'my server']).slice(7),
+    ['-c', 'mcp_servers.drawio.enabled=false', '-c', 'mcp_servers."my server".enabled=false', '-']);
+});
+
+test('mcpServerNames: the [mcp_servers.<name>] tables of config.toml, sub-tables and quoted names, no duplicates', () => {
+  const toml = [
+    'model = "gpt-x"',
+    '[mcp_servers.context7_http]', 'url = "https://x"',
+    '[mcp_servers.stitch]', '[mcp_servers.stitch.http_headers]', 'a = "b"',
+    '  [ mcp_servers."my server" ]', 'command = "x"',
+    '[mcp_servers.chrome-devtools]',
+    '# [mcp_servers.commented]',
+    '[profiles.fast]',
+  ].join('\n');
+  assert.deepEqual(mcpServerNames(toml), ['context7_http', 'stitch', 'my server', 'chrome-devtools']);
+  assert.deepEqual(mcpServerNames(''), []);
 });
 
 const FAKE = `

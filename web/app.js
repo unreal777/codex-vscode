@@ -78,7 +78,9 @@
     codexDefault: 'Codex default', modelDefaultEffort: 'Model default', setModels: 'Models',
     setModelsHint: 'Models shown in the picker below the input. At least one stays visible.', setNoModels: 'The model list is not loaded yet.',
     setAllModels: 'All models', setDefaultPerms: 'Default permissions', setDefaultPermsHint: 'New chats start with these permissions.',
-    keepLastPerms: 'Keep the last used', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
+    keepLastPerms: 'Keep the last used', likeDefaultModel: 'Like the default model',
+    setCommitModel: 'Commit message model', setCommitModelHint: 'For "Generate commit message" in Source Control. A fast model is enough.',
+    setCommitEffort: 'Commit message reasoning effort', setCommitEffortHint: 'Low is fast and enough for a commit message.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
     permTitle: 'How should Codex actions be approved?',
     permLabels: { ask: 'Ask for approval', auto: 'Approve for me', full: 'Full access', custom: 'Custom (config.toml)' },
@@ -1315,7 +1317,8 @@
   const normSettings = (o) => ({ defaultModel: String((o && o.defaultModel) || ''), defaultReasoningEffort: String((o && o.defaultReasoningEffort) || ''),
     defaultPermissions: PERMS.includes(o && o.defaultPermissions) ? o.defaultPermissions : '',
     hiddenModels: Array.isArray(o && o.hiddenModels) ? o.hiddenModels.map(String) : [],
-    fontSize: Number.isFinite(o && o.fontSize) && o.fontSize > 0 ? Math.min(32, Math.max(8, Math.round(o.fontSize))) : 0 });
+    fontSize: Number.isFinite(o && o.fontSize) && o.fontSize > 0 ? Math.min(32, Math.max(8, Math.round(o.fontSize))) : 0,
+    commitMessageModel: String((o && o.commitMessageModel) || ''), commitMessageEffort: String((o && o.commitMessageEffort) || '') });
   // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
   let pageZoom = 1;
   function baseFontSize() {
@@ -1360,7 +1363,8 @@
     state.settings = normSettings(Object.assign({}, state.settings, patch));
     const st = state.settings;
     bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort,
-      defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize });
+      defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize,
+      commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort });
     applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
@@ -1418,9 +1422,25 @@
     sizes.sort((a, b) => a - b).forEach((n) => selF.append(h('option', { value: String(n), text: String(n) })));
     selF.value = String(st.fontSize);
     selF.addEventListener('change', () => saveSettings({ fontSize: Number(selF.value) }));
+    // 6. commit messages (Source Control button): own model / effort, a fast one is enough
+    const selCM = h('select', { id: 'set-cmodel', 'aria-describedby': 'set-cmodel-hint' }, h('option', { value: '', text: STR.likeDefaultModel }));
+    models.forEach((m) => selCM.append(h('option', { value: m.model, text: m.displayName || m.model })));
+    if (st.commitMessageModel && !models.some((m) => m.model === st.commitMessageModel)) selCM.append(h('option', { value: st.commitMessageModel, text: st.commitMessageModel }));
+    selCM.value = st.commitMessageModel;
+    selCM.addEventListener('change', () => {
+      const m = modelFor(selCM.value || st.defaultModel), ok = (m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : []).includes(st.commitMessageEffort);
+      saveSettings({ commitMessageModel: selCM.value, commitMessageEffort: ok ? st.commitMessageEffort : '' });
+    });
+    const mc = modelFor(st.commitMessageModel || st.defaultModel), cEfforts = mc ? (mc.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : [];
+    if (st.commitMessageEffort && !cEfforts.includes(st.commitMessageEffort)) cEfforts.push(st.commitMessageEffort);
+    const selCE = h('select', { id: 'set-ceffort', 'aria-describedby': 'set-ceffort-hint' }, h('option', { value: '', text: STR.modelDefaultEffort }));
+    cEfforts.forEach((e) => selCE.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
+    selCE.value = st.commitMessageEffort;
+    selCE.addEventListener('change', () => saveSettings({ commitMessageEffort: selCE.value }));
     setBody.append(field('set-model', STR.setDefaultModel, STR.setDefaultModelHint, selM), field('set-effort', STR.setDefaultEffort, STR.setDefaultEffortHint, selE),
       field('set-perms', STR.setDefaultPerms, STR.setDefaultPermsHint, selP), field('set-ms', STR.setModels, STR.setModelsHint, ms),
       field('set-font', STR.setFontSize, STR.setFontSizeHint, selF),
+      field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM), field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE),
       h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
     const again = keep && document.getElementById(keep);
     if (again && !again.disabled) again.focus();
@@ -1748,23 +1768,46 @@
     sendBtn.disabled = !busy && !input.value.trim() && !state.images.length;
   }
   // While the composer has the focus the input grows with its text up to half the panel (the chat above stays readable); when the focus
-  // leaves the composer it shrinks back to one line and its text scrolls. The composer's own buttons and menus keep it open.
+  // leaves the composer it shrinks to at most three lines and its text scrolls. The composer's own buttons and menus keep it open.
   let inputOpen = false;
+  const CLOSED_LINES = 3;
   function autoGrow() {
     input.style.height = 'auto';   // rows="1": one line
-    if (!inputOpen) { input.style.overflowY = input.scrollHeight > input.clientHeight + 1 ? 'auto' : 'hidden'; scrollDown(); return; }
-    const max = Math.max(180, Math.floor(window.innerHeight / pageZoom * 0.5));
+    let max;
+    if (inputOpen) {
+      max = Math.max(180, Math.floor(window.innerHeight / pageZoom * 0.5));
+    } else {
+      const cs = getComputedStyle(input), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.45;
+      max = Math.ceil(lh * CLOSED_LINES + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom));
+    }
     input.style.height = Math.min(input.scrollHeight, max) + 'px';
     input.style.overflowY = input.scrollHeight > max ? 'auto' : 'hidden';
     scrollDown();
   }
   input.addEventListener('input', () => { autoGrow(); updateRunning(); });
-  input.addEventListener('focus', () => { if (!inputOpen) { inputOpen = true; autoGrow(); } });
-  $('#dock').addEventListener('focusout', (e) => {
-    if (e.relatedTarget && $('#dock').contains(e.relatedTarget)) return;
+  // Switching to another program (Alt+Tab) blurs the page just like a click elsewhere in VS Code; only the host knows the difference
+  // (event windowFocus). So the collapse waits a moment and is dropped when VS Code itself lost the focus.
+  let winFocused = true, collapseTimer = 0;
+  const DOCK = $('#dock');
+  function collapseInput() {
+    if (!inputOpen) return;
+    if (document.hasFocus() && DOCK.contains(document.activeElement)) return; // the focus came back
     inputOpen = false;
     autoGrow();
+  }
+  input.addEventListener('focus', () => { clearTimeout(collapseTimer); if (!inputOpen) { inputOpen = true; autoGrow(); } });
+  DOCK.addEventListener('focusin', () => clearTimeout(collapseTimer));
+  DOCK.addEventListener('focusout', (e) => {
+    if (e.relatedTarget && DOCK.contains(e.relatedTarget)) return;
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(() => { if (winFocused) collapseInput(); }, 400);
   });
+  function onWindowFocus(focused) {
+    winFocused = !!focused;
+    clearTimeout(collapseTimer);
+    // back in VS Code: if the focus did not return to the input (it went to an editor, ...), close it now
+    if (winFocused) collapseTimer = setTimeout(collapseInput, 400);
+  }
   window.addEventListener('resize', () => { if (inputOpen) autoGrow(); });
   input.addEventListener('keydown', (e) => {
     if (mentionKey(e)) return;
@@ -2151,6 +2194,7 @@
         if (chatIsEmpty()) applyDefaults();
         break;
       case 'theme': applyTheme(ev.theme); break;
+      case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'status':
         setConn(ev.state, ev.message);
         break;

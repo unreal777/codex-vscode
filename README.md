@@ -19,7 +19,7 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - **Ctrl+Alt+C** opens the panel (secondary side bar on VS Code 1.106+, activity bar before that). Enter sends, Shift+Enter inserts a newline.
 - Context chip above the input: the active editor file. Right-click selected code > **Codexter: Ask / Explain / Fix selection**.
 - **@** in the input picks files and folders of the chat's folder (recently opened files first, then ranked matches).
-- Source Control: the Codexter button in the view title (>_ icon, or *Codexter: Generate commit message*) lets Codex write the commit
+- Source Control: the Codexter button in the view title (sparkle in a box, or *Codexter: Generate commit message*) lets Codex write the commit
   message from the staged changes (all changes when nothing is staged), in a temporary read-only run that does not show up in the history.
 - Opening a project reopens the chat that was open there when VS Code was closed (New chat starts a fresh one).
 - Every git branch remembers the chat last used on it (a message sent while it was checked out) for 30 days; checking the branch out
@@ -31,7 +31,7 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - History (clock button) lists chats of all projects; type to search, pick a project to filter; archive, unarchive and delete chats.
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
-- Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `defaultPermissions`, `hiddenModels`, `fontSize`.
+- Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `defaultPermissions`, `hiddenModels`, `fontSize`, `commitMessageModel`, `commitMessageEffort`.
   Model, reasoning effort and permissions (Ask for approval / Approve for me / Full access / Custom) are chosen in the panel and remembered per user (globalState).
 - **+** button in the input: files and folders, goal, plan mode, sketch (and pasted images), installed plugins.
 - Proxy: `http.proxy` / `http.proxyStrictSSL` (or `HTTPS_PROXY`) for the download; the proxy is handed to the Codex process as well.

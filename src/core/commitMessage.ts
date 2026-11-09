@@ -45,13 +45,36 @@ export function cleanMessage(raw: string): string {
   return s.split('\n').map((l) => l.replace(/\s+$/, '')).join('\n');
 }
 
-/** Arguments of `codex exec`: a temporary (ephemeral) read-only run whose last message goes to outFile; the prompt comes on stdin. */
-export function execArgs(outFile: string, model: string, effort: string): string[] {
+/** Arguments of `codex exec`: a temporary (ephemeral) read-only run whose last message goes to outFile; the prompt comes on stdin.
+ *  mcpOff: MCP servers of config.toml to switch off for this run (a commit message needs no tools, and starting them is slow). */
+export function execArgs(outFile: string, model: string, effort: string, mcpOff: string[] = []): string[] {
   const a = ['exec', '--ephemeral', '--skip-git-repo-check', '-s', 'read-only', '-o', outFile];
   if (model) a.push('-m', model);
   if (effort) a.push('-c', 'model_reasoning_effort="' + effort + '"');
+  for (const n of mcpOff) a.push('-c', 'mcp_servers.' + (/^[A-Za-z0-9_-]+$/.test(n) ? n : JSON.stringify(n)) + '.enabled=false');
   a.push('-');
   return a;
+}
+
+/**
+ * Names of the MCP servers defined in a Codex config.toml ([mcp_servers.<name>] tables, also quoted names and sub-tables like .env).
+ * Only these can be switched off with -c: a server that comes from elsewhere (a plugin) breaks the config when only "enabled" is set.
+ */
+export function mcpServerNames(toml: string): string[] {
+  const names = new Set<string>();
+  const re = /^[ \t]*\[[ \t]*mcp_servers[ \t]*\.[ \t]*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z0-9_-]+))/gm;
+  for (let m = re.exec(toml); m !== null; m = re.exec(toml)) names.add(m[1] !== undefined ? m[1] : m[2]);
+  return [...names];
+}
+
+/** config.toml of the Codex in use: $CODEX_HOME/config.toml, else ~/.codex/config.toml; '' when there is none. */
+export function readCodexConfig(env: NodeJS.ProcessEnv = process.env): string {
+  const home = env.CODEX_HOME && env.CODEX_HOME.trim() ? env.CODEX_HOME : path.join(os.homedir(), '.codex');
+  try {
+    return fs.readFileSync(path.join(home, 'config.toml'), 'utf8');
+  } catch {
+    return '';
+  }
 }
 
 export interface ExecOptions {
@@ -62,6 +85,8 @@ export interface ExecOptions {
   prompt: string;
   model: string;
   effort: string;
+  /** MCP servers to switch off (see execArgs) */
+  mcpOff?: string[];
   timeoutMs: number;
   log?: (line: string) => void;
 }
@@ -71,7 +96,8 @@ export function runCodexExec(o: ExecOptions): Promise<string> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codexter-commit-'));
   const out = path.join(dir, 'message.txt');
   const [exe, ...pre] = o.command;
-  const args = [...pre, ...execArgs(out, o.model, o.effort)];
+  const args = [...pre, ...execArgs(out, o.model, o.effort, o.mcpOff ?? [])];
+  const started = Date.now();
   o.log?.('[commit] ' + exe + ' ' + args.join(' ') + ' (cwd ' + o.cwd + ')');
   const cleanup = () => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* temp folder */ } };
   return new Promise<string>((resolve, reject) => {
@@ -92,6 +118,7 @@ export function runCodexExec(o: ExecOptions): Promise<string> {
       let text = '';
       try { text = fs.readFileSync(out, 'utf8'); } catch { /* no answer */ }
       const msg = cleanMessage(text);
+      o.log?.('[commit] codex exec ended after ' + ((Date.now() - started) / 1000).toFixed(1) + ' s, exit code ' + code);
       if (msg) return finish(null, msg);
       const tail = stderr.trim().split('\n').slice(-3).join(' ').trim();
       finish(new Error('Codex wrote no message (exit code ' + code + ')' + (tail ? ': ' + tail : '')));

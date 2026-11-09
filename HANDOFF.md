@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.7)
+## Status (0.5.8)
+
+- 0.5.8: faster commit messages (own model / effort, MCP servers off), new icon, input keeps 3 lines and stays open on Alt+Tab. See "0.5.8".
 
 - 0.5.7: History rows show the first message (up to 500 characters) as tooltip.
 
@@ -29,6 +31,19 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.8
+
+- Commit messages were slow: no model setting meant the user's config.toml default (gpt-6.1-terra, effort xhigh), and every
+  `codex exec` started all MCP servers of config.toml. Now `codexPanel.commitMessageModel` ('' = defaultModel, else Codex default) and
+  `codexPanel.commitMessageEffort` (default low), also in the in-panel settings; each server of config.toml gets
+  `-c mcp_servers.<name>.enabled=false` (`mcpServerNames()` reads `[mcp_servers.<name>]` tables of $CODEX_HOME or ~/.codex config.toml).
+  `-c mcp_servers={}` does NOT work (merged, not replaced), and servers from elsewhere (a plugin, e.g. postman-mcp) must not be named:
+  "failed to load bootstrap configuration". The log shows how long the run took.
+- Icon: media/commit-light.svg / commit-dark.svg (sparkle in a rounded box), instead of `$(terminal)`.
+- Input: closed it shows up to 3 lines (empty: 1). Collapse waits 400 ms and is skipped when the host reports that VS Code lost the
+  OS focus (`windowFocus` event from `onDidChangeWindowState`); back in VS Code with the focus elsewhere it collapses then.
+  Checked in the isolated VS Code with synthetic focus events (open 512 / app switch 512 / back elsewhere 69 / click elsewhere 69).
 
 ## 0.5.7
 
