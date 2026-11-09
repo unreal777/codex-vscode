@@ -121,6 +121,23 @@ export class AppServerClient {
     return this.call('thread/list', p);
   }
 
+  // ---- config (user config.toml, written by Codex itself: comments and layout are kept) ----
+
+  /** Effective config ({config: {...}}); mcp_servers holds the servers of config.toml with their env / headers (secrets: never sent to the page). */
+  readConfig(): Promise<Json> { return this.call('config/read', { includeLayers: false }); }
+  /** Edits of the user config.toml; value null removes the key. Loaded threads get the new settings (reloadUserConfig). */
+  writeConfig(edits: { keyPath: string; value: unknown }[]): Promise<Json> {
+    return this.call('config/batchWrite', { edits: edits.map((e) => ({ keyPath: e.keyPath, mergeStrategy: 'replace', value: e.value })), reloadUserConfig: true });
+  }
+  /** Re-reads the MCP servers of the config. */
+  reloadMcpServers(): Promise<Json> { return this.call('config/mcpServer/reload', {}); }
+  /** Starts one server (or all) and lists its tools; toolsError says why it did not start. */
+  mcpServerStatus(serverName: string | null): Promise<Json> {
+    const p: Json = { detail: 'toolsAndAuthOnly' };
+    if (serverName) p.serverName = serverName;
+    return this.call('mcpServerStatus/list', p);
+  }
+
   archiveThread(threadId: string): Promise<Json> { return this.call('thread/archive', { threadId }); }
   /** answers {thread} */
   unarchiveThread(threadId: string): Promise<Json> { return this.call('thread/unarchive', { threadId }); }

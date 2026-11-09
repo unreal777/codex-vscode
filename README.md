@@ -33,6 +33,9 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   over the titles and first messages of the newest 300 chats of the selection).
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
+- MCP servers (gear > MCP servers): switch the servers of the Codex config on and off, check that one starts (it lists its tools),
+  remove one, copy servers of VS Code's mcp.json (Copilot) to Codex, or add one by name (Codex searches the web for the setup and
+  you confirm the command first). Written to ~/.codex/config.toml, which the Codex CLI and the Eclipse plugin share.
 - Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `defaultPermissions`, `hiddenModels`, `fontSize`, `commitMessageModel`, `commitMessageEffort`.
   Model, reasoning effort and permissions (Ask for approval / Approve for me / Full access / Custom) are chosen in the panel and remembered per user (globalState).
 - **+** button in the input: files and folders, goal, plan mode, sketch (and pasted images), installed plugins.

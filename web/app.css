@@ -531,5 +531,30 @@ button { cursor: pointer; }
 .set-model input { flex: none; margin: 0; accent-color: var(--accent); }
 .set-model input:disabled { cursor: not-allowed; }
 .set-model .mt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* MCP servers (VS Code host) */
+.set-sec { font-weight: 600; padding-top: 8px; border-top: 1px solid var(--border); }
+.set-sub { font-weight: 600; font-size: 12px; margin-top: 8px; }
+.mcp-list { display: flex; flex-direction: column; gap: 2px; }
+.mcp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 4px; }
+.mcp-row:hover, .mcp-row:focus-within { background: var(--card-hover); }
+.mcp-main { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; }
+.mcp-main input { flex: none; margin: 0; accent-color: var(--accent); }
+.mcp-name { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-target { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.mcp-row.off .mcp-name { color: var(--muted); text-decoration: line-through; }
+.mcp-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; }
+.mcp-btn:hover:not(:disabled) { background: var(--card-hover); }
+.mcp-btn:focus-visible { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: 1px; }
+.mcp-btn:disabled { opacity: .5; cursor: default; }
+.mcp-spark svg { width: 12px; height: 12px; fill: var(--accent); stroke: none; }
+.mcp-rm { flex: none; }
+.mcp-rm:hover { color: var(--err); }
+.mcp-note { flex-basis: 100%; display: flex; align-items: center; gap: 6px; padding-left: 22px; font-size: 12px; color: var(--muted); }
+.mcp-list > .mcp-note, .mcp > .mcp-note { padding-left: 0; }
+.mcp-note.bad, #settings .hint.bad { color: var(--err); }
+.mcp-findrow { display: flex; gap: 6px; max-width: 420px; }
+.mcp-q { flex: 1; min-width: 0; height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; outline: 0; }
+.mcp-q:focus { border-color: var(--accent); }
 .set-link { align-self: flex-start; padding: 2px 0; border: 0; background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .set-link:hover { filter: brightness(1.15); }

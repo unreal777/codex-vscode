@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.9)
+## Status (0.6.0)
+
+- 0.6.0: MCP servers in the in-panel settings (on/off, check, remove, copy from VS Code mcp.json, add by name with AI). See "0.6.0".
 
 - 0.5.9: AI search in the History panel; the quick model (commit messages, AI search) defaults to GPT-6-Luna. See "0.5.9".
 
@@ -33,6 +35,23 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.6.0
+
+- Settings > MCP servers (VS Code host only). All writes go through the app-server (`config/batchWrite`, mergeStrategy replace,
+  reloadUserConfig true) into the user config.toml, then `config/mcpServer/reload`. Codex keeps comments and layout of the file.
+  Verified against the real codex 0.166 with a temporary CODEX_HOME: add a table, `mcp_servers.<n>.enabled = false`, value null
+  removes the table. `config/read` gives mcp_servers with env / headers: only name, on/off and command line or URL go to the page.
+- Check = `mcpServerStatus/list {serverName, detail: toolsAndAuthOnly}`: starts the server, answers tools or toolsError.
+- From VS Code: User/mcp.json (globalStorage/../..) and each folder's .vscode/mcp.json, JSONC with BOM. Names: last segment of the
+  key ("oraios/serena" > serena). ${input:x} is asked with an input box, ${env:X} and ${userHome} are replaced; SSE, envFile and
+  other variables (${workspaceFolder}) can not be copied. "In Codex" = same name, URL, or command + args.
+- Add by name: `codex exec` with the quick model and `-c web_search="live"`, prompt asks for one JSON object (parseFindAnswer).
+  VS Code shows a modal with the command, notes and source; only "Add" writes. Env variables of the proposal are asked one by one.
+- A bare command that is not on PATH but in ~/.local/bin, ~/.cargo/bin, ~/scoop/shims or %APPDATA%\npm is written as full path
+  (resolveCommand): serena.exe of uv was in ~/.local/bin, which is not on PATH, so Codex said "program not found" while Copilot ran it.
+- Checked in the isolated VS Code with CODEX_HOME = a temp folder and a test mcp.json: list, off/on, Check (error and "23 tools"
+  for serena), copy from VS Code. Not checked live: Remove (native modal) and Add by name (real Codex run).
 
 ## 0.5.9
 

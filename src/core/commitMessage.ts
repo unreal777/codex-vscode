@@ -50,11 +50,12 @@ export function cleanMessage(raw: string): string {
 
 /** Arguments of `codex exec`: a temporary (ephemeral) read-only run whose last message goes to outFile; the prompt comes on stdin.
  *  mcpOff: MCP servers of config.toml to switch off for this run (a commit message needs no tools, and starting them is slow). */
-export function execArgs(outFile: string, model: string, effort: string, mcpOff: string[] = []): string[] {
+export function execArgs(outFile: string, model: string, effort: string, mcpOff: string[] = [], extraConfig: string[] = []): string[] {
   const a = ['exec', '--ephemeral', '--skip-git-repo-check', '-s', 'read-only', '-o', outFile];
   if (model) a.push('-m', model);
   if (effort) a.push('-c', 'model_reasoning_effort="' + effort + '"');
   for (const n of mcpOff) a.push('-c', 'mcp_servers.' + (/^[A-Za-z0-9_-]+$/.test(n) ? n : JSON.stringify(n)) + '.enabled=false');
+  for (const c of extraConfig) a.push('-c', c);
   a.push('-');
   return a;
 }
@@ -92,8 +93,10 @@ export interface ExecOptions {
   mcpOff?: string[];
   timeoutMs: number;
   log?: (line: string) => void;
-  /** log prefix and temp folder name: commit (default) or search */
+  /** log prefix and temp folder name: commit (default), search or mcp */
   tag?: string;
+  /** more -c key=value overrides (e.g. web_search="live") */
+  extraConfig?: string[];
 }
 
 /** Runs `codex exec` and returns the cleaned last message. Rejects with the end of stderr when Codex fails or writes nothing. */
@@ -102,7 +105,7 @@ export function runCodexExec(o: ExecOptions): Promise<string> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codexter-' + tag + '-'));
   const out = path.join(dir, 'message.txt');
   const [exe, ...pre] = o.command;
-  const args = [...pre, ...execArgs(out, o.model, o.effort, o.mcpOff ?? [])];
+  const args = [...pre, ...execArgs(out, o.model, o.effort, o.mcpOff ?? [], o.extraConfig ?? [])];
   const started = Date.now();
   o.log?.('[' + tag + '] ' + exe + ' ' + args.join(' ') + ' (cwd ' + o.cwd + ')');
   const cleanup = () => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* temp folder */ } };

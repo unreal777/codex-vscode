@@ -123,7 +123,10 @@ export function activate(ctx: vscode.ExtensionContext): void {
   void vscode.commands.executeCommand('setContext', NO_SECONDARY_KEY, !secondary);
   const providers = [VIEW_ID, VIEW_ID_SECONDARY].map((id) => new CodexViewProvider(id, ctx, s, ws, mentions, diffs, prefs, log));
   let lastActive = providers[secondary ? 1 : 0];
-  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; });
+  // "MCP servers > Add by name": the quick model with live web search finds the official setup (the user confirms it before it is written)
+  const mcpFind = (prompt: string) => runCodexExec({ command: quick.locateCodex().command(), cwd: os.tmpdir(), env: quick.env(), prompt,
+    model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 240_000, log, tag: 'mcp', extraConfig: ['web_search="live"'] });
+  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; });
   /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
   const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
 

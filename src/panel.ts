@@ -9,6 +9,7 @@ import { WEB_SCRIPTS } from './core/webScripts';
 import { Json } from './core/jsonrpc';
 import { migratePermissions, normalizePermissions } from './core/permissions';
 import { DiffProvider } from './diff';
+import { McpSettings } from './mcpSettings';
 import { MentionSearch } from './mentions';
 import { CodexSession, SendRequest } from './session';
 import { normalizeDrive } from './core/winPath';
@@ -92,6 +93,9 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   onActive: (p: CodexViewProvider) => void = () => {};
   /** Set by the owner: the chat to reopen at startup (the branch's, else the project's last), handed out once per window (null afterwards). */
   takeLastThread: (cwd: string) => Promise<string | null> = async () => null;
+  /** Set by the owner: the quick Codex run with web search of "MCP servers > Add by name". */
+  mcpFind: (prompt: string) => Promise<string> = async () => { throw new Error('not available'); };
+  private mcp: McpSettings | null = null;
 
   constructor(
     readonly viewId: string,
@@ -312,6 +316,15 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         break;
       case 'listThreads':
         this.onListThreads(m);
+        break;
+      case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind':
+        this.mcp ??= new McpSettings({
+          appServer: () => this.session.appServer(), find: (p) => this.mcpFind(p),
+          // globalStorage is <user folder>/globalStorage/<extension>: VS Code's mcp.json is in the user folder
+          userDir: () => path.resolve(this.ctx.globalStorageUri.fsPath, '..', '..'),
+          post: (e) => this.post(e), log: (l) => this.log(l),
+        });
+        this.mcp.handle(m);
         break;
       case 'aiSearch': {
         const cwds = Array.isArray(m.cwds) ? (m.cwds as unknown[]).filter((c): c is string => typeof c === 'string' && c !== '').map((c) => normalizeDrive(c)) : [];

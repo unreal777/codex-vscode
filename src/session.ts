@@ -238,6 +238,11 @@ export class CodexSession {
     });
   }
 
+  /** The connected app-server (connects first if needed); for config requests of the MCP settings. */
+  appServer(): Promise<AppServerClient> {
+    return this.connectBlocking();
+  }
+
   /** One connect at a time; callers that arrive meanwhile share the result (Java: synchronized). */
   private connectBlocking(): Promise<AppServerClient> {
     if (this.connected && this.client && this.client.isAlive()) return Promise.resolve(this.client);

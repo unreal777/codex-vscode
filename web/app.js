@@ -90,6 +90,16 @@
     setCommitModel: 'Model for commit messages and AI search', setCommitModelHint: '"Generate commit message" in Source Control and the AI search of the History. A fast model is enough.',
     setCommitEffort: 'Reasoning effort for commit messages and AI search', setCommitEffortHint: 'Low is fast and enough for both.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
+    // MCP servers (settings, VS Code host)
+    mcpTitle: 'MCP servers', mcpHint: 'Servers of the Codex config (~/.codex/config.toml, shared with the Codex CLI and Eclipse). Switching one off keeps it for later.',
+    mcpError: 'Could not read the Codex config: ', mcpNone: 'No MCP servers in the Codex config.', mcpOn: (n) => 'Use ' + n,
+    mcpTest: 'Check', mcpTestTitle: 'Start the server and list its tools', mcpRemove: 'Remove from the Codex config',
+    mcpVsTitle: 'From VS Code (Copilot)', mcpImport: 'Add', mcpImportTitle: 'Copy this server of VS Code\'s mcp.json to the Codex config',
+    mcpVsNone: 'VS Code\'s mcp.json has no servers.', mcpVsAll: (n) => 'All ' + n + ' servers of VS Code\'s mcp.json are in Codex already.',
+    mcpVsMore: (n) => n + ' more already in Codex.',
+    mcpFindTitle: 'Add by name', mcpFindPh: 'e.g. serena, github, postgres', mcpFind: 'Find',
+    mcpFindHint: 'Codex searches the web for the official setup. You see the command and confirm it before anything is added.',
+    mcpFinding: 'Searching the web for the setup… (up to a minute)',
     permTitle: 'How should Codex actions be approved?',
     permLabels: { ask: 'Ask for approval', auto: 'Approve for me', full: 'Full access', custom: 'Custom (config.toml)' },
     permDescs: {
@@ -316,6 +326,8 @@
     // cwds = selected projects (empty = all); manual = the user changed it by hand, so the IDE's open projects no longer preselect it.
     hist: { query: '', cwds: [], manual: false, openProjects: [], rows: [], next: null, loading: false, archived: false, confirm: null, busy: new Set(), reqId: 0, projects: [], error: null, sel: 0, autoLoads: 0,
       ai: false, aiCache: null /* {key, rows} of the last AI answer */, aiKey: null /* key of the AI request in flight */ },
+    // MCP servers of the settings (VS Code host): servers null = not loaded; notes by server name ('' = the whole section)
+    mcp: { servers: null, vscode: [], error: null, loading: false, notes: {}, finding: false, findError: null, query: '' },
     mention: { open: false, items: [], sel: 0, reqId: 0, start: 0, query: '', loading: false },
     tokenUsage: null, rateLimits: null,
     turnFiles: new Set(), turnDiff: null, turnStartMs: 0,
@@ -1508,8 +1520,64 @@
       field('set-font', STR.setFontSize, STR.setFontSizeHint, selF),
       field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM), field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE),
       h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
+    if (host === 'vscode') setBody.insertBefore(renderMcp(), $('#set-more'));
     const again = keep && document.getElementById(keep);
     if (again && !again.disabled) again.focus();
+  }
+  // ---------- in-panel settings: MCP servers of the Codex config (VS Code host) ----------
+  function renderMcp() {
+    const mc = state.mcp, rows = mc.servers || [];
+    const note = (name) => {
+      const n = mc.notes[name];
+      return n ? h('div', { class: 'mcp-note' + (n.ok ? '' : ' bad'), role: 'status' }, n.busy ? h('span', { class: 'spinner' }) : null, h('span', { text: n.text })) : null;
+    };
+    const list = h('div', { class: 'mcp-list', role: 'list' });
+    if (mc.error) list.append(h('div', { class: 'hint bad', text: STR.mcpError + mc.error }));
+    else if (mc.servers === null) list.append(h('div', { class: 'hint' }, h('span', { class: 'spinner' }), ' ' + STR.historyLoading));
+    else if (!rows.length) list.append(h('div', { class: 'hint', text: STR.mcpNone }));
+    rows.forEach((s, i) => {
+      const cb = h('input', { type: 'checkbox', id: 'mcp-on-' + i, 'aria-label': STR.mcpOn(s.name) });
+      cb.checked = s.enabled;
+      cb.addEventListener('change', () => { s.enabled = cb.checked; bridge.post({ type: 'mcpToggle', name: s.name, enabled: cb.checked }); });
+      list.append(h('div', { class: 'mcp-row' + (s.enabled ? '' : ' off'), role: 'listitem' },
+        h('label', { class: 'mcp-main', for: 'mcp-on-' + i, title: s.target }, cb, h('span', { class: 'mcp-name', text: s.name }), h('span', { class: 'mcp-target', text: s.target })),
+        h('button', { class: 'mcp-btn', type: 'button', id: 'mcp-test-' + i, disabled: !s.enabled, title: STR.mcpTestTitle, text: STR.mcpTest,
+          onclick: () => bridge.post({ type: 'mcpTest', name: s.name }) }),
+        h('button', { class: 'ract mcp-rm', type: 'button', id: 'mcp-rm-' + i, title: STR.mcpRemove, 'aria-label': STR.mcpRemove + ' ' + s.name,
+          onclick: () => bridge.post({ type: 'mcpRemove', name: s.name }) }, h('span', { html: ICON.trash })),
+        note(s.name)));
+    });
+    // servers of VS Code's mcp.json (Copilot) that Codex does not have yet
+    const fresh = (mc.vscode || []).filter((v) => !v.inCodex), known = (mc.vscode || []).length - fresh.length;
+    const vs = h('div', { class: 'mcp-list', role: 'list' });
+    fresh.forEach((v, i) => vs.append(h('div', { class: 'mcp-row', role: 'listitem' },
+      h('span', { class: 'mcp-main', title: v.key + '\n' + v.target + '\n' + v.source }, h('span', { class: 'mcp-name', text: v.name }), h('span', { class: 'mcp-target', text: v.problem || v.target })),
+      h('button', { class: 'mcp-btn', type: 'button', id: 'mcp-imp-' + i, disabled: !!v.problem, title: v.problem || STR.mcpImportTitle, text: STR.mcpImport,
+        onclick: () => bridge.post({ type: 'mcpImport', key: v.key }) }))));
+    if (!fresh.length && mc.servers !== null) vs.append(h('div', { class: 'hint', text: known ? STR.mcpVsAll(known) : STR.mcpVsNone }));
+    else if (known) vs.append(h('div', { class: 'hint', text: STR.mcpVsMore(known) }));
+    // add by name: a quick Codex run with web search proposes the setup, VS Code asks to confirm it
+    const q = h('input', { type: 'text', id: 'mcp-q', class: 'mcp-q', placeholder: STR.mcpFindPh, 'aria-label': STR.mcpFindPh, spellcheck: 'false', disabled: mc.finding });
+    q.value = mc.query;
+    q.addEventListener('input', () => { mc.query = q.value; findBtn.disabled = mc.finding || !q.value.trim(); });
+    const find = () => { if (!mc.query.trim() || mc.finding) return; mc.finding = true; mc.findError = null; bridge.post({ type: 'mcpFind', query: mc.query.trim() }); renderSettings(); };
+    q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); find(); } });
+    const findBtn = h('button', { class: 'mcp-btn', type: 'button', id: 'mcp-find', disabled: mc.finding || !mc.query.trim(), onclick: find },
+      h('span', { class: 'mcp-spark', html: ICON.sparkle }), h('span', { text: STR.mcpFind }));
+    const findState = mc.finding ? h('div', { class: 'mcp-note', role: 'status' }, h('span', { class: 'spinner' }), h('span', { text: STR.mcpFinding }))
+      : mc.findError ? h('div', { class: 'mcp-note bad', role: 'status', text: mc.findError }) : null;
+    return h('div', { class: 'set-field mcp' },
+      h('div', { class: 'set-sec', text: STR.mcpTitle }), h('div', { class: 'hint', text: STR.mcpHint }), list, note(''),
+      h('div', { class: 'set-sub', text: STR.mcpVsTitle }), vs,
+      h('div', { class: 'set-sub', text: STR.mcpFindTitle }), h('div', { class: 'mcp-findrow' }, q, findBtn),
+      h('div', { class: 'hint', text: STR.mcpFindHint }), findState);
+  }
+  function onMcp(ev) {
+    const mc = state.mcp;
+    if (ev.kind === 'mcp') { mc.servers = ev.servers || []; mc.vscode = ev.vscode || []; mc.error = ev.error || null; mc.loading = false; }
+    else if (ev.kind === 'mcpNote') { mc.notes[ev.name || ''] = { text: ev.text, ok: ev.ok !== false, busy: !!ev.busy }; }
+    else if (ev.kind === 'mcpFind') { mc.finding = !!ev.busy; mc.findError = ev.error || null; }
+    renderSettings();
   }
   // quiet: the history is opening (the focus must not go back to the gear)
   function toggleSettings(open, quiet) {
@@ -1523,6 +1591,7 @@
     if (state.settingsOpen) {
       if (state.historyOpen) toggleHistory(false);
       closePops(false);
+      if (host === 'vscode') { state.mcp.loading = true; bridge.post({ type: 'mcpList' }); }   // MCP servers of the Codex config
       renderSettings();
       $('#set-back').focus();
     } else if (!quiet) (gearBtn.offsetParent !== null ? gearBtn : input).focus();
@@ -2262,6 +2331,7 @@
         break;
       case 'theme': applyTheme(ev.theme); break;
       case 'windowFocus': onWindowFocus(ev.focused); break;
+      case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
       case 'status':
         setConn(ev.state, ev.message);
         break;
