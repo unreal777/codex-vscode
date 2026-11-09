@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -86,6 +86,11 @@
         "title": "Codexter: Attach files..."
       },
       {
+        "command": "codexPanel.generateCommitMessage",
+        "title": "Codexter: Generate commit message",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "codexPanel.askSelection",
         "title": "Codexter: Ask about selection"
       },
@@ -124,6 +129,13 @@
           "command": "codexPanel.openSettings",
           "when": "view == codexPanel.chat || view == codexPanel.chatSecondary",
           "group": "navigation@2"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "codexPanel.generateCommitMessage",
+          "when": "scmProvider == git",
+          "group": "navigation@0"
         }
       ],
       "explorer/context": [

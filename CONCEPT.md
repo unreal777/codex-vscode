@@ -40,6 +40,7 @@ a useful reference for the core (session, installer, history), but the two are s
 | `Ctrl+Alt+C` | focus the Codex view |
 | Preferences page (`Prefs`) | `contributes.configuration` `codexPanel.*` (codex path, source managed/own, update interval days, autosave, since 0.3.0 `defaultModel`, `defaultReasoningEffort`, `hiddenModels`, since 0.5.4 `defaultPermissions`, `fontSize`); the panel's gear opens an in-panel settings view for these five ("More settings…" opens VS Code's settings); the current model/effort/permissions are kept in `globalState` (0.2.0: permissions replaces mode + approvals, migrated) |
 | — (VS Code only) | history actions: archive, unarchive, delete (`thread/archive`, `thread/unarchive`, `thread/delete`), "Show archived" (`thread/list archived:true`) |
+| — (VS Code only) | Source Control title button `codexPanel.generateCommitMessage` (`scm/title`, `scmProvider == git`): staged diff (else all changes + untracked names) and the last 10 subjects from the git extension API, `codex exec --ephemeral -s read-only -o <tmp> -` with the default model/effort, answer cleaned into `repository.inputBox` |
 | `EclipseProxy` | VS Code `http.proxy` / `http.proxyStrictSSL` and `HTTPS_PROXY` env for the download; passed on to the Codex process like the Java code does |
 | Eclipse log | `LogOutputChannel` "Codexter" |
 | sign-in | `account/login/start` URL opened with `vscode.env.openExternal` |

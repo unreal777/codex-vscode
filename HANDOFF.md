@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.4)
+## Status (0.5.5)
+
+- 0.5.5: Source Control button "Generate commit message" with Codex. See "0.5.5".
 
 - 0.5.4: input grows while focused, compact models multi-select, default permissions, font size. See "0.5.4".
 
@@ -23,6 +25,18 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.5
+
+- Copilot's sparkle sits in the commit box through the proposed `scm/inputBox` menu (`contribSourceControlInputBoxMenu`); a published
+  extension can not use it, so Codexter's button is in `scm/title` (codicon `$(terminal)`, looks like the >_ logo).
+- `src/commitMessage.ts` (VS Code glue, git extension API v1: diff(staged), state, log, inputBox) and `src/core/commitMessage.ts`
+  (prompt, `execArgs`, `cleanMessage`, `runCodexExec`; unit tested with a fake codex in commit.test.ts). The run is
+  `codex exec --ephemeral --skip-git-repo-check -s read-only -o <tmp file> [-m model] [-c model_reasoning_effort=...] -` with the prompt
+  on stdin, cwd = repository root, 180 s timeout, one run per repository at a time. Model/effort = `codexPanel.defaultModel` / `defaultReasoningEffort`.
+- Not run against the real Codex here (it would use the subscription); the user tests it.
+- Reminder: never put backtick text into a Bash tool heredoc, even a quoted one; it gets executed (this happened again in 0.5.5 and
+  started a stray `codex exec`). Write scripts and commit messages to files.
 
 ## 0.5.4
 

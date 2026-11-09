@@ -2,6 +2,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { generateCommitMessage } from './commitMessage';
+import { locate } from './core/locator';
 import { DiffProvider } from './diff';
 import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
 import { MentionSearch } from './mentions';
@@ -110,6 +112,19 @@ export function activate(ctx: vscode.ExtensionContext): void {
     ...providers.map((p) => vscode.window.registerWebviewViewProvider(p.viewId, p, { webviewOptions: { retainContextWhenHidden: true } })),
 
     vscode.commands.registerCommand('codexPanel.open', showView),
+    vscode.commands.registerCommand('codexPanel.generateCommitMessage', (arg?: unknown) => generateCommitMessage({
+      locateCodex: () => {
+        try {
+          return locate(host.codexPath(), host.codexBase, host.managedEnabled());
+        } catch {
+          throw new Error('Codex is not installed yet: open the Codexter chat once so it can download Codex.');
+        }
+      },
+      env: () => ({ ...process.env, ...host.processEnv() }),
+      model: () => cfg().get<string>('defaultModel', '').trim(),
+      effort: () => cfg().get<string>('defaultReasoningEffort', '').trim(),
+      log,
+    }, arg)),
     vscode.commands.registerCommand('codexPanel.newChat', async () => {
       (await showView()).newChat();
     }),
