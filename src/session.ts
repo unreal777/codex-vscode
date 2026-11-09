@@ -38,6 +38,8 @@ export interface SessionHost {
   checked?(when: Date): void;
   /** The open chat changed: started, opened from the history (id) or New chat / archived / deleted (null). The host remembers it per project. */
   threadChanged?(id: string | null): void;
+  /** A message was sent in this chat (turn/start accepted); cwd is the chat's folder. Remembers it for the checked-out git branch. */
+  chatUsed?(threadId: string, cwd: string): void;
 }
 
 export type Sink = (event: Json) => void;
@@ -563,6 +565,7 @@ export class CodexSession {
           }
         }
         if (r.turn && r.turn.id) this.turnId = r.turn.id;
+        this.host.chatUsed?.(threadId, this._threadCwd ?? cwd);
       } catch (e) {
         if (!(e instanceof NotFoundError) && !(e instanceof Reported) && this.connected) this.error('Could not send the message', describe(e), false);
         this.emit(ev('idle'));
@@ -804,11 +807,15 @@ export class CodexSession {
     }
   }
 
-  /** Opens a chat. quiet: reopening the project's last chat at startup; on failure (deleted elsewhere, ...) it only logs and forgets
-   *  the id, and it does nothing if another chat was opened or started in the meantime. */
-  resume(id: string, quiet = false): Promise<void> {
+  /** Opens a chat; true when it is open now.
+   *  user: from the history, errors are shown.
+   *  restore: the project's / branch's last chat at startup; does nothing if a chat was opened or started in the meantime, and on failure
+   *    (deleted elsewhere, ...) it only logs and forgets the id.
+   *  switch: the chat of a branch that was just checked out; replaces the open chat, failures are only logged. */
+  resume(id: string, mode: 'user' | 'restore' | 'switch' = 'user'): Promise<boolean> {
     return this.submit(async () => {
-      if (quiet && this._threadId !== null) return;
+      if (mode === 'restore' && this._threadId !== null) return false;
+      if (mode === 'switch' && (this._threadId === id || this.turnId !== null)) return this._threadId === id;
       try {
         const c = await this.connectBlocking();
         if (this.turnId !== null) this.interrupt();
@@ -830,13 +837,15 @@ export class CodexSession {
           if (g.goal) e.goal = g.goal;
         } catch { /* no goal info */ }
         this.emit(e);
+        return true;
       } catch (e) {
-        if (!quiet) {
+        if (mode === 'user') {
           this.error('Could not open the chat', describe(e), false);
         } else {
-          this.log('[warn] could not reopen the last chat ' + id + ': ' + describe(e));
-          this.host.threadChanged?.(null);
+          this.log('[warn] could not open the ' + (mode === 'restore' ? 'last' : 'branch\'s') + ' chat ' + id + ': ' + describe(e));
+          if (mode === 'restore') this.host.threadChanged?.(null);
         }
+        return false;
       }
     });
   }

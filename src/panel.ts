@@ -86,8 +86,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   private readonly subs: vscode.Disposable[] = [];
   /** Set by the owner: told when this view became the one in use (resolved or visible). */
   onActive: (p: CodexViewProvider) => void = () => {};
-  /** Set by the owner: the project's last open chat, handed out once per window (null afterwards). */
-  takeLastThread: () => string | null = () => null;
+  /** Set by the owner: the chat to reopen at startup (the branch's, else the project's last), handed out once per window (null afterwards). */
+  takeLastThread: (cwd: string) => Promise<string | null> = async () => null;
 
   constructor(
     readonly viewId: string,
@@ -279,8 +279,8 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     if (this.session.threadId !== null) {
       if (!this.session.isRunning) void this.session.resume(this.session.threadId);
     } else {
-      const last = this.takeLastThread(); // first page of this window: reopen the chat that was open when the project was closed
-      if (last) void this.session.resume(last, true);
+      // first page of this window: reopen the branch's chat, else the one that was open when the project was closed
+      void this.takeLastThread(this.cwd).then((last) => { if (last) void this.session.resume(last, 'restore'); });
     }
   }
 

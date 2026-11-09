@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.5)
+## Status (0.5.6)
+
+- 0.5.6: last used chat per git branch. See "0.5.6".
 
 - 0.5.5: Source Control button "Generate commit message" with Codex. See "0.5.5".
 
@@ -25,6 +27,19 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.6
+
+- `src/core/branchChats.ts` (decisions, unit tested in branch.test.ts) and `src/branchChats.ts` (git extension API: HEAD of every
+  repository, `state.onDidChange`). Map in workspaceState `codexPanel.branchChats`: `<root lowercased, />|<branch>` -> `{ thread, at }`,
+  entries older than 30 days pruned on every load.
+- A chat is recorded for a branch when a message was sent in it (`SessionHost.chatUsed` after turn/start), not when it was only opened.
+- HEAD moved to another branch: that branch has a chat -> `session.resume(id, 'switch')` (replaces the open chat; skipped with a message
+  while a reply runs; on failure the entry is forgotten). No chat, the branch is new (same commit as before) and the open chat is the one
+  of the old branch -> the entry moves to the new branch (start on master, branch at the end). Detached HEAD is ignored.
+- Startup: `takeLastThread(cwd)` waits up to 5 s for the git extension and prefers the branch's chat over `codexPanel.lastThread`.
+- `session.resume(id, mode)`: user | restore | switch (was a quiet flag), returns whether the chat is open.
+- Not checked live (needs real chats and branch switches); the user tests it.
 
 ## 0.5.5
 

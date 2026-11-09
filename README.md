@@ -22,6 +22,8 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - Source Control: the Codexter button in the view title (>_ icon, or *Codexter: Generate commit message*) lets Codex write the commit
   message from the staged changes (all changes when nothing is staged), in a temporary read-only run that does not show up in the history.
 - Opening a project reopens the chat that was open there when VS Code was closed (New chat starts a fresh one).
+- Every git branch remembers the chat last used on it (a message sent while it was checked out) for 30 days; checking the branch out
+  opens that chat. A branch created from where you were working (e.g. at the end, from master) takes the open chat with it.
 - Drag files, folders or editor tabs onto **Attach files** (the small area under the chat, or click *Choose files...* there; VS Code never passes its own drags to the chat
   webview). Files from the Windows Explorer can be dropped onto the chat itself. Pasting file paths into the input (VS Code *Copy Path*,
   Windows Explorer *Copy as path*, file: URIs) also turns them into chips.

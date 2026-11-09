@@ -96,19 +96,45 @@ test('last chat: open / new chat report threadChanged; a quiet reopen fails sile
   const events: any[] = [];
   s.addSink((e) => events.push(e));
   try {
-    await s.resume('t1', true);
+    await s.resume('t1', 'restore');
     assert.equal(s.threadId, 't1');
     assert.deepEqual(changed, ['t1']);
-    await s.resume('t2', true);
+    await s.resume('t2', 'restore');
     assert.equal(s.threadId, 't1', 'a quiet reopen never replaces an open chat');
     s.newChat();
     assert.deepEqual(changed, ['t1', null]);
-    await s.resume('bad', true);
+    await s.resume('bad', 'restore');
     assert.equal(s.threadId, null);
     assert.deepEqual(changed, ['t1', null, null]);
     assert.ok(!events.some((e) => e.kind === 'error'), 'no error shown for a quiet reopen');
     await s.resume('bad');
     assert.ok(events.some((e) => e.kind === 'error'), 'opening from the history still shows the error');
+  } finally {
+    c.close();
+  }
+});
+
+test('branch switch: replaces the open chat, skips while a reply runs, fails quietly; a sent message reports chatUsed', async () => {
+  const c = await server();
+  const host = { log: () => {}, projectName: (d: string | null) => d ?? '', version: '0', codexBase: '', permissionsPref: () => 'ask' } as unknown as SessionHost;
+  const s = new CodexSession(host);
+  const priv = s as any;
+  priv.client = c;
+  priv.connected = true;
+  const events: any[] = [];
+  s.addSink((e) => events.push(e));
+  try {
+    priv._threadId = 'main-chat';
+    assert.equal(await s.resume('feature-chat', 'switch'), true);
+    assert.equal(s.threadId, 'feature-chat');
+    assert.equal(await s.resume('feature-chat', 'switch'), true, 'already open');
+    priv.turnId = 'running';
+    assert.equal(await s.resume('other', 'switch'), false);
+    assert.equal(s.threadId, 'feature-chat', 'a running reply is never cut off');
+    priv.turnId = null;
+    assert.equal(await s.resume('bad', 'switch'), false);
+    assert.equal(s.threadId, 'feature-chat');
+    assert.ok(!events.some((e) => e.kind === 'error'));
   } finally {
     c.close();
   }

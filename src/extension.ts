@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { BranchChats } from './branchChats';
 import { generateCommitMessage } from './commitMessage';
 import { locate } from './core/locator';
 import { DiffProvider } from './diff';
@@ -46,12 +47,17 @@ export function activate(ctx: vscode.ExtensionContext): void {
   const ws = new WorkspaceBridge();
   // The chat that was open in this project (workspaceState is per folder / workspace), reopened once when the window starts.
   // Any chat change before that (New chat, a first message) wins over the remembered one.
+  // 0.5.6: the chat of the checked-out git branch comes first (see branchChats.ts).
   let lastThreadTaken = false;
-  const takeLastThread = (): string | null => {
+  let chatChanged = false;
+  let branches: BranchChats | undefined;
+  const takeLastThread = async (cwd: string): Promise<string | null> => {
     if (lastThreadTaken) return null;
     lastThreadTaken = true;
     if (!vscode.workspace.workspaceFolders?.length) return null;
-    return ctx.workspaceState.get<string>(LAST_THREAD_KEY) ?? null;
+    const byBranch = branches ? await branches.threadAtStartup(cwd) : null;
+    if (chatChanged) return null; // the user opened or started a chat while git was loading
+    return byBranch ?? ctx.workspaceState.get<string>(LAST_THREAD_KEY) ?? null;
   };
 
   const host: SessionHost = {
@@ -72,11 +78,21 @@ export function activate(ctx: vscode.ExtensionContext): void {
     checked: (when) => { void ctx.globalState.update('codexPanel.lastUpdateCheck', when.toISOString()); },
     threadChanged: (id) => {
       lastThreadTaken = true;
+      chatChanged = true;
       void ctx.workspaceState.update(LAST_THREAD_KEY, id ?? undefined);
     },
+    chatUsed: (threadId, cwd) => branches?.used(threadId, cwd),
   };
   session = new CodexSession(host);
   const s = session;
+  branches = new BranchChats(ctx.workspaceState, {
+    openThread: () => s.threadId,
+    isRunning: () => s.isRunning,
+    open: (id) => s.resume(id, 'switch'),
+    log,
+  });
+  void branches.start();
+  ctx.subscriptions.push(branches);
   const mentions = new MentionSearch(ws, log);
   const diffs = new DiffProvider(log);
 
