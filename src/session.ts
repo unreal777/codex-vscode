@@ -10,6 +10,7 @@ import { Json, RpcError } from './core/jsonrpc';
 import { locate, Located, NotFoundError } from './core/locator';
 import { permissionSettings, PermissionSettings } from './core/permissions';
 import { mapPlugins } from './core/plugins';
+import { AI_MAX_CHATS, buildSearchPrompt, parseSearchAnswer } from './core/aiSearch';
 import { cwdKey, expandCwds, isListable, str, threadMatches, threadPreview, threadTitle } from './core/threadRows';
 import { normalizeDrive } from './core/winPath';
 import { CodexUpdater, errorMessage } from './updater';
@@ -40,6 +41,8 @@ export interface SessionHost {
   threadChanged?(id: string | null): void;
   /** A message was sent in this chat (turn/start accepted); cwd is the chat's folder. Remembers it for the checked-out git branch. */
   chatUsed?(threadId: string, cwd: string): void;
+  /** One question to a temporary read-only `codex exec` run (fast model of the settings); resolves with the answer. Used by the AI search. */
+  ask?(prompt: string): Promise<string>;
 }
 
 export type Sink = (event: Json) => void;
@@ -723,6 +726,63 @@ export class CodexSession {
         this.emit(e);
       } catch (ex) {
         this.emit({ kind: 'threads', requestId, append: cursor !== null, data: [], error: describe(ex) });
+      }
+    })();
+  }
+
+  /**
+   * AI search: the newest chats of the selection (up to AI_MAX_CHATS) go to host.ask with the description; answers with a "threads"
+   * event (ai: true, no paging) whose rows are the matches, best first. A newer listThreads / aiSearch makes the page drop the answer.
+   */
+  aiSearch(requestId: number, query: string, cwds: string[], archived = false): void {
+    this.latestHistoryRequest = requestId;
+    this._historyQuery = query ?? '';
+    this._historyCwds = cwds.filter((p) => typeof p === 'string' && p !== '').map((p) => normalizeDrive(p));
+    const selected = this._historyCwds;
+    void (async () => {
+      try {
+        const ask = this.host.ask?.bind(this.host);
+        if (!ask) throw new Error('AI search is not available here');
+        const c = await this.connectBlocking();
+        if (selected.length > 0 && this.projectSurvey === null) {
+          try { await this.loadSurvey(c); } catch (e) { this.log('project survey failed: ' + e); }
+        }
+        const cwdFilter = selected.length > 0 ? expandCwds(selected, this.seenCwds) : null;
+        const rows: Json[] = [];
+        const projectByCwd = new Map<string, string>();
+        let next: string | null = null;
+        let pages = 0;
+        do {
+          if (requestId !== this.latestHistoryRequest) return;
+          const page = await this.fetchThreadPage(c, cwdFilter, next, HISTORY_SCAN_PAGE, archived);
+          pages++;
+          for (const thread of page.data ?? []) {
+            if (!isListable(thread) || rows.length >= AI_MAX_CHATS) continue;
+            const cwd = str(thread, 'cwd');
+            if (cwd) this.seenCwds.add(cwd);
+            const key = cwdKey(cwd);
+            let project = projectByCwd.get(key);
+            if (project === undefined) {
+              project = this.host.projectName(cwd);
+              projectByCwd.set(key, project);
+            }
+            rows.push({ id: thread.id, title: threadTitle(str(thread, 'name'), str(thread, 'preview')), preview: threadPreview(str(thread, 'preview')),
+              updatedAt: thread.updatedAt ?? null, cwd, project });
+          }
+          next = str(page, 'nextCursor');
+        } while (next !== null && rows.length < AI_MAX_CHATS && pages < HISTORY_MAX_SCAN_PAGES);
+        if (requestId !== this.latestHistoryRequest) return;
+        let data: Json[] = [];
+        if (rows.length > 0) {
+          const { prompt, count } = buildSearchPrompt(query, rows.map((r) => ({ title: r.title, project: r.project, updatedAt: r.updatedAt, preview: r.preview })));
+          const started = Date.now();
+          const answer = await ask(prompt);
+          this.log('[search] ' + count + ' chats, answer "' + answer.slice(0, 200).replace(/\s+/g, ' ') + '" after ' + ((Date.now() - started) / 1000).toFixed(1) + ' s');
+          data = parseSearchAnswer(answer, count).map((i) => rows[i]);
+        }
+        this.emit({ kind: 'threads', requestId, append: false, ai: true, data, scanned: rows.length });
+      } catch (ex) {
+        this.emit({ kind: 'threads', requestId, append: false, ai: true, data: [], error: describe(ex) });
       }
     })();
   }

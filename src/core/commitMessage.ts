@@ -4,6 +4,9 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+/** Model of the quick one-off runs (commit message, AI search) unless the user picks another: fast and cheap. */
+export const DEFAULT_QUICK_MODEL = 'gpt-6-luna';
+
 /** Longest diff sent to Codex; the rest is cut (the file list still names every file). */
 export const MAX_DIFF_CHARS = 60_000;
 
@@ -89,16 +92,19 @@ export interface ExecOptions {
   mcpOff?: string[];
   timeoutMs: number;
   log?: (line: string) => void;
+  /** log prefix and temp folder name: commit (default) or search */
+  tag?: string;
 }
 
 /** Runs `codex exec` and returns the cleaned last message. Rejects with the end of stderr when Codex fails or writes nothing. */
 export function runCodexExec(o: ExecOptions): Promise<string> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codexter-commit-'));
+  const tag = o.tag ?? 'commit';
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codexter-' + tag + '-'));
   const out = path.join(dir, 'message.txt');
   const [exe, ...pre] = o.command;
   const args = [...pre, ...execArgs(out, o.model, o.effort, o.mcpOff ?? [])];
   const started = Date.now();
-  o.log?.('[commit] ' + exe + ' ' + args.join(' ') + ' (cwd ' + o.cwd + ')');
+  o.log?.('[' + tag + '] ' + exe + ' ' + args.join(' ') + ' (cwd ' + o.cwd + ')');
   const cleanup = () => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* temp folder */ } };
   return new Promise<string>((resolve, reject) => {
     let stderr = '';
@@ -118,7 +124,7 @@ export function runCodexExec(o: ExecOptions): Promise<string> {
       let text = '';
       try { text = fs.readFileSync(out, 'utf8'); } catch { /* no answer */ }
       const msg = cleanMessage(text);
-      o.log?.('[commit] codex exec ended after ' + ((Date.now() - started) / 1000).toFixed(1) + ' s, exit code ' + code);
+      o.log?.('[' + tag + '] codex exec ended after' + ((Date.now() - started) / 1000).toFixed(1) + ' s, exit code ' + code);
       if (msg) return finish(null, msg);
       const tail = stderr.trim().split('\n').slice(-3).join(' ').trim();
       finish(new Error('Codex wrote no message (exit code ' + code + ')' + (tail ? ': ' + tail : '')));

@@ -313,6 +313,11 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'listThreads':
         this.onListThreads(m);
         break;
+      case 'aiSearch': {
+        const cwds = Array.isArray(m.cwds) ? (m.cwds as unknown[]).filter((c): c is string => typeof c === 'string' && c !== '').map((c) => normalizeDrive(c)) : [];
+        this.session.aiSearch(intOf(m, 'requestId'), orEmpty(str(m, 'query')), cwds, m.archived === true);
+        break;
+      }
       case 'mentionSearch':
         void this.mentions.searchAsync(this.currentCwd(), orEmpty(str(m, 'query')), intOf(m, 'requestId'), (e) => this.post(e));
         break;

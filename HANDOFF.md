@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.8)
+## Status (0.5.9)
+
+- 0.5.9: AI search in the History panel; the quick model (commit messages, AI search) defaults to GPT-6-Luna. See "0.5.9".
 
 - 0.5.8: faster commit messages (own model / effort, MCP servers off), new icon, input keeps 3 lines and stays open on Alt+Tab. See "0.5.8".
 
@@ -32,10 +34,25 @@ never edit that folder from here (its Java core is still a useful reference for 
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
 
+## 0.5.9
+
+- AI search (History, VS Code only: the "AI" toggle is shown for host vscode). With AI on, typing does not search; Enter posts
+  `aiSearch {requestId, query, cwds, archived}`. `CodexSession.aiSearch` lists the newest chats of the selection (up to AI_MAX_CHATS = 300,
+  first message cut to 300 characters, list at most 90 000 characters, src/core/aiSearch.ts), asks `host.ask(prompt)` once and answers
+  with a normal `threads` event plus `ai: true` (no paging), rows in the order of the answer. The answer is the chat numbers
+  ("12, 3, 40" or "none"); `parseSearchAnswer` ignores dates, duplicates and numbers out of range, max 30.
+  `host.ask` (extension.ts) is a `codex exec` in os.tmpdir() (no project AGENTS.md) with the commit message model / effort and MCP
+  servers off, log tag `[search]`. The page keeps the last AI answer for the same query + projects + archived switch, so AI off/on or
+  reopening the History costs no new run.
+- `codexPanel.commitMessageModel` now defaults to `gpt-6-luna` (DEFAULT_QUICK_MODEL); '' = the Codex default (config.toml), no longer the
+  chat's default model. The in-panel field is "Model for commit messages and AI search".
+- Checked in the isolated VS Code with the aiSearch request answered by fake rows (window.__codexPost wrapped): toggle, placeholder,
+  "Press Enter" hint, loading text, result rows, answer reused after AI off/on. A real AI search run was not made.
+
 ## 0.5.8
 
 - Commit messages were slow: no model setting meant the user's config.toml default (gpt-6.1-terra, effort xhigh), and every
-  `codex exec` started all MCP servers of config.toml. Now `codexPanel.commitMessageModel` ('' = defaultModel, else Codex default) and
+  `codex exec` started all MCP servers of config.toml. Now `codexPanel.commitMessageModel` ('' = defaultModel, else Codex default; changed in 0.5.9) and
   `codexPanel.commitMessageEffort` (default low), also in the in-panel settings; each server of config.toml gets
   `-c mcp_servers.<name>.enabled=false` (`mcpServerNames()` reads `[mcp_servers.<name>]` tables of $CODEX_HOME or ~/.codex config.toml).
   `-c mcp_servers={}` does NOT work (merged, not replaced), and servers from elsewhere (a plugin, e.g. postman-mcp) must not be named:

@@ -17,6 +17,14 @@
     noHistoryHint: 'Try another word, or choose All projects.',
     historySearch: 'Search chats and projects…',
     historyLoading: 'Loading…',
+    // AI search of the History
+    aiToggle: 'AI search: describe the chat in your own words, then press Enter (Codex reads the titles and first messages of the newest 300 chats)',
+    aiSearchPh: 'Describe the chat, then press Enter…',
+    aiSearching: 'AI is searching the chats…',
+    aiPressEnter: 'Press Enter to search with AI.',
+    aiNone: 'AI found no matching chat',
+    aiNoneHint: 'Describe it differently, or choose All projects.',
+    aiFailed: 'AI search failed: ',
     historyMore: 'Load more',
     historyError: 'Could not load the history: ',
     allProjects: 'All projects',
@@ -78,9 +86,9 @@
     codexDefault: 'Codex default', modelDefaultEffort: 'Model default', setModels: 'Models',
     setModelsHint: 'Models shown in the picker below the input. At least one stays visible.', setNoModels: 'The model list is not loaded yet.',
     setAllModels: 'All models', setDefaultPerms: 'Default permissions', setDefaultPermsHint: 'New chats start with these permissions.',
-    keepLastPerms: 'Keep the last used', likeDefaultModel: 'Like the default model',
-    setCommitModel: 'Commit message model', setCommitModelHint: 'For "Generate commit message" in Source Control. A fast model is enough.',
-    setCommitEffort: 'Commit message reasoning effort', setCommitEffortHint: 'Low is fast and enough for a commit message.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
+    keepLastPerms: 'Keep the last used',
+    setCommitModel: 'Model for commit messages and AI search', setCommitModelHint: '"Generate commit message" in Source Control and the AI search of the History. A fast model is enough.',
+    setCommitEffort: 'Reasoning effort for commit messages and AI search', setCommitEffortHint: 'Low is fast and enough for both.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
     permTitle: 'How should Codex actions be approved?',
     permLabels: { ask: 'Ask for approval', auto: 'Approve for me', full: 'Full access', custom: 'Custom (config.toml)' },
@@ -306,7 +314,8 @@
     contexts: [], dismissedFile: null,
     // History panel: the query and the project selection are kept while the page lives (and by the host for the whole IDE session).
     // cwds = selected projects (empty = all); manual = the user changed it by hand, so the IDE's open projects no longer preselect it.
-    hist: { query: '', cwds: [], manual: false, openProjects: [], rows: [], next: null, loading: false, archived: false, confirm: null, busy: new Set(), reqId: 0, projects: [], error: null, sel: 0, autoLoads: 0 },
+    hist: { query: '', cwds: [], manual: false, openProjects: [], rows: [], next: null, loading: false, archived: false, confirm: null, busy: new Set(), reqId: 0, projects: [], error: null, sel: 0, autoLoads: 0,
+      ai: false, aiCache: null /* {key, rows} of the last AI answer */, aiKey: null /* key of the AI request in flight */ },
     mention: { open: false, items: [], sel: 0, reqId: 0, start: 0, query: '', loading: false },
     tokenUsage: null, rateLimits: null,
     turnFiles: new Set(), turnDiff: null, turnStartMs: 0,
@@ -323,6 +332,7 @@
     file: '<svg viewBox="0 0 16 16"><path d="M4 1.5h5l3.5 3.5V14a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5V2a.5.5 0 0 1 .5-.5zM9 1.5V5h3.5"/></svg>',
     folder: '<svg viewBox="0 0 16 16"><path d="M1.5 3.5h4l1.5 1.5h7.5v8a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5z"/></svg>',
     caret: '<svg viewBox="0 0 16 16"><path d="M4 6.5l4 4 4-4"/></svg>',
+    sparkle: '<svg viewBox="0 0 16 16"><path d="M8 1.5 9.3 6.7 14.5 8 9.3 9.3 8 14.5 6.7 9.3 1.5 8 6.7 6.7z"/></svg>',
     hand: '<svg viewBox="0 0 16 16"><path d="M5.5 8V3.5a1 1 0 0 1 2 0V7M7.5 7V2.5a1 1 0 0 1 2 0V7M9.5 7V3.5a1 1 0 0 1 2 0V9.5c0 2.5-1.5 4-4 4-2 0-3-1-4-2.5L2.5 8.5a1 1 0 0 1 1.7-1L5.5 9"/></svg>',
     shield: '<svg viewBox="0 0 16 16"><path d="M8 1.8 13 3.6v4c0 3-2 5.2-5 6.6-3-1.400-5-3.600-5-6.600v-4z"/><path d="M5.800 8 7.200 9.400 10.200 6.400"/></svg>',
     warn: '<svg viewBox="0 0 16 16"><path d="M8 2 14.500 13.500h-13z"/><path d="M8 6.500v3.200M8 11.500v.1"/></svg>',
@@ -349,6 +359,7 @@
     '<button class="icon-btn" id="btn-set" type="button" title="' + esc(STR.settings) + '" aria-label="' + esc(STR.settings) + '" aria-haspopup="dialog" aria-expanded="false">' + ICON.gear + '</button>' +
     '<div id="history" class="hidden"><div class="hist-head">' +
     '<input id="hist-q" type="search" autocomplete="off" spellcheck="false" placeholder="' + esc(STR.historySearch) + '">' +
+    '<button id="hist-ai" class="hidden" type="button" aria-pressed="false" title="' + esc(STR.aiToggle) + '" aria-label="' + esc(STR.aiToggle) + '">' + ICON.sparkle + '<span>AI</span></button>' +
     '<button id="hist-proj" type="button" aria-haspopup="true" aria-expanded="false" title="' + esc(STR.projectFilter) + '"><span class="lbl"></span>' + ICON.caret + '</button></div>' +
     '<label id="hist-arch"><input type="checkbox" id="hist-archived"><span>' + esc(STR.showArchived) + '</span></label>' +
     '<div id="hist-list"></div></div></div>' +
@@ -1114,10 +1125,18 @@
     const ae = document.activeElement;
     const keep = ae && histList.contains(ae) && ae.dataset.act ? { id: ae.closest('.row') && ae.closest('.row').dataset.id, act: ae.dataset.act } : null;
     histList.innerHTML = '';
-    const words = hist.query.toLowerCase().split(/\s+/).filter(Boolean);
+    const aiOn = aiActive();
+    const words = aiOn ? [] : hist.query.toLowerCase().split(/\s+/).filter(Boolean);   // AI matches by meaning: nothing to highlight
     const dup = duplicateNames();
-    if (hist.error) histList.append(h('div', { class: 'empty', text: STR.historyError + hist.error }));
-    else if (!hist.rows.length && !hist.loading) {
+    // AI mode with a description that was not searched yet: say how to start (the list below stays as it is)
+    const typed = histQ.value.trim(), aiWaiting = hist.ai && !hist.loading && typed !== '' && (typed !== hist.query || !aiCached());
+    if (aiWaiting) histList.append(h('div', { class: 'empty' }, h('div', { class: 'hint', text: STR.aiPressEnter })));
+    if (hist.error) histList.append(h('div', { class: 'empty', text: (aiOn ? STR.aiFailed : STR.historyError) + hist.error }));
+    else if (aiWaiting) { /* the hint above is enough */ }
+    else if (aiOn && !hist.rows.length && !hist.loading) {
+      histList.append(h('div', { class: 'empty' }, h('div', { text: STR.aiNone }), h('div', { class: 'hint', text: STR.aiNoneHint }),
+        hist.cwds.length ? h('button', { class: 'more', type: 'button', text: STR.showAllProjects, onclick: () => setSelection([], true) }) : null));
+    } else if (!hist.rows.length && !hist.loading) {
       histList.append(h('div', { class: 'empty' }, h('div', { text: hist.archived ? STR.noArchived : STR.noHistory }), h('div', { class: 'hint', text: STR.noHistoryHint }),
         hist.cwds.length ? h('button', { class: 'more', type: 'button', text: STR.showAllProjects, onclick: () => setSelection([], true) }) : null));
     }
@@ -1146,7 +1165,7 @@
       row.addEventListener('mousemove', () => { if (hist.sel !== i) selectHistoryRow(i, false); });
       histList.append(row);
     });
-    if (hist.loading) histList.append(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), ' ' + STR.historyLoading));
+    if (hist.loading) histList.append(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), ' ' + (aiOn ? STR.aiSearching : STR.historyLoading)));
     else if (hist.next) histList.append(h('button', { class: 'more', type: 'button', text: STR.historyMore, onclick: () => requestHistory(true) }));
     if (keep && keep.id) {
       const b = histList.querySelector('.row[data-id="' + CSS.escape(keep.id) + '"] [data-act="' + keep.act + '"]');
@@ -1199,7 +1218,46 @@
   }
 
   // The answer to the newest request replaces (or, for "Load more", extends) the list; answers to older keystrokes are dropped.
+  // AI search (VS Code only): runs on Enter, not on every key, because each search is a Codex run. The answer is kept for the same
+  // description, project selection and archived switch, so reopening the History or switching AI off and on costs nothing.
+  const aiActive = () => hist.ai && hist.query !== '';
+  const aiKeyNow = () => JSON.stringify([hist.query, hist.cwds.map(normPath).sort(), hist.archived]);
+  const aiCached = () => !!hist.aiCache && hist.aiCache.key === aiKeyNow();
+  function runAiSearch() {
+    clearTimeout(histTimer); histTimer = null;
+    hist.query = histQ.value.trim(); hist.autoLoads = 0;
+    if (!hist.query) { requestHistory(false); return; }
+    hist.reqId++;
+    hist.loading = true; hist.error = null; hist.sel = 0; hist.rows = []; hist.next = null;
+    hist.aiKey = aiKeyNow();
+    renderHistory();
+    bridge.post({ type: 'aiSearch', requestId: hist.reqId, query: hist.query, cwds: hist.cwds.slice(), archived: hist.archived });
+  }
+  function fillAiToggle() {
+    const b = $('#hist-ai');
+    b.classList.toggle('hidden', host !== 'vscode');
+    b.setAttribute('aria-pressed', String(hist.ai));
+    histQ.placeholder = hist.ai ? STR.aiSearchPh : STR.historySearch;
+  }
+  $('#hist-ai').addEventListener('click', () => {
+    hist.ai = !hist.ai;
+    fillAiToggle();
+    clearTimeout(histTimer); histTimer = null;
+    hist.query = histQ.value.trim(); hist.autoLoads = 0;
+    requestHistory(false);
+    histQ.focus();
+  });
   function requestHistory(append, withProjects) {
+    if (aiActive()) {
+      // AI mode: no paging and no search per keystroke; show the kept answer, or ask for Enter
+      hist.reqId++;   // drops a listing still on its way
+      hist.loading = false; hist.error = null; hist.next = null;
+      if (append) return;
+      hist.sel = 0;
+      hist.rows = aiCached() ? hist.aiCache.rows.slice() : [];
+      renderHistory();
+      return;
+    }
     hist.reqId++;
     hist.loading = true; hist.error = null;
     if (!append) hist.sel = 0;
@@ -1208,6 +1266,7 @@
   }
   function onThreads(ev) {
     if (ev.requestId !== hist.reqId) return;
+    if (ev.ai && !ev.error) hist.aiCache = { key: hist.aiKey, rows: (ev.data || []).slice() };
     hist.loading = false; hist.error = ev.error || null;
     const data = ev.data || [];
     if (ev.append) {
@@ -1236,7 +1295,11 @@
   function closeHistory() { toggleHistory(false); input.focus(); }
 
   histQ.addEventListener('input', () => {
-    clearTimeout(histTimer);
+    clearTimeout(histTimer); histTimer = null;
+    if (hist.ai) {   // AI mode searches on Enter only; clearing the box goes back to the plain list
+      if (histQ.value.trim() === '' && hist.query !== '') applyHistoryQuery(); else renderHistory();
+      return;
+    }
     histTimer = setTimeout(applyHistoryQuery, 200);
   });
   $('#hist-archived').addEventListener('change', (e) => { hist.archived = e.target.checked; hist.confirm = null; hist.autoLoads = 0; hist.rows = []; hist.next = null; requestHistory(false); });
@@ -1267,6 +1330,9 @@
     if (step) { e.preventDefault(); if (last >= 0) selectHistoryRow(Math.max(0, Math.min(hist.sel + step, last)), true); }
     else if (e.key === 'Enter' && e.target === histQ) {
       e.preventDefault();
+      // AI mode: a new description (or one not searched yet) starts the search; Enter again opens the selected match
+      if (hist.ai && histQ.value.trim() !== '' && (histQ.value.trim() !== hist.query || !aiCached()) && !hist.loading) { runAiSearch(); return; }
+      if (hist.ai && hist.loading) return;
       if (histTimer) { clearTimeout(histTimer); applyHistoryQuery(); return; }   // Enter right after typing: search first, do not open a stale row
       if (hist.rows[hist.sel]) openHistoryRow(hist.rows[hist.sel]);
     }
@@ -1423,15 +1489,15 @@
     selF.value = String(st.fontSize);
     selF.addEventListener('change', () => saveSettings({ fontSize: Number(selF.value) }));
     // 6. commit messages (Source Control button): own model / effort, a fast one is enough
-    const selCM = h('select', { id: 'set-cmodel', 'aria-describedby': 'set-cmodel-hint' }, h('option', { value: '', text: STR.likeDefaultModel }));
+    const selCM = h('select', { id: 'set-cmodel', 'aria-describedby': 'set-cmodel-hint' }, h('option', { value: '', text: STR.codexDefault }));
     models.forEach((m) => selCM.append(h('option', { value: m.model, text: m.displayName || m.model })));
     if (st.commitMessageModel && !models.some((m) => m.model === st.commitMessageModel)) selCM.append(h('option', { value: st.commitMessageModel, text: st.commitMessageModel }));
     selCM.value = st.commitMessageModel;
     selCM.addEventListener('change', () => {
-      const m = modelFor(selCM.value || st.defaultModel), ok = (m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : []).includes(st.commitMessageEffort);
+      const m = modelFor(selCM.value), ok = (m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : []).includes(st.commitMessageEffort);
       saveSettings({ commitMessageModel: selCM.value, commitMessageEffort: ok ? st.commitMessageEffort : '' });
     });
-    const mc = modelFor(st.commitMessageModel || st.defaultModel), cEfforts = mc ? (mc.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : [];
+    const mc = modelFor(st.commitMessageModel), cEfforts = mc ? (mc.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : [];
     if (st.commitMessageEffort && !cEfforts.includes(st.commitMessageEffort)) cEfforts.push(st.commitMessageEffort);
     const selCE = h('select', { id: 'set-ceffort', 'aria-describedby': 'set-ceffort-hint' }, h('option', { value: '', text: STR.modelDefaultEffort }));
     cEfforts.forEach((e) => selCE.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
@@ -2180,6 +2246,7 @@
     switch (ev.kind) {
       case 'init':
         if (ev.host) { host = ev.host; const dz = $('#dropzone > div'); if (dz && host === 'vscode') dz.textContent = STR.dropHintVscode; }
+        fillAiToggle();
         applyTheme(ev.theme);
         if (ev.prefs) Object.assign(state.prefs, ev.prefs);
         setProject(ev.project, ev.cwd);

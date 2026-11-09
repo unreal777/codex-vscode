@@ -82,6 +82,14 @@ button { cursor: pointer; }
 #hist-proj .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #hist-proj svg { flex: none; width: 12px; height: 12px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 #hist-proj:hover { background: var(--card-hover); }
+/* AI search switch: a toggle button between the search box and the project filter */
+#hist-ai { flex: none; height: 28px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; outline: 0; }
+#hist-ai.hidden { display: none; }
+#hist-ai svg { width: 12px; height: 12px; fill: currentColor; stroke: none; }
+#hist-ai:hover { background: var(--card-hover); color: var(--fg); }
+#hist-ai:focus-visible { border-color: var(--accent); }
+#hist-ai[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 #hist-proj[aria-expanded="true"] { border-color: var(--accent); }
 
 /* project checklist: a popover below the filter button (a child of #app so the history panel does not clip it) */

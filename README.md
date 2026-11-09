@@ -29,6 +29,8 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   Windows Explorer *Copy as path*, file: URIs) also turns them into chips.
   Right-click > **Add to Codexter chat** (Explorer, also multi-select and folders; editor; editor tab) always works.
 - History (clock button) lists chats of all projects; type to search, pick a project to filter; archive, unarchive and delete chats.
+  The AI switch next to the search box finds chats by meaning: describe the chat and press Enter (a temporary read-only Codex run
+  over the titles and first messages of the newest 300 chats of the selection).
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
 - Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `defaultPermissions`, `hiddenModels`, `fontSize`, `commitMessageModel`, `commitMessageEffort`.

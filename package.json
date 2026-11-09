@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -270,8 +270,8 @@
         },
         "codexPanel.commitMessageModel": {
           "type": "string",
-          "default": "",
-          "markdownDescription": "Model for *Generate commit message* (a fast one is enough). Empty = `#codexPanel.defaultModel#`, else the Codex default."
+          "default": "gpt-6-luna",
+          "markdownDescription": "Model for *Generate commit message* and the AI search of the History panel (a fast one is enough). Default: GPT-6-Luna. Empty = the Codex default (config.toml)."
         },
         "codexPanel.commitMessageEffort": {
           "type": "string",
@@ -294,7 +294,7 @@
             "High",
             "Extra high"
           ],
-          "markdownDescription": "Reasoning effort for *Generate commit message*. Low is fast and enough for a commit message."
+          "markdownDescription": "Reasoning effort for *Generate commit message* and the AI search. Low is fast and enough for both."
         },
         "codexPanel.fontSize": {
           "type": "number",

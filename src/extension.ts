@@ -1,10 +1,11 @@
 // Codexter (Codex Panel) for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { BranchChats } from './branchChats';
 import { generateCommitMessage } from './commitMessage';
-import { mcpServerNames, readCodexConfig } from './core/commitMessage';
+import { DEFAULT_QUICK_MODEL, mcpServerNames, readCodexConfig, runCodexExec } from './core/commitMessage';
 import { locate } from './core/locator';
 import { DiffProvider } from './diff';
 import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
@@ -83,6 +84,25 @@ export function activate(ctx: vscode.ExtensionContext): void {
       void ctx.workspaceState.update(LAST_THREAD_KEY, id ?? undefined);
     },
     chatUsed: (threadId, cwd) => branches?.used(threadId, cwd),
+    // AI search of the History panel: same fast model / effort as the commit messages, run outside any project (no AGENTS.md)
+    ask: (prompt) => runCodexExec({ command: quick.locateCodex().command(), cwd: os.tmpdir(), env: quick.env(), prompt,
+      model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 120_000, log, tag: 'search' }),
+  };
+  // Settings and Codex of the quick one-off runs (commit message, AI search)
+  const quick = {
+    locateCodex: () => {
+      try {
+        return locate(host.codexPath(), host.codexBase, host.managedEnabled());
+      } catch {
+        throw new Error('Codex is not installed yet: open the Codexter chat once so it can download Codex.');
+      }
+    },
+    env: (): NodeJS.ProcessEnv => ({ ...process.env, ...host.processEnv() }),
+    // '' = the Codex default (config.toml); the setting's default is the fast GPT-6-Luna
+    model: () => cfg().get<string>('commitMessageModel', DEFAULT_QUICK_MODEL).trim(),
+    effort: () => cfg().get<string>('commitMessageEffort', 'low').trim(),
+    mcpOff: () => mcpServerNames(readCodexConfig({ ...process.env, ...host.processEnv() })),
+    log,
   };
   session = new CodexSession(host);
   const s = session;
@@ -129,21 +149,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
     ...providers.map((p) => vscode.window.registerWebviewViewProvider(p.viewId, p, { webviewOptions: { retainContextWhenHidden: true } })),
 
     vscode.commands.registerCommand('codexPanel.open', showView),
-    vscode.commands.registerCommand('codexPanel.generateCommitMessage', (arg?: unknown) => generateCommitMessage({
-      locateCodex: () => {
-        try {
-          return locate(host.codexPath(), host.codexBase, host.managedEnabled());
-        } catch {
-          throw new Error('Codex is not installed yet: open the Codexter chat once so it can download Codex.');
-        }
-      },
-      env: () => ({ ...process.env, ...host.processEnv() }),
-      // own model / effort for commit messages (a fast one); the model falls back to the chat's default model
-      model: () => cfg().get<string>('commitMessageModel', '').trim() || cfg().get<string>('defaultModel', '').trim(),
-      effort: () => cfg().get<string>('commitMessageEffort', 'low').trim(),
-      mcpOff: () => mcpServerNames(readCodexConfig({ ...process.env, ...host.processEnv() })),
-      log,
-    }, arg)),
+    vscode.commands.registerCommand('codexPanel.generateCommitMessage', (arg?: unknown) => generateCommitMessage(quick, arg)),
     vscode.commands.registerCommand('codexPanel.newChat', async () => {
       (await showView()).newChat();
     }),
