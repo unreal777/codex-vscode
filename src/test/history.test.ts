@@ -123,6 +123,11 @@ test('package.json: the three settings and the attach-files drop target', () => 
   assert.equal(p['codexPanel.defaultReasoningEffort'].default, '');
   assert.deepEqual(p['codexPanel.defaultReasoningEffort'].enum, ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh']);
   assert.equal(p['codexPanel.defaultReasoningEffort'].enumDescriptions.length, 7);
+  assert.deepEqual(p['codexPanel.defaultPermissions'].enum, ['', 'ask', 'auto', 'full', 'custom']);
+  assert.equal(p['codexPanel.defaultPermissions'].default, '');
+  assert.equal(p['codexPanel.defaultPermissions'].enumDescriptions.length, 5);
+  assert.equal(p['codexPanel.fontSize'].type, 'number');
+  assert.equal(p['codexPanel.fontSize'].default, 0);
   assert.equal(p['codexPanel.hiddenModels'].type, 'array');
   assert.equal(p['codexPanel.hiddenModels'].items.type, 'string');
   assert.deepEqual(p['codexPanel.hiddenModels'].default, []);

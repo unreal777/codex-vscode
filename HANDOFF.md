@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.5.3)
+## Status (0.5.4)
+
+- 0.5.4: input grows while focused, compact models multi-select, default permissions, font size. See "0.5.4".
 
 - 0.5.3: opening a project reopens the chat that was open there last. See "0.5.3".
 
@@ -21,6 +23,18 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.5.4
+
+- Input (`autoGrow` in web/app.js): while the focus is in `#dock` it grows with its text up to half the panel (min 180 px); when the focus
+  leaves `#dock` (focusout with relatedTarget outside, also when VS Code takes the focus) it shrinks to one line and scrolls. The CSS
+  max-height of `#input` is gone.
+- Settings view: the models list is a compact multi-select (button with the visible names + n/m, checkbox list below; Escape or a click
+  outside closes it; descriptions are tooltips). New `codexPanel.defaultPermissions` ('' = keep the last used, else ask | auto | full |
+  custom, applied by `applyDefaults` like the default model) and `codexPanel.fontSize` (0 = VS Code's `--vscode-font-size`, else 8..32 px).
+- Font size zooms the whole page (`document.documentElement.style.zoom = size / --vscode-font-size`) because app.css has many px sizes;
+  `autoGrow` divides innerHeight by the zoom. Checked in the isolated VS Code (input 309 px focused / 31 px blurred at 618 px, zoom 1.23 at 16).
+- package-lock.json: `mkdirp-classic` is also 0.5.3, so version bumps must only change the two project entries (lines 3 and 9).
 
 ## 0.5.3
 

@@ -77,6 +77,8 @@
     setDefaultModelHint: 'New chats start with this model.', setDefaultEffortHint: 'Only efforts the chosen model supports are listed.',
     codexDefault: 'Codex default', modelDefaultEffort: 'Model default', setModels: 'Models',
     setModelsHint: 'Models shown in the picker below the input. At least one stays visible.', setNoModels: 'The model list is not loaded yet.',
+    setAllModels: 'All models', setDefaultPerms: 'Default permissions', setDefaultPermsHint: 'New chats start with these permissions.',
+    keepLastPerms: 'Keep the last used', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
     permTitle: 'How should Codex actions be approved?',
     permLabels: { ask: 'Ask for approval', auto: 'Approve for me', full: 'Full access', custom: 'Custom (config.toml)' },
@@ -295,7 +297,8 @@
     items: new Map(), approvals: new Map(),
     models: [], prefs: { model: '', effort: '', permissions: 'ask' },
     // IDE settings (init.settings / event settings): the model and effort a new chat starts with, and the models the picker hides
-    settings: { defaultModel: '', defaultReasoningEffort: '', hiddenModels: [] }, defaultsApplied: false, settingsOpen: false,
+    settings: { defaultModel: '', defaultReasoningEffort: '', defaultPermissions: '', hiddenModels: [], fontSize: 0 }, defaultsApplied: false, settingsOpen: false,
+    modelsOpen: false,   // the models multi-select of the settings view is open
     turn: null, planMode: false, planUsed: false, images: [], goal: null, plugins: { items: null, loading: false, error: null, at: 0 },
     project: '', active: null, reviews: new Map(),
     contexts: [], dismissedFile: null,
@@ -1308,7 +1311,21 @@
   selEffort.addEventListener('change', () => { state.prefs.effort = selEffort.value; postPrefs(); });
   // ---------- defaults for new chats (IDE settings) ----------
   const normSettings = (o) => ({ defaultModel: String((o && o.defaultModel) || ''), defaultReasoningEffort: String((o && o.defaultReasoningEffort) || ''),
-    hiddenModels: Array.isArray(o && o.hiddenModels) ? o.hiddenModels.map(String) : [] });
+    defaultPermissions: PERMS.includes(o && o.defaultPermissions) ? o.defaultPermissions : '',
+    hiddenModels: Array.isArray(o && o.hiddenModels) ? o.hiddenModels.map(String) : [],
+    fontSize: Number.isFinite(o && o.fontSize) && o.fontSize > 0 ? Math.min(32, Math.max(8, Math.round(o.fontSize))) : 0 });
+  // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
+  let pageZoom = 1;
+  function baseFontSize() {
+    const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vscode-font-size'));
+    return v > 0 ? v : 13;
+  }
+  function applyFontSize() {
+    const fs = state.settings.fontSize;
+    pageZoom = fs ? fs / baseFontSize() : 1;
+    document.documentElement.style.zoom = pageZoom === 1 ? '' : String(pageZoom);
+    autoGrow();
+  }
   function resolvedDefaultModel() {
     const dm = state.settings.defaultModel;
     if (!dm) return '';
@@ -1322,6 +1339,7 @@
     state.prefs.model = resolvedDefaultModel();
     const eff = state.settings.defaultReasoningEffort, m = modelFor(state.prefs.model);
     state.prefs.effort = eff && (!m || (m.supportedReasoningEfforts || []).some((e) => e.reasoningEffort === eff)) ? eff : '';
+    if (state.settings.defaultPermissions) { state.prefs.permissions = state.settings.defaultPermissions; fillPerm(); }
     if (state.models.length) state.defaultsApplied = true;
     fillModels(); postPrefs();
   }
@@ -1339,7 +1357,9 @@
   function saveSettings(patch) {
     state.settings = normSettings(Object.assign({}, state.settings, patch));
     const st = state.settings;
-    bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort, hiddenModels: st.hiddenModels.slice() });
+    bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort,
+      defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize });
+    applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
   }
@@ -1365,11 +1385,19 @@
     efforts.forEach((e) => selE.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
     selE.value = efforts.includes(st.defaultReasoningEffort) ? st.defaultReasoningEffort : '';
     selE.addEventListener('change', () => saveSettings({ defaultReasoningEffort: selE.value }));
-    // 3. models of the picker (at least one stays visible)
+    // 3. default permissions ('' = keep the last used)
+    const selP = h('select', { id: 'set-perms', 'aria-describedby': 'set-perms-hint' }, h('option', { value: '', text: STR.keepLastPerms }));
+    PERMS.forEach((k) => selP.append(h('option', { value: k, text: STR.permLabels[k] })));
+    selP.value = st.defaultPermissions;
+    selP.addEventListener('change', () => saveSettings({ defaultPermissions: selP.value }));
+    // 4. models of the picker: a compact multi-select (at least one stays visible)
     const visible = models.filter((m) => !userHidden(m.model));
-    const fs = h('fieldset', { class: 'set-models', 'aria-describedby': 'set-models-hint' }, h('legend', { text: STR.setModels }),
-      h('div', { class: 'hint', id: 'set-models-hint', text: STR.setModelsHint }));
-    if (!models.length) fs.append(h('div', { class: 'hint', text: STR.setNoModels }));
+    const msText = !models.length ? STR.setNoModels : visible.length === models.length ? STR.setAllModels : visible.map((m) => m.displayName || m.model).join(', ');
+    const msBtn = h('button', { type: 'button', id: 'set-ms', class: 'set-ms-btn', 'aria-haspopup': 'true', 'aria-expanded': String(state.modelsOpen),
+      'aria-controls': 'set-ms-list', 'aria-describedby': 'set-ms-hint', disabled: !models.length,
+      onclick: () => { state.modelsOpen = !state.modelsOpen; renderSettings(); } },
+      h('span', { class: 't', text: msText }), models.length ? h('span', { class: 'n', text: visible.length + '/' + models.length }) : null, h('span', { class: 'c', html: ICON.caret }));
+    const msList = h('div', { id: 'set-ms-list', class: 'set-ms-list' + (state.modelsOpen && models.length ? '' : ' hidden'), role: 'group', 'aria-label': STR.setModels });
     models.forEach((m, i) => {
       const on = !userHidden(m.model);
       const cb = h('input', { type: 'checkbox', id: 'set-m' + i, disabled: on && visible.length <= 1 });
@@ -1378,10 +1406,19 @@
         const rest = st.hiddenModels.filter((x) => x !== m.model);
         saveSettings({ hiddenModels: cb.checked ? rest : rest.concat(m.model) });
       });
-      fs.append(h('label', { class: 'set-model', for: 'set-m' + i }, cb,
-        h('span', { class: 'mt' }, h('b', { text: m.displayName || m.model }), m.description ? h('span', { class: 'md', text: m.description }) : null)));
+      msList.append(h('label', { class: 'set-model', for: 'set-m' + i, title: m.description || null }, cb, h('span', { class: 'mt', text: m.displayName || m.model })));
     });
-    setBody.append(field('set-model', STR.setDefaultModel, STR.setDefaultModelHint, selM), field('set-effort', STR.setDefaultEffort, STR.setDefaultEffortHint, selE), fs,
+    const ms = h('div', { class: 'set-ms' }, msBtn, msList);
+    // 5. font size (0 = like VS Code)
+    const base = baseFontSize(), sizes = [10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24];
+    if (st.fontSize && !sizes.includes(st.fontSize)) sizes.push(st.fontSize);
+    const selF = h('select', { id: 'set-font', 'aria-describedby': 'set-font-hint' }, h('option', { value: '0', text: STR.vscodeFontSize + ' (' + base + ')' }));
+    sizes.sort((a, b) => a - b).forEach((n) => selF.append(h('option', { value: String(n), text: String(n) })));
+    selF.value = String(st.fontSize);
+    selF.addEventListener('change', () => saveSettings({ fontSize: Number(selF.value) }));
+    setBody.append(field('set-model', STR.setDefaultModel, STR.setDefaultModelHint, selM), field('set-effort', STR.setDefaultEffort, STR.setDefaultEffortHint, selE),
+      field('set-perms', STR.setDefaultPerms, STR.setDefaultPermsHint, selP), field('set-ms', STR.setModels, STR.setModelsHint, ms),
+      field('set-font', STR.setFontSize, STR.setFontSizeHint, selF),
       h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
     const again = keep && document.getElementById(keep);
     if (again && !again.disabled) again.focus();
@@ -1391,6 +1428,7 @@
     const was = state.settingsOpen;
     state.settingsOpen = open == null ? !was : !!open;
     if (state.settingsOpen === was) return;
+    state.modelsOpen = false;
     setBox.classList.toggle('hidden', !state.settingsOpen);
     gearBtn.setAttribute('aria-expanded', String(state.settingsOpen));
     ['#topbar', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
@@ -1402,7 +1440,20 @@
     } else if (!quiet) (gearBtn.offsetParent !== null ? gearBtn : input).focus();
   }
   $('#set-back').addEventListener('click', () => toggleSettings(false));
-  setBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); toggleSettings(false); } });
+  function closeModelList(focusBtn) {
+    if (!state.modelsOpen) return;
+    state.modelsOpen = false;
+    renderSettings();
+    const b = document.getElementById('set-ms');
+    if (focusBtn && b) b.focus();
+  }
+  setBox.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault(); e.stopPropagation();
+    if (state.modelsOpen) closeModelList(true); else toggleSettings(false);
+  });
+  // a click outside the models multi-select closes it
+  setBox.addEventListener('mousedown', (e) => { if (state.modelsOpen && !e.target.closest('.set-ms')) closeModelList(false); });
 
   // ---------- popup menus above the composer (permissions, "+") ----------
   const popBox = { plus: $('#plus-menu'), perm: $('#perm-menu') };
@@ -1694,8 +1745,25 @@
     sendBtn.title = busy ? STR.stop : STR.send;
     sendBtn.disabled = !busy && !input.value.trim() && !state.images.length;
   }
-  function autoGrow() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 180) + 'px'; input.style.overflowY = input.scrollHeight > 180 ? 'auto' : 'hidden'; }
+  // While the composer has the focus the input grows with its text up to half the panel (the chat above stays readable); when the focus
+  // leaves the composer it shrinks back to one line and its text scrolls. The composer's own buttons and menus keep it open.
+  let inputOpen = false;
+  function autoGrow() {
+    input.style.height = 'auto';   // rows="1": one line
+    if (!inputOpen) { input.style.overflowY = input.scrollHeight > input.clientHeight + 1 ? 'auto' : 'hidden'; scrollDown(); return; }
+    const max = Math.max(180, Math.floor(window.innerHeight / pageZoom * 0.5));
+    input.style.height = Math.min(input.scrollHeight, max) + 'px';
+    input.style.overflowY = input.scrollHeight > max ? 'auto' : 'hidden';
+    scrollDown();
+  }
   input.addEventListener('input', () => { autoGrow(); updateRunning(); });
+  input.addEventListener('focus', () => { if (!inputOpen) { inputOpen = true; autoGrow(); } });
+  $('#dock').addEventListener('focusout', (e) => {
+    if (e.relatedTarget && $('#dock').contains(e.relatedTarget)) return;
+    inputOpen = false;
+    autoGrow();
+  });
+  window.addEventListener('resize', () => { if (inputOpen) autoGrow(); });
   input.addEventListener('keydown', (e) => {
     if (mentionKey(e)) return;
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
@@ -2075,6 +2143,7 @@
         if (ev.historyManual) { hist.manual = true; hist.cwds = ev.historyCwds || []; }   // the user's own selection survives a re-created view
         refreshProjectUi();
         if (ev.settings) state.settings = normSettings(ev.settings);
+        applyFontSize();
         fillModels(); fillPerm();
         if (!state.hasContent) showEmpty();
         if (chatIsEmpty()) applyDefaults();
@@ -2091,6 +2160,7 @@
       case 'settings': {
         const before = JSON.stringify(state.settings);
         state.settings = normSettings(ev.settings);
+        applyFontSize();
         if (JSON.stringify(state.settings) !== before && chatIsEmpty()) applyDefaults(); else fillModels();
         renderSettings();
         break;

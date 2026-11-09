@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "publisher": "codexpanel",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -233,6 +233,32 @@
             "Extra high"
           ],
           "markdownDescription": "Reasoning effort a new chat starts with. Empty = the model's default."
+        },
+        "codexPanel.defaultPermissions": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "ask",
+            "auto",
+            "full",
+            "custom"
+          ],
+          "enumDescriptions": [
+            "Keep the permissions used last",
+            "Ask for approval",
+            "Approve for me",
+            "Full access",
+            "Custom (config.toml)"
+          ],
+          "markdownDescription": "Permissions a new chat starts with. Empty = keep the permissions used last."
+        },
+        "codexPanel.fontSize": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 32,
+          "markdownDescription": "Font size of the Codexter panel in px (8-32). 0 = the font size of VS Code's own panels. Everything in the panel scales with it."
         },
         "codexPanel.hiddenModels": {
           "type": "array",

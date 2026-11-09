@@ -48,16 +48,26 @@ export class Prefs {
   }
 }
 
-export interface PanelSettings { defaultModel: string; defaultReasoningEffort: string; hiddenModels: string[] }
-const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'hiddenModels'];
+export interface PanelSettings { defaultModel: string; defaultReasoningEffort: string; defaultPermissions: string; hiddenModels: string[]; fontSize: number }
+const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+/** '' = a new chat keeps the permissions used last */
+const PERMISSIONS = ['', 'ask', 'auto', 'full', 'custom'];
 
 /** Strings only, trimmed; the array deduped. Anything else becomes the default. */
 export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
   const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
   const effort = s(o?.defaultReasoningEffort);
+  const perms = s(o?.defaultPermissions);
   const hidden = Array.isArray(o?.hiddenModels) ? (o?.hiddenModels as unknown[]).map(s).filter((x) => x !== '') : [];
-  return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '', hiddenModels: [...new Set(hidden)] };
+  return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '',
+    defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize) };
+}
+
+/** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
+export function fontSizeOf(v: unknown): number {
+  const n = typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : 0;
+  return n === 0 ? 0 : Math.min(32, Math.max(8, n));
 }
 
 const str = (o: Json, k: string): string | null => (o && typeof o[k] === 'string' ? o[k] : null);

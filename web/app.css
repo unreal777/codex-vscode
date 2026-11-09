@@ -293,7 +293,7 @@ button { cursor: pointer; }
 #chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
 #composer { position: relative; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); display: flex; flex-direction: column; }
 #composer:focus-within { border-color: var(--accent); }
-#input { border: 0; outline: 0; resize: none; background: transparent; padding: 8px 10px 4px; min-height: 22px; max-height: 180px; line-height: 1.45; }
+#input { border: 0; outline: 0; resize: none; background: transparent; padding: 8px 10px 4px; min-height: 22px; line-height: 1.45; } /* height: autoGrow() in app.js */
 #composer .row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 4px 6px 6px; }
 /* narrow panels (a ~280px side bar): the selects shrink with an ellipsis before the row wraps, and the send button stays at the right */
 #composer .tool {
@@ -500,21 +500,28 @@ button { cursor: pointer; }
 .set-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
 #set-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 16px; max-width: 640px; width: 100%; }
 .set-field { display: flex; flex-direction: column; gap: 4px; }
-.set-field label, .set-models legend { font-weight: 600; padding: 0; }
+.set-field > label { font-weight: 600; padding: 0; }
 #settings select {
   width: 100%; max-width: 360px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); outline: 0;
 }
 #settings select:focus-visible, #settings .set-link:focus-visible { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: 1px; }
 #settings .hint { color: var(--muted); font-size: 12px; }
-.set-models { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.set-models legend { margin-bottom: 2px; }
-.set-model { display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; }
+/* models of the picker: a compact multi-select (button + checkbox list below it) */
+.set-ms { position: relative; width: 100%; max-width: 360px; }
+.set-ms-btn { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--fg); text-align: left; }
+.set-ms-btn:focus-visible, .set-ms-btn[aria-expanded="true"] { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: 1px; }
+.set-ms-btn .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-ms-btn .n { flex: none; color: var(--muted); font-size: 12px; }
+.set-ms-btn .c { flex: none; display: inline-flex; color: var(--muted); }
+.set-ms-btn .c svg { width: 12px; height: 12px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.set-ms-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; max-height: 260px; overflow: auto; padding: 4px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+.set-model { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
 .set-model:hover { background: var(--card-hover); }
 .set-model:focus-within { background: var(--card-hover); outline: 1px solid var(--accent); outline-offset: -1px; }
-.set-model input { flex: none; margin: 3px 0 0; accent-color: var(--accent); }
+.set-model input { flex: none; margin: 0; accent-color: var(--accent); }
 .set-model input:disabled { cursor: not-allowed; }
-.set-model .mt { display: flex; flex-direction: column; min-width: 0; }
-.set-model .mt b { overflow-wrap: anywhere; }
-.set-model .md { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.set-model .mt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .set-link { align-self: flex-start; padding: 2px 0; border: 0; background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .set-link:hover { filter: brightness(1.15); }

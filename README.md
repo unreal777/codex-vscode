@@ -27,7 +27,7 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
 - History (clock button) lists chats of all projects; type to search, pick a project to filter; archive, unarchive and delete chats.
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
-- Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `hiddenModels`.
+- Settings (`codexPanel.*`): `codexPath`, `codexSource` (managed | own), `updateIntervalDays`, `autosave`, `defaultModel`, `defaultReasoningEffort`, `defaultPermissions`, `hiddenModels`, `fontSize`.
   Model, reasoning effort and permissions (Ask for approval / Approve for me / Full access / Custom) are chosen in the panel and remembered per user (globalState).
 - **+** button in the input: files and folders, goal, plan mode, sketch (and pasted images), installed plugins.
 - Proxy: `http.proxy` / `http.proxyStrictSSL` (or `HTTPS_PROXY`) for the download; the proxy is handed to the Codex process as well.
