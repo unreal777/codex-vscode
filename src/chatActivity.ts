@@ -3,6 +3,7 @@
 // Today's chats of this project (opened or used today) are the tabs in the top bar (workspaceState: per project, reset each day).
 import * as vscode from 'vscode';
 import { addToday, dayKey, pruneUnread, removeToday, tabsOf, todayOf, TodayChats, UnreadMap } from './core/chatList';
+import { osNotify } from './core/osNotify';
 import { CodexSession } from './session';
 
 const UNREAD_KEY = 'codexPanel.unread';
@@ -75,11 +76,11 @@ export class ChatActivity {
       return;
     }
     const verb = status === 'failed' ? 'failed' : status === 'interrupted' ? 'was stopped' : 'is done';
-    this.notify('Codexter: "' + this.name(threadId) + '" ' + verb + '.', threadId, status === 'failed');
+    this.notify('"' + this.name(threadId) + '" ' + verb + '.', threadId, status === 'failed');
   }
 
   needsApproval(threadId: string): void {
-    this.notify('Codexter: "' + this.name(threadId) + '" waits for your approval.', threadId, true);
+    this.notify('"' + this.name(threadId) + '" waits for your approval.', threadId, true);
   }
 
   private name(id: string): string {
@@ -87,9 +88,20 @@ export class ChatActivity {
     return t.length > 60 ? t.slice(0, 59) + '…' : t;
   }
 
+  /** VS Code in the background: a notification of the system (seen over any program; a click opens the chat through a
+   *  vscode:// link, see extension.ts registerUriHandler). Else, or when that fails, VS Code's own. */
   private notify(text: string, threadId: string, warn: boolean): void {
-    const show = warn ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
-    void show(text, 'Open').then((b) => { if (b === 'Open') void this.open(threadId, true); });
+    const vsCode = () => {
+      const show = warn ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;
+      void show('Codexter: ' + text, 'Open').then((b) => { if (b === 'Open') void this.open(threadId, true); });
+    };
+    if (vscode.window.state.focused || !vscode.workspace.getConfiguration('codexPanel').get<boolean>('systemNotifications', true)) return vsCode();
+    const link = vscode.env.uriScheme + '://' + this.ctx.extension.id + '/open?thread=' + encodeURIComponent(threadId);
+    void osNotify('Codexter', text, link).then((err) => {
+      if (!err) return;
+      this.log('[notify] system notification failed, showing it in VS Code: ' + err);
+      vsCode();
+    });
   }
 
   /** Opens a chat (tab, History, notification). An unread one (or toAnswer) is shown from the start of its last answer. */

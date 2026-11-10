@@ -37,6 +37,10 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   ends, VS Code shows a notification ("Open" shows the start of the last answer) and the chat gets a blue dot (History, tabs) until
   it is opened, at most 3 days. The chats opened or used today in this project are tabs in the top bar (a spinner while a reply
   runs; a new chat is the "New chat" tab; x or a middle click closes a tab, the open one passes to its neighbour).
+- While VS Code is in the background, an ended reply (or an approval request) is a notification of the system (Windows toast,
+  macOS, Linux), seen over any program; a click opens the chat. Off: gear > System notifications.
+- Attached pictures: a click shows them big; "Draw / write" draws, writes text, erases (only the drawing) and undoes on top of
+  the picture, "Save changes" replaces the attached one.
 - Lists in the input: "- " or "* " at the start of a line becomes "• ", "1. " starts a numbered list; Enter (or Shift+Enter) continues
   the list, Enter on an empty item ends it, Tab / Shift+Tab indent, Ctrl+Enter sends from anywhere.
 - Code references: a symbol copied in an editor and pasted into the input becomes `#sym:name` (marked, the file shows on hover);

@@ -498,7 +498,20 @@ button { cursor: pointer; }
 #sketch input[type=range] { width: 70px; accent-color: var(--accent); }
 #sketch button:focus-visible, #sketch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #sketch .sk-wrap { position: relative; flex: 1; min-height: 140px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
-#sketch .sk-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+#sketch .sk-canvas { position: absolute; touch-action: none; cursor: crosshair; }
+#sketch .sk-base { pointer-events: none; }
+#sketch .sk-wrap.img { background: repeating-conic-gradient(#8882 0% 25%, transparent 0% 50%) 50% / 16px 16px; }
+#sketch .sk-text { position: absolute; z-index: 2; min-width: 120px; padding: 0 2px; border: 1px dashed currentColor; background: rgba(255,255,255,.75); font-weight: 600; outline: 0; }
+/* image preview */
+#imgview { position: absolute; inset: 0; z-index: 55; display: flex; flex-direction: column; background: rgba(0,0,0,.82); }
+#imgview .iv-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; color: #fff; }
+#imgview .iv-bar .spacer { flex: 1 1 0; }
+#imgview .iv-bar .btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
+#imgview .iv-bar .btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#imgview .iv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#imgview .iv-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px 10px; }
+#imgview .iv-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.5); }
+.imgchip.clickable, .pic.clickable { cursor: zoom-in; }
 
 /* ---- history: row actions, delete confirmation, archived toggle ---- */
 #hist-arch { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-bottom: 1px solid var(--border); flex: none; color: var(--muted); font-size: 12px; cursor: pointer; user-select: none; }
@@ -547,6 +560,8 @@ button { cursor: pointer; }
 #set-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 16px; max-width: 640px; width: 100%; }
 .set-field { display: flex; flex-direction: column; gap: 4px; }
 .set-field > label { font-weight: 600; padding: 0; }
+.set-field > label.set-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.set-check input { margin: 0; accent-color: var(--accent); }
 #settings select {
   width: 100%; max-width: 360px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); outline: 0;
 }

@@ -92,6 +92,7 @@
     setCommitModel: 'Model for commit messages and AI search', setCommitModelHint: '"Generate commit message" in Source Control and the AI search of the History. A fast model is enough.',
     setCommitEffort: 'Reasoning effort for commit messages and AI search', setCommitEffortHint: 'Low is fast and enough for both.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
+    setNotify: 'System notifications', setNotifyHint: 'When a reply ends while VS Code is in the background, Windows (macOS, Linux) shows it over any program. A click opens the chat.',
     // MCP servers (settings, VS Code host)
     mcpTitle: 'MCP servers', mcpHint: 'Servers of the Codex config (~/.codex/config.toml, shared with the Codex CLI and Eclipse). Switching one off keeps it for later.',
     mcpError: 'Could not read the Codex config: ', mcpNone: 'No MCP servers in the Codex config.', mcpOn: (n) => 'Use ' + n,
@@ -143,6 +144,8 @@
     sketchClear: 'Clear',
     sketchDone: 'Attach',
     sketchCancel: 'Cancel',
+    sketchText: 'Text', sketchTextHint: 'Click where the text goes, type, Enter', sketchUndo: 'Undo (Ctrl+Z)', sketchSave: 'Save changes',
+    sketchEditTitle: 'Draw and write on the image', imageView: 'Image', imageEdit: 'Draw / write', imageClose: 'Close',
     imageAdded: 'Image attached',
     imageTooMany: 'At most 8 images per message',
     imageFailed: 'Could not read the image',
@@ -398,6 +401,7 @@
     '<div id="footer"><span id="f-tokens"></span><span id="f-limits"></span></div></div>' +
     '<div id="proj-menu" class="hidden" role="group" aria-label="' + esc(STR.projectFilter) + '"></div>' +
     '<div id="sketch" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.sketchTitle) + '"></div>' +
+    '<div id="imgview" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.imageView) + '"></div>' +
     '<div id="dropzone" class="hidden"><div>' + esc(STR.dropHint) + '</div></div>';
 
   const feed = $('#feed'), input = $('#input'), sendBtn = $('#send');
@@ -529,7 +533,7 @@
     if (!reuse) beginTurn(whenSec);
     const syms = (contexts || []).filter((c) => c.kind === 'symbol');
     const chips = (contexts || []).filter((c) => c.kind !== 'symbol').map((c) => chipEl(c, false));
-    const pics = (images || []).map((im) => h('img', { class: 'pic', src: im.url, alt: im.name || STR.pastedImage }));
+    const pics = (images || []).map((im) => h('img', { class: 'pic clickable', src: im.url, alt: im.name || STR.pastedImage, onclick: () => openImageView(im, false) }));
     append(h('div', { class: 'msg user' }, h('div', { class: 'bubble' },
       chips.length ? h('div', { class: 'chips' }, chips) : null, pics.length ? h('div', { class: 'pics' }, pics) : null,
       text ? h('div', { class: 'tx' }, symParts(text, syms)) : null)));
@@ -994,8 +998,11 @@
     state.contexts.forEach((c) => box.append(chipEl(c, true)));
     state.images.forEach((im) => {
       const x = h('button', { type: 'button', text: '\u00d7', title: STR.removeImage, 'aria-label': STR.removeImage });
-      x.addEventListener('click', () => { state.images = state.images.filter((o) => o !== im); renderChips(); updateRunning(); });
-      box.append(h('span', { class: 'chip imgchip', title: im.name }, h('img', { src: im.url, alt: '' }), h('span', { class: 'n', text: im.name }), x));
+      x.addEventListener('click', (e) => { e.stopPropagation(); state.images = state.images.filter((o) => o !== im); renderChips(); updateRunning(); });
+      const chip = h('span', { class: 'chip imgchip clickable', title: im.name, role: 'button', tabindex: '0' }, h('img', { src: im.url, alt: '' }), h('span', { class: 'n', text: im.name }), x);
+      chip.addEventListener('click', () => openImageView(im, true));
+      chip.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === chip) { e.preventDefault(); openImageView(im, true); } });
+      box.append(chip);
     });
     box.classList.toggle('hidden', !state.contexts.length && !state.images.length);
   }
@@ -1481,7 +1488,8 @@
     defaultPermissions: PERMS.includes(o && o.defaultPermissions) ? o.defaultPermissions : '',
     hiddenModels: Array.isArray(o && o.hiddenModels) ? o.hiddenModels.map(String) : [],
     fontSize: Number.isFinite(o && o.fontSize) && o.fontSize > 0 ? Math.min(32, Math.max(8, Math.round(o.fontSize))) : 0,
-    commitMessageModel: String((o && o.commitMessageModel) || ''), commitMessageEffort: String((o && o.commitMessageEffort) || '') });
+    commitMessageModel: String((o && o.commitMessageModel) || ''), commitMessageEffort: String((o && o.commitMessageEffort) || ''),
+    systemNotifications: !(o && o.systemNotifications === false) });
   // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
   let pageZoom = 1;
   function baseFontSize() {
@@ -1527,7 +1535,7 @@
     const st = state.settings;
     bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort,
       defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize,
-      commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort });
+      commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort, systemNotifications: st.systemNotifications });
     applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
@@ -1605,7 +1613,15 @@
       field('set-font', STR.setFontSize, STR.setFontSizeHint, selF),
       field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM), field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE),
       h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
-    if (host === 'vscode') setBody.insertBefore(renderMcp(), $('#set-more'));
+    if (host === 'vscode') {
+      // system notifications (VS Code in the background) on / off
+      const cbN = h('input', { type: 'checkbox', id: 'set-notify', 'aria-describedby': 'set-notify-hint' });
+      cbN.checked = st.systemNotifications;
+      cbN.addEventListener('change', () => saveSettings({ systemNotifications: cbN.checked }));
+      setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-notify' }, cbN, h('span', { text: STR.setNotify })),
+        h('div', { class: 'hint', id: 'set-notify-hint', text: STR.setNotifyHint })), $('#set-more'));
+      setBody.insertBefore(renderMcp(), $('#set-more'));
+    }
     const again = keep && document.getElementById(keep);
     if (again && !again.disabled) again.focus();
   }
@@ -1916,60 +1932,158 @@
     box.classList.add('hidden'); box.innerHTML = '';
     if (refocus) input.focus();
   }
-  function openSketch() {
+  // ---------- image preview ----------
+  // A click on an attached picture (chip) or a picture of a sent message shows it big; an attached one can be drawn on from here.
+  function closeImageView(refocus) {
+    const box = $('#imgview');
+    box.classList.add('hidden'); box.innerHTML = '';
+    if (refocus) input.focus();
+  }
+  function openImageView(im, editable) {
+    const box = $('#imgview');
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    const close = h('button', { class: 'btn', type: 'button', text: STR.imageClose, onclick: () => closeImageView(true) });
+    const edit = editable ? h('button', { class: 'btn primary', type: 'button', html: ICON.pen + '<span>' + esc(STR.imageEdit) + '</span>',
+      onclick: () => { closeImageView(false); openSketch({ image: im }); } }) : null;
+    const pic = h('img', { class: 'iv-img', src: im.url, alt: im.name || STR.pastedImage });
+    const stage = h('div', { class: 'iv-stage' }, pic);
+    stage.addEventListener('click', (e) => { if (e.target === stage) closeImageView(true); });
+    box.append(h('div', { class: 'iv-bar' }, h('span', { class: 'iv-name', text: im.name || STR.pastedImage }), h('span', { class: 'spacer' }), edit, close), stage);
+    box.onkeydown = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeImageView(true); } };
+    (edit || close).focus();
+  }
+
+  // Sketch: a canvas over the view with pen, eraser, text, colours, undo, clear. Two layers: the picture below (white for a new
+  // sketch, the attached image when opts.image is given) and the drawing above, so the eraser only removes what was drawn.
+  // "Attach" adds a new sketch as PNG; for an attached image "Save changes" replaces it with the drawn-on version.
+  function openSketch(opts) {
+    opts = opts || {};
+    const editing = opts.image || null;
     const box = $('#sketch');
     box.innerHTML = '';
     box.classList.remove('hidden');
-    let color = SKETCH_COLORS[0], size = 4, eraser = false;
-    const canvas = h('canvas', { class: 'sk-canvas', 'aria-label': STR.sketchTitle });
-    const ctx = canvas.getContext('2d');
+    let color = editing ? '#e03131' : SKETCH_COLORS[0], size = 4, mode = 'pen';
+    let textBox = null, textAt = null;   // the text being typed (text tool) and where it goes
+    const base = h('canvas', { class: 'sk-canvas sk-base' }), canvas = h('canvas', { class: 'sk-canvas', 'aria-label': STR.sketchTitle });
+    const bctx = base.getContext('2d'), ctx = canvas.getContext('2d');
     const tool = (label, icon, fn) => h('button', { class: 'tool', type: 'button', title: label, 'aria-label': label, html: icon, onclick: fn });
-    const penBtn = tool(STR.sketchPen, ICON.pen, () => setTool(false));
-    const eraseBtn = h('button', { class: 'tool txt', type: 'button', text: STR.sketchEraser, title: STR.sketchEraser, onclick: () => setTool(true) });
-    function setTool(er) { eraser = er; penBtn.setAttribute('aria-pressed', String(!er)); eraseBtn.setAttribute('aria-pressed', String(er)); }
+    const penBtn = tool(STR.sketchPen, ICON.pen, () => setMode('pen'));
+    const eraseBtn = h('button', { class: 'tool txt', type: 'button', text: STR.sketchEraser, title: STR.sketchEraser, onclick: () => setMode('eraser') });
+    const textBtn = h('button', { class: 'tool txt', type: 'button', text: STR.sketchText, title: STR.sketchTextHint, onclick: () => setMode('text') });
+    function setMode(m) {
+      commitText();
+      mode = m;
+      penBtn.setAttribute('aria-pressed', String(m === 'pen')); eraseBtn.setAttribute('aria-pressed', String(m === 'eraser')); textBtn.setAttribute('aria-pressed', String(m === 'text'));
+      canvas.style.cursor = m === 'text' ? 'text' : 'crosshair';
+    }
     const swatches = SKETCH_COLORS.map((c) => {
       const b = h('button', { class: 'sw', type: 'button', style: 'background:' + c, title: STR.sketchColor + ' ' + c, 'aria-label': STR.sketchColor + ' ' + c, 'aria-pressed': String(c === color) });
-      b.addEventListener('click', () => { color = c; setTool(false); swatches.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
+      b.addEventListener('click', () => { color = c; if (mode === 'eraser') setMode('pen'); swatches.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); if (textBox) textBox.style.color = c; });
       return b;
     });
     const range = h('input', { type: 'range', min: '1', max: '24', value: String(size), title: STR.sketchSize, 'aria-label': STR.sketchSize });
     range.addEventListener('input', () => { size = parseInt(range.value, 10) || 4; });
-    const clear = () => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); };
-    const done = () => { addImageUrl(canvas.toDataURL('image/png'), STR.sketchName); closeSketch(true); };
-    const bar = h('div', { class: 'sk-bar' }, penBtn, eraseBtn, h('span', { class: 'sws' }, swatches), range,
+    // undo: the drawing layer before each stroke, text or clear
+    const undoStack = [];
+    const remember = () => { try { undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); if (undoStack.length > 30) undoStack.shift(); } catch (e) { /* tainted */ } };
+    const undo = () => { commitText(); const d = undoStack.pop(); if (d) ctx.putImageData(d, 0, 0); };
+    const clear = () => { commitText(); remember(); ctx.clearRect(0, 0, canvas.width, canvas.height); };
+    const done = () => {
+      commitText();
+      const out = h('canvas');
+      out.width = canvas.width; out.height = canvas.height;
+      const o = out.getContext('2d');
+      o.drawImage(base, 0, 0); o.drawImage(canvas, 0, 0);
+      const url = out.toDataURL('image/png');
+      if (editing) { editing.url = url; renderChips(); toast(STR.imageAdded); } else addImageUrl(url, STR.sketchName);
+      closeSketch(true);
+    };
+    const bar = h('div', { class: 'sk-bar' }, penBtn, eraseBtn, textBtn, h('span', { class: 'sws' }, swatches), range,
+      h('button', { class: 'btn', type: 'button', text: '\u21b6', title: STR.sketchUndo, 'aria-label': STR.sketchUndo, onclick: undo }),
       h('button', { class: 'btn', type: 'button', text: STR.sketchClear, onclick: clear }), h('span', { class: 'spacer' }),
       h('button', { class: 'btn', type: 'button', text: STR.sketchCancel, onclick: () => closeSketch(true) }),
-      h('button', { class: 'btn primary', type: 'button', text: STR.sketchDone, onclick: done }));
-    const wrap = h('div', { class: 'sk-wrap' }, canvas);
-    box.append(h('div', { class: 'sk-title', text: STR.sketchTitle }), bar, wrap);
-    setTool(false);
-    {   // the overlay is laid out already: size the bitmap to the surface (device pixels) and paint it white
+      h('button', { class: 'btn primary', type: 'button', text: editing ? STR.sketchSave : STR.sketchDone, onclick: done }));
+    const wrap = h('div', { class: 'sk-wrap' + (editing ? ' img' : '') }, base, canvas);
+    box.append(h('div', { class: 'sk-title', text: editing ? STR.sketchEditTitle : STR.sketchTitle }), bar, wrap);
+    setMode('pen');
+    // sizes: a new sketch fills the surface (device pixels); an image keeps its own pixels and is shown fitted into the surface
+    const place = (w, hgt) => {
+      const r = wrap.getBoundingClientRect(), k = Math.min(r.width / w, r.height / hgt);
+      [base, canvas].forEach((c) => { c.style.width = Math.floor(w * k) + 'px'; c.style.height = Math.floor(hgt * k) + 'px';
+        c.style.left = Math.floor((r.width - w * k) / 2) + 'px'; c.style.top = Math.floor((r.height - hgt * k) / 2) + 'px'; });
+    };
+    if (editing) {
+      const img = new Image();
+      img.onload = () => {
+        [base, canvas].forEach((c) => { c.width = img.naturalWidth; c.height = img.naturalHeight; });
+        bctx.drawImage(img, 0, 0);
+        place(img.naturalWidth, img.naturalHeight);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      };
+      img.src = editing.url;
+    } else {
       const r = wrap.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr));
+      [base, canvas].forEach((c) => { c.width = Math.max(1, Math.round(r.width * dpr)); c.height = Math.max(1, Math.round(r.height * dpr)); });
+      bctx.fillStyle = '#ffffff'; bctx.fillRect(0, 0, base.width, base.height);
+      place(base.width, base.height);
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      clear();
     }
     let last = null;
     const pos = (e) => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height]; };
     const scale = () => canvas.width / Math.max(1, canvas.getBoundingClientRect().width);
+    const stroke = (from, to) => {
+      ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.strokeStyle = color; ctx.fillStyle = color;
+      ctx.lineWidth = (mode === 'eraser' ? size * 3 : size) * scale();
+      if (!to) { ctx.beginPath(); ctx.arc(from[0], from[1], ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill(); }
+      else { ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+    };
+    // text: a small input where the click was; Enter (or another click, another tool, Save) draws it into the layer
+    const textPx = () => Math.max(12, size * 4);
+    function commitText() {
+      if (!textBox) return;
+      const t = textBox.value, at = textAt, px = textPx() * scale();
+      textBox.remove(); textBox = null; textAt = null;
+      if (!t.trim()) return;
+      remember();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = color; ctx.textBaseline = 'top';
+      ctx.font = '600 ' + px + 'px ' + getComputedStyle(document.body).fontFamily;
+      t.split('\n').forEach((line, i) => ctx.fillText(line, at[0], at[1] + i * px * 1.2));
+    }
+    function startText(e) {
+      commitText();
+      textAt = pos(e);
+      const wr = wrap.getBoundingClientRect();
+      textBox = h('input', { type: 'text', class: 'sk-text', placeholder: STR.sketchText,
+        style: 'left:' + (e.clientX - wr.left) + 'px;top:' + (e.clientY - wr.top) + 'px;color:' + color + ';font-size:' + textPx() + 'px' });
+      textBox.addEventListener('keydown', (k) => {
+        if (k.key === 'Enter') { k.preventDefault(); commitText(); }
+        else if (k.key === 'Escape') { k.preventDefault(); k.stopPropagation(); textBox.remove(); textBox = null; textAt = null; }
+      });
+      wrap.append(textBox);
+      setTimeout(() => textBox && textBox.focus(), 0);
+    }
     canvas.addEventListener('pointerdown', (e) => {
+      if (mode === 'text') { e.preventDefault(); startText(e); return; }
       try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* synthetic pointer */ }
+      remember();
       last = pos(e);
-      ctx.fillStyle = eraser ? '#ffffff' : color;
-      ctx.beginPath(); ctx.arc(last[0], last[1], (eraser ? size * 3 : size) * scale() / 2, 0, Math.PI * 2); ctx.fill();
+      stroke(last);
     });
     canvas.addEventListener('pointermove', (e) => {
       if (!last) return;
       const p = pos(e);
-      ctx.strokeStyle = eraser ? '#ffffff' : color;
-      ctx.lineWidth = (eraser ? size * 3 : size) * scale();
-      ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      stroke(last, p);
       last = p;
     });
     const stop = () => { last = null; };
     canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
     box.onkeydown = (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSketch(true); return; }
+      if (e.key === 'Escape' && !textBox) { e.preventDefault(); e.stopPropagation(); closeSketch(true); return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !textBox) { e.preventDefault(); undo(); return; }
       if (e.key === 'Tab') {   // keep the focus inside the dialog
         const f = Array.from(box.querySelectorAll('button,input')).filter((x) => !x.disabled);
         if (!f.length) return;

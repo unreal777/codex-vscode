@@ -137,6 +137,14 @@ export function activate(ctx: vscode.ExtensionContext): void {
   const act = activity;
   providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; p.activity = act; });
   act.publish();
+  // a click on a system notification opens vscode://codexpanel.codex-panel/open?thread=<id>
+  ctx.subscriptions.push(vscode.window.registerUriHandler({
+    handleUri: (uri: vscode.Uri) => {
+      if (uri.path !== '/open') return;
+      const id = new URLSearchParams(uri.query).get('thread');
+      if (id) void act.open(id, true);
+    },
+  }));
   /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
   const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
 

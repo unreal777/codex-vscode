@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.3)
+## Status (0.7.4)
+
+- 0.7.4: system notifications, image preview, drawing and text on an attached image. See "0.7.4".
 
 - 0.7.3: the Diff button of a changed file opens VS Code's git change view. See "0.7.3".
 
@@ -45,6 +47,21 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.4
+
+- System notifications (core/osNotify.ts): VS Code's own notifications stay inside its window, so while VS Code is not focused
+  ChatActivity.notify shows one of the system instead (setting `codexPanel.systemNotifications`, default on, also in the gear).
+  Windows: a toast through `powershell.exe -Command -` (script on stdin, toast XML and PowerShell's app id in environment
+  variables, so no user text is in the script); activationType protocol, launch = `<uriScheme>://codexpanel.codex-panel/open?thread=<id>`,
+  handled by `registerUriHandler` in extension.ts (opens the chat at its last answer; activation event onUri). macOS osascript,
+  Linux notify-send (no click action there). When it fails, VS Code's own notification. A test toast was shown on the dev machine;
+  the click through the vscode:// link was not tested.
+- Image preview (#imgview): click on an attached picture chip (or a picture of a sent message, preview only).
+- openSketch(opts) is now a two-layer editor: base canvas (white, or opts.image at its own pixels, fitted into the surface) and the
+  drawing canvas; the eraser uses destination-out on the drawing only. Text tool: an input at the click, Enter draws it (size from
+  the brush slider). Undo (button, Ctrl+Z) keeps 30 drawing states. Save merges both layers into a PNG that replaces the image's
+  url; a new sketch is attached as before. Checked in the isolated VS Code with a pasted 400x200 picture and synthetic pointer events.
 
 ## 0.7.3
 

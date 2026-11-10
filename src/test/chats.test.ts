@@ -142,3 +142,13 @@ test('0.7.3: Diff of a changed file opens the git change view first', () => {
   assert.ok(diff.includes("executeCommand('git.openChange', uri)"));
   assert.ok(diff.indexOf('if (await this.openGitChange(file)) return;') > 0, 'tried before the rebuilt diff');
 });
+
+test('0.7.4: system notifications, image preview and drawing on an attached image', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes('function openImageView(im, editable)') && app.includes('function openSketch(opts)'));
+  assert.ok(app.includes("if (editing) { editing.url = url;"), 'saving replaces the attached image');
+  const act = fs.readFileSync(path.join(root, 'src', 'chatActivity.ts'), 'utf8');
+  assert.ok(act.includes("'/open?thread='") && act.includes('osNotify('));
+  const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+  assert.ok(ext.includes('registerUriHandler'));
+});

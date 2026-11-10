@@ -53,8 +53,11 @@ export class Prefs {
 export interface PanelSettings {
   defaultModel: string; defaultReasoningEffort: string; defaultPermissions: string; hiddenModels: string[]; fontSize: number;
   commitMessageModel: string; commitMessageEffort: string;
+  /** system notifications while VS Code is in the background (else VS Code's own) */
+  systemNotifications: boolean;
 }
-const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort'];
+const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort',
+  'systemNotifications'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 /** '' = a new chat keeps the permissions used last */
 const PERMISSIONS = ['', 'ask', 'auto', 'full', 'custom'];
@@ -67,7 +70,8 @@ export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
   const hidden = Array.isArray(o?.hiddenModels) ? (o?.hiddenModels as unknown[]).map(s).filter((x) => x !== '') : [];
   return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '',
     defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize),
-    commitMessageModel: s(o?.commitMessageModel), commitMessageEffort: EFFORTS.includes(s(o?.commitMessageEffort)) ? s(o?.commitMessageEffort) : '' };
+    commitMessageModel: s(o?.commitMessageModel), commitMessageEffort: EFFORTS.includes(s(o?.commitMessageEffort)) ? s(o?.commitMessageEffort) : '',
+    systemNotifications: o?.systemNotifications !== false };
 }
 
 /** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
