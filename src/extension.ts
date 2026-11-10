@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { BranchChats } from './branchChats';
+import { ChatActivity } from './chatActivity';
 import { generateCommitMessage } from './commitMessage';
 import { DEFAULT_QUICK_MODEL, mcpServerNames, readCodexConfig, runCodexExec } from './core/commitMessage';
 import { locate } from './core/locator';
@@ -53,6 +54,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   let lastThreadTaken = false;
   let chatChanged = false;
   let branches: BranchChats | undefined;
+  let activity: ChatActivity | undefined;
   const takeLastThread = async (cwd: string): Promise<string | null> => {
     if (lastThreadTaken) return null;
     lastThreadTaken = true;
@@ -82,8 +84,12 @@ export function activate(ctx: vscode.ExtensionContext): void {
       lastThreadTaken = true;
       chatChanged = true;
       void ctx.workspaceState.update(LAST_THREAD_KEY, id ?? undefined);
+      activity?.opened(id);
     },
-    chatUsed: (threadId, cwd) => branches?.used(threadId, cwd),
+    chatUsed: (threadId, cwd) => { branches?.used(threadId, cwd); activity?.used(threadId); },
+    chatsChanged: () => activity?.publish(),
+    turnDone: (threadId, background, status) => activity?.turnDone(threadId, background, status),
+    needsApproval: (threadId) => activity?.needsApproval(threadId),
     // AI search of the History panel: same fast model / effort as the commit messages, run outside any project (no AGENTS.md)
     ask: (prompt) => runCodexExec({ command: quick.locateCodex().command(), cwd: os.tmpdir(), env: quick.env(), prompt,
       model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 120_000, log, tag: 'search' }),
@@ -126,7 +132,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
   // "MCP servers > Add by name": the quick model with live web search finds the official setup (the user confirms it before it is written)
   const mcpFind = (prompt: string) => runCodexExec({ command: quick.locateCodex().command(), cwd: os.tmpdir(), env: quick.env(), prompt,
     model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 240_000, log, tag: 'mcp', extraConfig: ['web_search="live"'] });
-  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; });
+  // unread marks, today's tabs, notifications of replies that finish while their chat is not open
+  activity = new ChatActivity(ctx, s, () => showView(), log);
+  const act = activity;
+  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; p.activity = act; });
+  act.publish();
   /** The view in use: the visible one, else the one that was open last, else the home of this VS Code version. */
   const current = (): CodexViewProvider => providers.find((p) => p.isVisible) ?? (lastActive.isOpen ? lastActive : undefined) ?? providers.find((p) => p.isOpen) ?? providers[secondary ? 1 : 0];
 

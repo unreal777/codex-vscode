@@ -212,7 +212,7 @@ test('secondary side bar: version switch at 1.106', () => {
 test('package.json: both view homes, one context key, engines unchanged, commands target both views', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.engines.vscode, '^1.90.0');
-  assert.equal(pkg.version, '0.6.1');
+  assert.equal(pkg.version, '0.7.0');
   const c = pkg.contributes;
   assert.equal(c.viewsContainers.secondarySidebar[0].id, 'codexPanelSecondary');
   assert.equal(c.viewsContainers.secondarySidebar[0].when, '!codexPanel.noSecondarySidebar');

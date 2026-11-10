@@ -41,6 +41,12 @@ export interface SessionHost {
   threadChanged?(id: string | null): void;
   /** A message was sent in this chat (turn/start accepted); cwd is the chat's folder. Remembers it for the checked-out git branch. */
   chatUsed?(threadId: string, cwd: string): void;
+  /** The running chats changed (a reply started or ended, a chat went to or came back from the background). */
+  chatsChanged?(): void;
+  /** A reply ended; background: the chat was not open. status: completed | interrupted | failed. */
+  turnDone?(threadId: string, background: boolean, status: string): void;
+  /** A chat running in the background asks for an approval. */
+  needsApproval?(threadId: string): void;
   /** One question to a temporary read-only `codex exec` run (fast model of the settings); resolves with the answer. Used by the AI search. */
   ask?(prompt: string): Promise<string>;
 }
@@ -51,7 +57,7 @@ export type Sink = (event: Json) => void;
 class Reported extends Error {}
 
 const FORWARD_PREFIXES = ['turn/', 'item/', 'thread/tokenUsage', 'thread/name', 'thread/goal', 'account/rateLimits', 'serverRequest/resolved', 'error', 'warning'];
-const STICKY = new Set(['status', 'models', 'rateLimits', 'auth', 'sandbox', 'install', 'codexUpdated']);
+const STICKY = new Set(['status', 'models', 'rateLimits', 'auth', 'sandbox', 'install', 'codexUpdated', 'chats']);
 
 const HISTORY_PAGE = 40;
 const HISTORY_SCAN_PAGE = 100;
@@ -107,6 +113,11 @@ export class CodexSession {
   private readonly sinks = new Set<Sink>();
   private readonly sticky = new Map<string, Json>();
   private readonly pendingApprovals = new Map<string, Json>();
+  /** Chats left while their reply was running (New chat, another chat opened): the reply goes on in the app-server; their events
+   *  only update this map and tell the host when the reply is done. Opening such a chat again takes it back. */
+  private readonly background = new Map<string, { turnId: string | null; cwd: string | null }>();
+  /** Titles of the chats seen in this window (thread name or first message), for notifications and tabs. */
+  private readonly titles = new Map<string, string>();
   private readonly recentLog: string[] = [];
   private readonly updater: CodexUpdater;
   /** The Java session runs its work on one executor thread; here a promise chain keeps the same order. */
@@ -266,6 +277,8 @@ export class CodexSession {
           this.needsResume = this._threadId !== null;
           this.turnId = null;
           this.pendingApprovals.clear();
+          this.background.clear();
+          this.host.chatsChanged?.();
           this.status('closed', 'Codex app-server stopped: ' + reason);
           this.error('Codex stopped', reason + this.lastLog(), false);
           this.emit(ev('idle'));
@@ -458,12 +471,23 @@ export class CodexSession {
       return;
     }
     const tid = typeof params.threadId === 'string' ? params.threadId : null;
+    if (method === 'thread/name/updated' && tid !== null) {
+      const name = str(params, 'threadName') ?? str(params, 'name');
+      if (name) this.titles.set(tid, name);
+    }
+    if (tid !== null && tid !== this._threadId && this.background.has(tid)) {
+      this.backgroundNotification(tid, method, params);
+      return;
+    }
     if (tid !== null && this._threadId !== null && tid !== this._threadId) return;
     if (method === 'turn/started') {
       this.turnId = params.turn?.id ?? null;
+      this.host.chatsChanged?.();
     } else if (method === 'turn/completed') {
       this.turnId = null;
       this.host.refreshHook(this._threadCwd);
+      if (this._threadId !== null) this.host.turnDone?.(this._threadId, false, str(params.turn ?? {}, 'status') ?? 'completed');
+      this.host.chatsChanged?.();
     } else if (method === 'item/completed') {
       if (params.item && params.item.type === 'fileChange') this.host.refreshHook(this._threadCwd);
     }
@@ -471,8 +495,30 @@ export class CodexSession {
     this.emit({ kind: 'notification', method, params });
   }
 
+  /** An event of a chat running in the background: only its end (and a new turn of it) matters here. */
+  private backgroundNotification(tid: string, method: string, params: Json): void {
+    const bg = this.background.get(tid);
+    if (!bg) return;
+    if (method === 'turn/started') {
+      bg.turnId = params.turn?.id ?? bg.turnId;
+    } else if (method === 'turn/completed') {
+      this.background.delete(tid);
+      this.dropStaleApprovals();
+      this.host.refreshHook(bg.cwd);
+      this.host.turnDone?.(tid, true, str(params.turn ?? {}, 'status') ?? 'completed');
+      this.host.chatsChanged?.();
+    } else if (method === 'item/completed' && params.item && params.item.type === 'fileChange') {
+      this.host.refreshHook(bg.cwd);
+    }
+  }
+
   private handleApprovalRequest(req: Json): void {
     this.pendingApprovals.set(String(req.id), req);
+    const tid = req.params?.threadId;
+    if (typeof tid === 'string' && tid !== this._threadId && this.background.has(tid)) {
+      this.host.needsApproval?.(tid);   // shown when the chat is opened again
+      return;
+    }
     this.emit({ kind: 'serverRequest', id: req.id, method: req.method, params: req.params });
   }
 
@@ -629,6 +675,10 @@ export class CodexSession {
     const e = ev('thread');
     if (created) e.created = true;
     e.thread = thread;
+    if (thread && typeof thread.id === 'string') {
+      const t = threadTitle(str(thread, 'name'), str(thread, 'preview'));
+      if (t) this.titles.set(thread.id, t);
+    }
     if (turns) e.turns = turns;
     if (this._threadCwd) {
       e.cwd = this._threadCwd;
@@ -654,14 +704,51 @@ export class CodexSession {
     }
   }
 
+  /** The open chat is being left: a running reply goes on in the background. Returns how to undo it (opening another chat failed). */
+  private leaveOpenThread(): () => void {
+    const id = this._threadId, turn = this.turnId;
+    if (id === null || turn === null) return () => {};
+    this.background.set(id, { turnId: turn, cwd: this._threadCwd });
+    this.turnId = null;
+    this.host.chatsChanged?.();
+    return () => {
+      const bg = this.background.get(id);
+      if (!bg || this._threadId !== id) return;
+      this.background.delete(id);
+      this.turnId = bg.turnId;
+      this.host.chatsChanged?.();
+    };
+  }
+
+  /** Approvals of chats that are neither open nor running in the background are void. */
+  private dropStaleApprovals(): void {
+    for (const [k, req] of this.pendingApprovals) {
+      const t = req.params?.threadId;
+      if (typeof t !== 'string' || (t !== this._threadId && !this.background.has(t))) this.pendingApprovals.delete(k);
+    }
+  }
+
+  /** Ids of the chats whose reply is running (open one included). */
+  runningChats(): string[] {
+    const ids = [...this.background.keys()];
+    if (this._threadId !== null && this.turnId !== null) ids.push(this._threadId);
+    return ids;
+  }
+
+  /** Title of a chat seen in this window, or null. */
+  titleOf(id: string): string | null { return this.titles.get(id) ?? null; }
+
+  /** A UI event for every view (the host's chat list: unread marks, tabs). */
+  broadcast(e: Json): void { this.emit(e); }
+
   newChat(): void {
-    const idle = this.turnId === null;
-    this.interrupt();
+    this.leaveOpenThread();   // a running reply goes on in the background (it used to be interrupted)
+    const idle = this.background.size === 0;
     this._threadId = null;
     this.turnId = null;
     this._threadCwd = null;
     this.needsResume = false;
-    this.pendingApprovals.clear();
+    this.dropStaleApprovals();
     this.host.threadChanged?.(null);
     this.emit(ev('newChat'));
     if (idle && this.connected && this.codexUpdatePending()) { // a newer Codex is on disk and no turn is running: switch now
@@ -883,9 +970,11 @@ export class CodexSession {
     return this.submit(async () => {
       if (mode === 'restore' && this._threadId !== null) return false;
       if (mode === 'switch' && (this._threadId === id || this.turnId !== null)) return this._threadId === id;
+      if (this._threadId === id && mode === 'user' && this.turnId !== null) return true;   // already open with its reply running
+      let undoLeave = () => {};
       try {
         const c = await this.connectBlocking();
-        if (this.turnId !== null) this.interrupt();
+        if (this._threadId !== id) undoLeave = this.leaveOpenThread();   // the open chat's reply goes on in the background
         const r = await withTimeout(c.resumeThread(id, null, null, null, permissionSettings(this.host.permissionsPref()).reviewer), 60_000, 'thread/resume');
         const thread = r.thread;
         let turns: Json[] = Array.isArray(thread?.turns) ? thread.turns : [];
@@ -893,10 +982,14 @@ export class CodexSession {
           const rr = await withTimeout(c.call('thread/read', { threadId: id, includeTurns: true }), 60_000, 'thread/read');
           if (Array.isArray(rr.thread?.turns)) turns = rr.thread.turns;
         }
+        // a chat whose reply was running in the background: take it back (its reply keeps streaming into the view)
+        const bg = this.background.get(id);
+        this.background.delete(id);
         this._threadId = id;
-        this._threadCwd = typeof r.cwd === 'string' ? r.cwd : null;
+        this._threadCwd = typeof r.cwd === 'string' ? r.cwd : bg?.cwd ?? null;
         this.needsResume = false;
-        this.turnId = null;
+        this.turnId = bg?.turnId ?? null;
+        this.dropStaleApprovals();
         this.host.threadChanged?.(id);
         const e = this.threadEvent(thread, turns, false);
         try { // the chat's goal, if it has one (best effort: older Codex versions may not know goals)
@@ -904,8 +997,16 @@ export class CodexSession {
           if (g.goal) e.goal = g.goal;
         } catch { /* no goal info */ }
         this.emit(e);
+        if (this.turnId !== null) {
+          this.emit({ kind: 'notification', method: 'turn/started', params: { threadId: id, turn: { id: this.turnId } } });
+          for (const req of this.pendingApprovals.values()) {   // approvals asked while it was in the background
+            if (req.params?.threadId === id) this.emit({ kind: 'serverRequest', id: req.id, method: req.method, params: req.params });
+          }
+        }
+        this.host.chatsChanged?.();
         return true;
       } catch (e) {
+        undoLeave();
         if (mode === 'user') {
           this.error('Could not open the chat', describe(e), false);
         } else {

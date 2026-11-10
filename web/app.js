@@ -17,6 +17,8 @@
     noHistoryHint: 'Try another word, or choose All projects.',
     historySearch: 'Search chats and projects…',
     historyLoading: 'Loading…',
+    // today's chats as tabs, unread marks
+    tabsLabel: 'Today\'s chats of this project', tabUnread: 'New answer, not read yet', tabRunning: 'Working…', tabClose: 'Hide this tab (until the chat is used again)',
     // AI search of the History
     aiToggle: 'AI search: describe the chat in your own words, then press Enter (Codex reads the titles and first messages of the newest 300 chats)',
     aiSearchPh: 'Describe the chat, then press Enter…',
@@ -328,6 +330,8 @@
       ai: false, aiCache: null /* {key, rows} of the last AI answer */, aiKey: null /* key of the AI request in flight */ },
     // MCP servers of the settings (VS Code host): servers null = not loaded; notes by server name ('' = the whole section)
     mcp: { servers: null, vscode: [], error: null, loading: false, notes: {}, finding: false, findError: null, query: '' },
+    // unread marks and today's tabs from the host (VS Code)
+    chats: { unread: new Set(), tabs: [] },
     mention: { open: false, items: [], sel: 0, reqId: 0, start: 0, query: '', loading: false },
     tokenUsage: null, rateLimits: null,
     turnFiles: new Set(), turnDiff: null, turnStartMs: 0,
@@ -378,6 +382,7 @@
     '<div id="settings" class="hidden" role="dialog" aria-label="' + esc(STR.settings) + '"><div class="set-head">' +
     '<button class="icon-btn" id="set-back" type="button" title="' + esc(STR.settingsBack) + '" aria-label="' + esc(STR.settingsBack) + '">' + ICON.back + '</button>' +
     '<h2>' + esc(STR.settings) + '</h2></div><div id="set-body"></div></div>' +
+    '<div id="tabs" class="hidden" role="tablist" aria-label="' + esc(STR.tabsLabel) + '"></div>' +
     '<div id="cxstatus" class="hidden"></div>' +
     '<div id="feed"></div>' +
     '<div id="dock"><div id="sandbox" class="hidden"></div><div id="signin" class="hidden"></div><div id="plan" class="hidden"></div><div id="xproj" class="hidden"></div><div id="goal" class="hidden"></div><div id="chips"></div>' +
@@ -963,7 +968,14 @@
   }
 
   // ---------- header / history ----------
-  function setTitle(t) { state.title = t || STR.newChat; $('#title').textContent = state.title; $('#title').title = state.title; }
+  function setTitle(t) { state.title = t || STR.newChat; $('#title').textContent = state.title; $('#title').title = state.title; reportTitle(); }
+  const reportedTitles = new Map();
+  function reportTitle() {
+    const id = state.threadId, t = state.title;
+    if (!id || !t || t === STR.newChat || reportedTitles.get(id) === t) return;
+    reportedTitles.set(id, t);
+    bridge.post({ type: 'chatTitle', threadId: id, title: t });
+  }
   function setProject(name, cwd) {
     if (cwd != null) state.cwd = cwd;
     state.project = name || (state.cwd ? basename(state.cwd) : '');
@@ -1187,7 +1199,8 @@
       const tip = [t.preview || '', t.cwd || ''].filter(Boolean).join('\n\n');
       const row = h('div', { class: 'row' + (t.id === state.threadId ? ' current' : '') + (i === hist.sel ? ' sel' : '') + (asking ? ' asking' : '') + (busy ? ' busy' : ''), title: tip, role: 'option', 'data-id': t.id, 'aria-busy': busy ? 'true' : null },
         h('span', { class: 'proj' }, highlight(badgeText(t, dup), words)),
-        h('span', { class: 't' }, highlight(t.title || STR.untitled, words)),
+        h('span', { class: 't' }, state.chats.unread.has(t.id) && t.id !== state.threadId ? h('span', { class: 'udot', title: STR.tabUnread }) : null,
+          highlight(t.title || STR.untitled, words)),
         h('span', { class: 'when', text: relTimeAgo(t.updatedAt) }));
       if (asking) {
         // inline confirmation: deleting cannot be undone
@@ -1615,7 +1628,7 @@
     state.modelsOpen = false;
     setBox.classList.toggle('hidden', !state.settingsOpen);
     gearBtn.setAttribute('aria-expanded', String(state.settingsOpen));
-    ['#topbar', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
+    ['#topbar', '#tabs', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
     if (state.settingsOpen) {
       if (state.historyOpen) toggleHistory(false);
       closePops(false);
@@ -1924,6 +1937,53 @@
     penBtn.focus();
   }
 
+  // ---------- today's chats of this project as tabs (VS Code host) ----------
+  // The host sends them (event "chats"): a chat becomes a tab when a message is sent in it today. A blue dot = a reply that finished
+  // while the chat was not open and was not read yet; a spinner = its reply is running. Shown from two tabs on (or one that is not open).
+  state.chats = { unread: new Set(), tabs: [] };
+  const tabsEl = $('#tabs');
+  // the strip has no scrollbar: the mouse wheel scrolls it sideways
+  tabsEl.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { tabsEl.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  function renderTabs() {
+    const tabs = state.chats.tabs;
+    const show = host === 'vscode' && (tabs.length >= 2 || (tabs.length === 1 && tabs[0].id !== state.threadId));
+    tabsEl.classList.toggle('hidden', !show);
+    tabsEl.textContent = '';
+    if (!show) return;
+    const focusedId = document.activeElement && tabsEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+    tabs.forEach((t) => {
+      const cur = t.id === state.threadId, running = t.running || (cur && (state.running || state.pending));
+      const mark = running ? h('span', { class: 'tab-mark spinner' }) : t.unread && !cur ? h('span', { class: 'tab-mark udot' }) : null;
+      const tab = h('div', { class: 'tab' + (cur ? ' cur' : '') + (t.unread && !cur ? ' unread' : ''), role: 'tab', tabindex: '0', 'data-id': t.id, 'aria-selected': String(cur),
+        title: t.title + (running ? '\n' + STR.tabRunning : t.unread && !cur ? '\n' + STR.tabUnread : '') },
+        mark, h('span', { class: 'tab-t', text: t.title }),
+        h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×',
+          onclick: (e) => { e.stopPropagation(); bridge.post({ type: 'tabClose', threadId: t.id }); } }));
+      const open = () => { if (!cur) { toggleHistory(false); bridge.post({ type: 'resumeThread', threadId: t.id }); } };
+      tab.addEventListener('click', open);
+      tab.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        else if (e.key === 'Delete') { e.preventDefault(); bridge.post({ type: 'tabClose', threadId: t.id }); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          const all = [...tabsEl.querySelectorAll('.tab')], i = all.indexOf(tab), n = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+          e.preventDefault(); if (n) n.focus();
+        }
+      });
+      tabsEl.append(tab);
+    });
+    const c = tabsEl.querySelector('.tab.cur');
+    if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (focusedId) { const f = tabsEl.querySelector('.tab[data-id="' + CSS.escape(focusedId) + '"]'); if (f) f.focus(); }
+  }
+  // A chat opened from a notification (or unread): show the start of its last answer instead of the end.
+  function scrollToLastAnswer() {
+    const users = feed.querySelectorAll('.msg.user'), last = users[users.length - 1];
+    if (!last) return;
+    const target = last.nextElementSibling || last;
+    stick = false;
+    feed.scrollTop += target.getBoundingClientRect().top - feed.getBoundingClientRect().top - 8;
+  }
+
   // ---------- composer ----------
   function updateRunning() {
     const busy = state.running || state.pending;
@@ -1931,6 +1991,7 @@
     sendBtn.innerHTML = busy ? ICON.stop : ICON.send;
     sendBtn.title = busy ? STR.stop : STR.send;
     sendBtn.disabled = !busy && !input.value.trim() && !state.images.length;
+    try { renderTabs(); } catch (e) { /* not set up yet */ }
   }
   // While the composer has the focus the input grows with its text up to half the panel (the chat above stays readable); when the focus
   // leaves the composer it shrinks to at most three lines and its text scrolls. The composer's own buttons and menus keep it open.
@@ -2436,6 +2497,7 @@
     if (ev.created) { // thread was just created for the message in the feed: keep what is shown
       state.threadId = th.id || null;
       setProject(ev.project, ev.cwd);
+      reportTitle(); renderTabs();
       return;
     }
     resetConversation();
@@ -2445,9 +2507,14 @@
     setTitle(cleanTitle(th.name || th.preview) || STR.newChat);
     if (ev.turns && ev.turns.length) {
       stick = true;
-      ev.turns.forEach((turn) => {
+      ev.turns.forEach((turn, idx) => {
         beginTurn(turn.startedAt);
         (turn.items || []).forEach((it) => upsertItem(it, 'completed', true));
+        if (turn.status === 'inProgress' && idx === ev.turns.length - 1) {   // its reply is still running: the next events go on here
+          state.running = true; state.turnId = turn.id || null; state.turn.started = true;
+          state.turn.startMs = turn.startedAt ? turn.startedAt * 1000 : Date.now(); state.turnFiles = new Set(); state.turnDiff = null;
+          return;
+        }
         endTurn(state.turn, turn.durationMs != null ? turn.durationMs : turn.startedAt && turn.completedAt ? (turn.completedAt - turn.startedAt) * 1000 : null);
       });
       if (ev.goal) { state.goal = ev.goal; renderGoal(); }
@@ -2478,6 +2545,8 @@
       case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
       case 'pasteRef': onPasteRef(ev); break;
+      case 'chats': state.chats = { unread: new Set(ev.unread || []), tabs: ev.tabs || [] }; renderTabs(); if (state.historyOpen) renderHistory(); break;
+      case 'scrollToLastAnswer': if (ev.threadId === state.threadId) scrollToLastAnswer(); break;
       case 'status':
         setConn(ev.state, ev.message);
         break;
@@ -2516,7 +2585,7 @@
       }
       case 'mentions': onMentions(ev); break;
       case 'thread': loadThread(ev); break;
-      case 'newChat': resetConversation(); state.planUsed = false; setTitle(STR.newChat); state.threadId = null; setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); break;
+      case 'newChat': resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
       case 'cwd': setProject(ev.project, ev.cwd || ''); { const e = $('#empty'); if (e) showEmpty(); } break;
       case 'notification': onNotification(ev.method, ev.params || {}); break;
       case 'serverRequest': {

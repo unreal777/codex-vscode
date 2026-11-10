@@ -33,6 +33,9 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   over the titles and first messages of the newest 300 chats of the selection).
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
+- Several chats at once: opening another chat or New chat no longer stops a running reply; it goes on in the background. When it
+  ends, VS Code shows a notification ("Open" shows the start of the last answer) and the chat gets a blue dot (History, tabs) until
+  it is opened, at most 3 days. The chats used today in this project are tabs above the chat (a spinner while a reply runs).
 - Lists in the input: "- " or "* " at the start of a line becomes "• ", "1. " starts a numbered list; Enter (or Shift+Enter) continues
   the list, Enter on an empty item ends it, Tab / Shift+Tab indent, Ctrl+Enter sends from anywhere.
 - Code references: a symbol copied in an editor and pasted into the input becomes `#sym:name` (marked, the file shows on hover);

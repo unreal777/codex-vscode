@@ -9,6 +9,7 @@ import { WEB_SCRIPTS } from './core/webScripts';
 import { Json } from './core/jsonrpc';
 import { migratePermissions, normalizePermissions } from './core/permissions';
 import { DiffProvider } from './diff';
+import { ChatActivity } from './chatActivity';
 import { McpSettings } from './mcpSettings';
 import { MentionSearch } from './mentions';
 import { CodexSession, SendRequest } from './session';
@@ -96,6 +97,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   /** Set by the owner: the quick Codex run with web search of "MCP servers > Add by name". */
   mcpFind: (prompt: string) => Promise<string> = async () => { throw new Error('not available'); };
   private mcp: McpSettings | null = null;
+  /** Set by the owner: unread marks, today's tabs, opening a chat at its last answer. */
+  activity: ChatActivity | null = null;
 
   constructor(
     readonly viewId: string,
@@ -361,8 +364,16 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'dropText': // the page's own drop: uri-list or text (paths, one per line)
         this.handleDrop([orEmpty(str(m, 'text'))]);
         break;
-      case 'resumeThread':
-        if (str(m, 'threadId')) void this.session.resume(str(m, 'threadId') as string);
+      case 'resumeThread': {
+        const id = str(m, 'threadId');
+        if (id) void (this.activity ? this.activity.open(id) : this.session.resume(id));
+        break;
+      }
+      case 'chatTitle':
+        if (str(m, 'threadId') && str(m, 'title')) this.activity?.title(str(m, 'threadId') as string, str(m, 'title') as string);
+        break;
+      case 'tabClose':
+        if (str(m, 'threadId')) this.activity?.closeTab(str(m, 'threadId') as string);
         break;
       case 'approval':
         this.session.approve(String(m.requestId), orEmpty(str(m, 'decision')));

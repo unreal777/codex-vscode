@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.6.1)
+## Status (0.7.0)
+
+- 0.7.0: replies go on in the background, unread marks, notifications, today's chats as tabs. See "0.7.0".
 
 - 0.6.1: lists in the input, pasted symbols as #sym: references, "Add MCP by name with AI". See "0.6.1".
 
@@ -37,6 +39,26 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.0
+
+- Session: leaving a chat (New chat, resume of another) no longer calls interrupt(); `leaveOpenThread()` moves {turnId, cwd} into
+  `background`. Notifications of a background thread go to `backgroundNotification` (turn/started updates the turn, turn/completed
+  removes it and calls host.turnDone(id, true, status)); nothing of it reaches the page. Approval requests of a background thread
+  stay in pendingApprovals (host.needsApproval) and are re-emitted when the chat is opened again. resume() of a background chat
+  takes it back: turnId restored, a synthetic turn/started after the thread event. A failed resume undoes the leave.
+  newChat() reconnects for a Codex update only when nothing runs in the background. app-server close clears the map.
+- Page loadThread keeps the last turn open when its status is inProgress (running = true), so the streamed rest lands in it.
+- chatActivity.ts (host): unread marks in globalState `codexPanel.unread` (id -> ms, pruned after 3 days, core/chatList.ts),
+  removed when the chat is opened (threadChanged). Today's chats in workspaceState `codexPanel.todayChats` {day (local), chats}:
+  added on chatUsed (a sent message), titles from the page (`chatTitle`), hidden with the tab's x (`tabClose`). Event `chats`
+  {unread, tabs: [{id, title, unread, running}]} is sticky. Notifications: a background reply that ends (info / warning when
+  failed), an approval asked in the background, and the open chat's end while VS Code is not focused. "Open" reveals the view,
+  resumes and sends `scrollToLastAnswer` (also when an unread chat is opened from a tab or the History).
+- Page: #tabs below the top bar (shown from two tabs on, or one that is not open), blue dot `.udot` for unread (tabs and History
+  rows), spinner while running; arrows / Enter / Delete on a focused tab; the wheel scrolls the strip.
+- Not checked against the real Codex: a reply running in the background, its notification and taking it back (tests use a fake
+  app-server; the tabs were checked in the isolated VS Code with a faked `chats` event).
 
 ## 0.6.1
 
