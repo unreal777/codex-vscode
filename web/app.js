@@ -146,7 +146,7 @@
     sketchCancel: 'Cancel',
     sketchText: 'Text', sketchTextHint: 'Click where the text goes, type, Enter', sketchUndo: 'Undo (Ctrl+Z)', sketchSave: 'Save changes',
     sketchEditTitle: 'Draw and write on the image', imageView: 'Image', imageEdit: 'Draw / write', imageClose: 'Close',
-    imageAdded: 'Image attached',
+    imageAdded: 'Image attached', imageSaved: 'Image updated',
     imageTooMany: 'At most 8 images per message',
     imageFailed: 'Could not read the image',
     removeImage: 'Remove image',
@@ -1794,7 +1794,7 @@
     add('goal', { name: STR.plusGoal, desc: STR.plusGoalHint, inline: true, iconHtml: ICON.target, onclick: () => { closePops(false); openGoalForm(); } });
     add('plan', { name: STR.plusPlan, desc: state.planMode ? STR.plusPlanOn : STR.plusPlanHint, inline: true, iconHtml: ICON.bulb, role: 'menuitemcheckbox', checked: state.planMode,
       onclick: () => { setPlanMode(!state.planMode); closePops(true); } });
-    add('sketch', { name: STR.plusSketch, desc: STR.plusSketchHint, inline: true, iconHtml: ICON.pen, onclick: () => { closePops(false); openSketch(); } });
+    add('sketch', { name: STR.plusSketch, desc: STR.plusSketchHint, inline: true, iconHtml: ICON.pen, onclick: () => { closePops(false); if (host === 'vscode') bridge.post({ type: 'imageOpen', key: '', url: '', name: STR.sketchName, editable: true, blank: true }); else openSketch(); } });
     box.append(h('div', { class: 'pm-title', text: STR.plusPlugins }));
     const pl = state.plugins;
     if (pl.error) box.append(h('div', { class: 'pm-note', text: STR.pluginsError + pl.error }));
@@ -1881,9 +1881,10 @@
 
   // ---------- images: paste, drop, sketch ----------
   const MAX_IMAGES = 8, MAX_SIDE = 2048;
+  let imageSeq = 0;   // keys of the attached pictures (a picture edited in the editor tab comes back by its key)
   function addImageUrl(url, name) {
     if (state.images.length >= MAX_IMAGES) { toast(STR.imageTooMany); return; }
-    state.images.push({ url, name: name || STR.pastedImage });
+    state.images.push({ url, name: name || STR.pastedImage, key: 'img' + (++imageSeq) });
     renderChips(); updateRunning();
   }
   // Any image file or blob: read it, scale it down to MAX_SIDE and keep it as a PNG data URL.
@@ -1940,6 +1941,10 @@
     if (refocus) input.focus();
   }
   function openImageView(im, editable) {
+    if (host === 'vscode') {   // VS Code: shown big in an editor tab of its own (src/imageEditor.ts), not over the small panel
+      bridge.post({ type: 'imageOpen', key: editable ? im.key || '' : '', url: im.url, name: im.name || STR.pastedImage, editable: !!editable, blank: false });
+      return;
+    }
     const box = $('#imgview');
     box.innerHTML = '';
     box.classList.remove('hidden');
@@ -2199,7 +2204,25 @@
     clearTimeout(collapseTimer);
     collapseTimer = setTimeout(() => { if (winFocused) collapseInput(); }, 400);
   });
+  // Alt+Tab away from the input and back: the caret goes back where it was (only when VS Code gives the focus back to this page;
+  // a click into an editor to come back keeps the focus there).
+  let lastInputSel = null, inputBlurAt = 0, restoreInput = null;
+  input.addEventListener('blur', () => { lastInputSel = [input.selectionStart, input.selectionEnd]; inputBlurAt = Date.now(); });
+  function restoreInputFocus() {
+    if (!restoreInput || !document.hasFocus() || document.activeElement === input) { if (document.activeElement === input) restoreInput = null; return; }
+    const sel = restoreInput;
+    restoreInput = null;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== input) return;   // the user is somewhere else in the page
+    input.focus();
+    try { input.setSelectionRange(sel[0], sel[1]); } catch (e) { /* value changed */ }
+  }
+  window.addEventListener('focus', () => setTimeout(restoreInputFocus, 0));
   function onWindowFocus(focused) {
+    if (!focused && (document.activeElement === input || Date.now() - inputBlurAt < 1000)) {
+      restoreInput = document.activeElement === input ? [input.selectionStart, input.selectionEnd] : lastInputSel;
+    }
+    if (focused) setTimeout(restoreInputFocus, 60);
     winFocused = !!focused;
     clearTimeout(collapseTimer);
     // back in VS Code: if the focus did not return to the input (it went to an editor, ...), close it now
@@ -2749,6 +2772,11 @@
       case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
       case 'pasteRef': onPasteRef(ev); break;
+      case 'imageEdited': {   // back from the editor tab: replaces the attached picture, or attaches a new sketch
+        const im = ev.key && state.images.find((x) => x.key === ev.key);
+        if (im) { im.url = ev.url; renderChips(); toast(STR.imageSaved); } else if (!ev.key) addImageUrl(ev.url, STR.sketchName);
+        break;
+      }
       case 'chats': state.chats = { unread: new Set(ev.unread || []), tabs: ev.tabs || [] }; renderTabs(); if (state.historyOpen) renderHistory(); break;
       case 'scrollToLastAnswer': if (ev.threadId === state.threadId) scrollToLastAnswer(); break;
       case 'status':

@@ -10,6 +10,7 @@ import { Json } from './core/jsonrpc';
 import { migratePermissions, normalizePermissions } from './core/permissions';
 import { DiffProvider } from './diff';
 import { ChatActivity } from './chatActivity';
+import { ImageEditor } from './imageEditor';
 import { McpSettings } from './mcpSettings';
 import { MentionSearch } from './mentions';
 import { CodexSession, SendRequest } from './session';
@@ -103,6 +104,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   private mcp: McpSettings | null = null;
   /** Set by the owner: unread marks, today's tabs, opening a chat at its last answer. */
   activity: ChatActivity | null = null;
+  /** Set by the owner: the editor tab for attached pictures (view, draw, write). */
+  images: ImageEditor | null = null;
 
   constructor(
     readonly viewId: string,
@@ -324,6 +327,12 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'listThreads':
         this.onListThreads(m);
         break;
+      case 'imageOpen': { // a picture shown big in its own editor tab; a saved one goes back to the page (key: which attached picture)
+        const key = orEmpty(str(m, 'key'));
+        this.images?.open({ url: orEmpty(str(m, 'url')), name: orEmpty(str(m, 'name')), editable: m.editable === true, blank: m.blank === true },
+          (url) => this.post({ kind: 'imageEdited', key, url }));
+        break;
+      }
       case 'pasteRef': {
         const ref = this.pastedRef(orEmpty(str(m, 'text')));
         this.post({ kind: 'pasteRef', requestId: intOf(m, 'requestId'), ref });

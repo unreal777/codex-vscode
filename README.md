@@ -39,8 +39,10 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   runs; a new chat is the "New chat" tab; x or a middle click closes a tab, the open one passes to its neighbour).
 - While VS Code is in the background, an ended reply (or an approval request) is a notification of the system (Windows toast,
   macOS, Linux), seen over any program; a click opens the chat. Off: gear > System notifications.
-- Attached pictures: a click shows them big; "Draw / write" draws, writes text, erases (only the drawing) and undoes on top of
-  the picture, "Save changes" replaces the attached one.
+- Attached pictures: a click opens them big in an editor tab of their own, with pen, eraser (only the drawing), text, colours and
+  undo; "Save changes" (Ctrl+S) replaces the attached picture. Pictures of sent messages open there too (view only); the Sketch
+  of the "+" menu as well.
+- Alt+Tab away from the input and back: the caret is where it was.
 - Lists in the input: "- " or "* " at the start of a line becomes "• ", "1. " starts a numbered list; Enter (or Shift+Enter) continues
   the list, Enter on an empty item ends it, Tab / Shift+Tab indent, Ctrl+Enter sends from anywhere.
 - Code references: a symbol copied in an editor and pasted into the input becomes `#sym:name` (marked, the file shows on hover);

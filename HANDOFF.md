@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.4)
+## Status (0.7.5)
+
+- 0.7.5: pictures in an editor tab of their own, input focus back after Alt+Tab. See "0.7.5".
 
 - 0.7.4: system notifications, image preview, drawing and text on an attached image. See "0.7.4".
 
@@ -47,6 +49,20 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.5
+
+- Pictures (VS Code host): the chat page posts `imageOpen {key, url, name, editable, blank}`; src/imageEditor.ts shows them in a
+  WebviewPanel (one at a time, ViewColumn.Active) with web/imageEditor.js / .css (shipped by sync-web). The page is the same
+  two-layer editor as the in-panel sketch (kept for the Eclipse host): picture at its own pixels, fitted (up to 2x), drawing layer,
+  text input, undo (40), Ctrl+S / Esc. Save posts the merged PNG; the host answers the chat page with `imageEdited {key, url}`
+  (key = the attached picture, "" = a new sketch to attach) and closes the tab. Attached pictures got keys (imageSeq).
+  VS Code's own modal image viewer (Copilot) is workbench code, an extension can not open such a dialog; the editor tab is the
+  big place there is. tools/cdp-vscode.mjs: CDP_PURPOSE=webviewPanel drives the editor tab instead of the chat view.
+- Input focus after Alt+Tab: the page remembers the caret when VS Code loses the OS focus while the input had it (or lost it less
+  than 1 s before); when VS Code gives the focus back to the page (window focus event, document.hasFocus) and nothing else in the
+  page has it, the input gets the focus and the caret back. Coming back by a click into an editor does not move the focus.
+  Checked with synthetic focus events only (a real Alt+Tab in the isolated VS Code would take the focus from the user).
 
 ## 0.7.4
 

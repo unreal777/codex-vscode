@@ -152,3 +152,14 @@ test('0.7.4: system notifications, image preview and drawing on an attached imag
   const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
   assert.ok(ext.includes('registerUriHandler'));
 });
+
+test('0.7.5: pictures open in an editor tab of their own, the input gets its caret back after Alt+Tab', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes("bridge.post({ type: 'imageOpen'") && app.includes("case 'imageEdited':"));
+  assert.ok(app.includes('function restoreInputFocus()'));
+  const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
+  assert.ok(panel.includes("case 'imageOpen':"));
+  const sync = fs.readFileSync(path.join(root, 'scripts', 'sync-web.mjs'), 'utf8');
+  assert.ok(sync.includes("'imageEditor.js', 'imageEditor.css'"), 'the editor page is shipped');
+  assert.ok(fs.existsSync(path.join(root, 'web', 'imageEditor.js')));
+});

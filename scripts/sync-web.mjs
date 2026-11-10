@@ -1,5 +1,5 @@
 // Copies this extension's web UI source (web/) into media/web/, which is what the extension ships.
-// Only app.js, app.css, filelinks.js, dropdata.js and vendor/ - never fixtures or dev files.
+// Only app.js, app.css, filelinks.js, dropdata.js, imageEditor.js / .css and vendor/ - never fixtures or dev files.
 import { cpSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,6 @@ if (!existsSync(join(src, 'app.js'))) {
 }
 rmSync(dst, { recursive: true, force: true });
 mkdirSync(dst, { recursive: true });
-for (const f of ['app.js', 'app.css', 'filelinks.js', 'dropdata.js']) cpSync(join(src, f), join(dst, f));
+for (const f of ['app.js', 'app.css', 'filelinks.js', 'dropdata.js', 'imageEditor.js', 'imageEditor.css']) cpSync(join(src, f), join(dst, f));
 cpSync(join(src, 'vendor'), join(dst, 'vendor'), { recursive: true });
 console.log('sync-web: copied web UI from ' + src);
