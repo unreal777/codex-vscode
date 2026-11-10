@@ -83,6 +83,8 @@ test('thread titles', () => {
   assert.equal(threadTitle(null, 'Active file: C:\\work\\shop\\src\\A.java\n\nWhy does this fail?'), 'Why does this fail?');
   assert.equal(threadTitle(null, 'Referenced files (read them if needed):\n- src/A.java\n- docs (folder)\n\nRefactor this'), 'Refactor this');
   assert.equal(threadTitle('', 'Active file: a.txt\n\nSelected code in a.txt (lines 1-2):\n```\nx = 1;\ny = 2;\n```\n\nExplain this code.'), 'Explain this code.');
+  assert.equal(threadTitle(null, 'Referenced symbols (#sym:name = file:line):\n- #sym:panelButtons = src/a.ts:393\n\nWhy is #sym:panelButtons empty?'),
+    'Why is #sym:panelButtons empty?', '0.6.1: pasted symbol references');
   assert.notEqual(threadTitle(null, 'Active file: a.txt\n\n'), '', 'a preview that is only extension context stays visible');
   const long = 'x'.repeat(500);
   assert.ok(threadTitle(null, long).length <= 160 && threadTitle(null, long).endsWith('\u2026'));

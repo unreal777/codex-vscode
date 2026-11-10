@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.6.0)
+## Status (0.6.1)
+
+- 0.6.1: lists in the input, pasted symbols as #sym: references, "Add MCP by name with AI". See "0.6.1".
 
 - 0.6.0: MCP servers in the in-panel settings (on/off, check, remove, copy from VS Code mcp.json, add by name with AI). See "0.6.0".
 
@@ -35,6 +37,23 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.6.1
+
+- Lists (app.js listKey): LIST_RE = indent + "•" or "n." / "n)" + spaces. "- " / "* " typed at a line start (input event with
+  inputType insertText and data " ") becomes "• ". Enter / Shift+Enter in an item inserts the next marker; on an empty item it
+  outdents (2 spaces) or ends the list; Backspace right after the marker removes it; Tab / Shift+Tab indent by 2. Ctrl+Enter always
+  sends. Changes go through execCommand("insertText") so Ctrl+Z works. The text keeps "•" (Codex reads it as a list).
+- Symbol references: paste of one identifier-like line (SYM_TEXT, <= 120 chars) whose clipboard has "vscode-editor-data" asks the
+  host (`pasteRef`); panel.pastedRef finds an editor selection with exactly that text (active, then visible editors) and answers
+  {path, rel, startLine, endLine}. The page replaces the pasted text with `#sym:name` (a second, different "name" gets _n).
+  #input-hl is a copy of the text behind the transparent textarea with <mark> for the tokens (synced on input, scroll, autoGrow);
+  the tooltip hit-tests the marks. On send the live refs become contexts kind "symbol"; the host puts
+  "Referenced symbols (#sym:name = file:line):" lines before the text (stripped from titles and from the history bubble, where
+  symbolsOf() reads them back to make the tokens clickable). Copilot's own paste provider is not available to a webview, hence the
+  selection match.
+- Settings: "Add by name" is now "Add MCP by name with AI".
+- Checked in the isolated VS Code with synthetic key / paste events and a faked pasteRef answer (no real editor selection).
 
 ## 0.6.0
 

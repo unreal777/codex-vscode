@@ -163,3 +163,15 @@ test('page and host know the MCP messages', () => {
   assert.match(panel, /case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind':/);
   assert.match(app, /case 'mcp': case 'mcpNote': case 'mcpFind': onMcp\(ev\)/);
 });
+
+test('0.6.1: input lists and pasted symbol references are wired (page and host)', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.match(app, /function listKey\(e\)/);
+  assert.match(app, /type: 'pasteRef'/);
+  assert.match(app, /case 'pasteRef': onPasteRef\(ev\)/);
+  assert.match(app, /id="input-hl"/);
+  assert.match(app, /Referenced \(\?:files\|symbols\)/);
+  const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
+  assert.match(panel, /case 'pasteRef'/);
+  assert.ok(panel.includes("'Referenced symbols (#sym:name = file:line):\\n'"), 'host writes the symbol lines');
+});

@@ -97,7 +97,7 @@
     mcpVsTitle: 'From VS Code (Copilot)', mcpImport: 'Add', mcpImportTitle: 'Copy this server of VS Code\'s mcp.json to the Codex config',
     mcpVsNone: 'VS Code\'s mcp.json has no servers.', mcpVsAll: (n) => 'All ' + n + ' servers of VS Code\'s mcp.json are in Codex already.',
     mcpVsMore: (n) => n + ' more already in Codex.',
-    mcpFindTitle: 'Add by name', mcpFindPh: 'e.g. serena, github, postgres', mcpFind: 'Find',
+    mcpFindTitle: 'Add MCP by name with AI', mcpFindPh: 'e.g. serena, github, postgres', mcpFind: 'Find',
     mcpFindHint: 'Codex searches the web for the official setup. You see the command and confirm it before anything is added.',
     mcpFinding: 'Searching the web for the setup… (up to a minute)',
     permTitle: 'How should Codex actions be approved?',
@@ -238,7 +238,7 @@
     return !short ? '' : short === 'now' || /\d{4}|\//.test(short) ? short : STR.ago(short);
   }
   // the plugin prepends "Active file: ..." / "Referenced files ..." / selections to prompts; they are not part of a chat title
-  const PREAMBLE_RE = /^(?:(?:Active file: [^\n]*|Referenced files[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
+  const PREAMBLE_RE = /^(?:(?:Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
   function cleanTitle(text) {
     const t = String(text || '');
     const rest = t.replace(PREAMBLE_RE, '');
@@ -385,7 +385,7 @@
     '<div id="plus-menu" class="popmenu hidden" role="menu" aria-label="' + esc(STR.plusTitle) + '"></div>' +
     '<div id="perm-menu" class="popmenu hidden" role="menu" aria-label="' + esc(STR.permTitle) + '"></div>' +
     '<div id="cchips" class="hidden"></div>' +
-    '<textarea id="input" rows="1" placeholder="' + esc(STR.placeholder) + '"></textarea>' +
+    '<div id="input-wrap"><div id="input-hl" aria-hidden="true"></div><textarea id="input" rows="1" placeholder="' + esc(STR.placeholder) + '"></textarea></div>' +
     '<div class="row"><button id="plus" type="button" class="tool" aria-haspopup="menu" aria-expanded="false" title="' + esc(STR.plusTitle) + '" aria-label="' + esc(STR.plusTitle) + '">' + ICON.plus + '</button>' +
     '<button id="perm" type="button" class="tool perm" aria-haspopup="menu" aria-expanded="false" title="' + esc(STR.permButton) + '"><span class="pi"></span><span class="pl"></span></button>' +
     '<select id="sel-model" title="Model"></select><select id="sel-effort" title="Reasoning effort"></select><span class="spacer"></span>' +
@@ -478,11 +478,39 @@
 
   function addUser(text, contexts, images, whenSec, reuse) {
     if (!reuse) beginTurn(whenSec);
-    const chips = (contexts || []).map((c) => chipEl(c, false));
+    const syms = (contexts || []).filter((c) => c.kind === 'symbol');
+    const chips = (contexts || []).filter((c) => c.kind !== 'symbol').map((c) => chipEl(c, false));
     const pics = (images || []).map((im) => h('img', { class: 'pic', src: im.url, alt: im.name || STR.pastedImage }));
     append(h('div', { class: 'msg user' }, h('div', { class: 'bubble' },
       chips.length ? h('div', { class: 'chips' }, chips) : null, pics.length ? h('div', { class: 'pics' }, pics) : null,
-      text ? h('div', { class: 'tx', text }) : null)));
+      text ? h('div', { class: 'tx' }, symParts(text, syms)) : null)));
+  }
+  // "#sym:name" of a message as a link to its file and line
+  const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function symParts(text, syms) {
+    if (!syms.length) return [text];
+    const re = new RegExp(syms.map((r) => reEscape(r.token)).join('|') + '(?![\\w$])', 'g');
+    const out = [];
+    let pos = 0;
+    for (const m of text.matchAll(re)) {
+      const r = syms.find((x) => x.token === m[0]);
+      out.push(text.slice(pos, m.index), h('span', { class: 'sym', text: m[0], title: (r.rel || r.path) + ':' + r.startLine + (r.endLine > r.startLine ? '-' + r.endLine : ''),
+        onclick: () => bridge.post({ type: 'openFile', path: r.path || r.rel, line: r.startLine, endLine: r.endLine }) }));
+      pos = m.index + m[0].length;
+    }
+    out.push(text.slice(pos));
+    return out;
+  }
+  // The "Referenced symbols" lines the host puts before a message (panel.ts onSend), for a chat loaded from the history.
+  function symbolsOf(raw) {
+    const block = /(?:^|\n)Referenced symbols[^\n]*:\n((?:- [^\n]*\n?)+)/.exec(raw);
+    if (!block) return [];
+    const out = [];
+    for (const l of block[1].split('\n')) {
+      const m = /^- (#sym:\S+) = (.+):(\d+)(?:-(\d+))?$/.exec(l.trim());
+      if (m) out.push({ kind: 'symbol', token: m[1], rel: m[2], path: m[2], startLine: +m[3], endLine: +(m[4] || m[3]) });
+    }
+    return out;
   }
 
   // ---------- item rendering ----------
@@ -714,7 +742,7 @@
         const raw = parts.filter((c) => c.type === 'text').map((c) => c.text).join('\n');
         const text = raw.replace(PREAMBLE_RE, '').trim() ? raw.replace(PREAMBLE_RE, '') : raw;
         const pics = parts.filter((c) => c.type === 'image' && /^data:image\//.test(c.url || '')).map((c) => ({ url: c.url }));
-        addUser(text.trim(), [], pics, null, true);
+        addUser(text.trim(), symbolsOf(raw), pics, null, true);
       }
       return;
     }
@@ -1815,7 +1843,9 @@
       if (host === 'vscode' && lines.length && lines.length <= 50 && lines.every((l) => /^(?:file:\/\/|[A-Za-z]:[\\/]|\\\\[^\\])/.test(l))) {
         e.preventDefault();
         bridge.post({ type: 'dropText', text: lines.join('\n') });
+        return;
       }
+      askPasteRef(e);   // a symbol copied in an editor: the host may turn it into a #sym: reference
       return;
     }
     e.preventDefault();
@@ -1917,6 +1947,7 @@
     }
     input.style.height = Math.min(input.scrollHeight, max) + 'px';
     input.style.overflowY = input.scrollHeight > max ? 'auto' : 'hidden';
+    try { syncHl(); } catch (e) { /* not set up yet */ }
     scrollDown();
   }
   input.addEventListener('input', () => { autoGrow(); updateRunning(); });
@@ -1946,13 +1977,127 @@
   window.addEventListener('resize', () => { if (inputOpen) autoGrow(); });
   input.addEventListener('keydown', (e) => {
     if (mentionKey(e)) return;
+    if (listKey(e)) return;
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); submit(); return; }   // sends also from a list
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
   });
+
+  // ---------- lists in the input (like Claude) ----------
+  // "- " or "* " typed at the start of a line becomes "• "; "1. " stays. In a list item Enter (and Shift+Enter) starts the next item
+  // ("• " or the next number); Enter on an empty item ends the list, Backspace right after the marker removes it, Tab / Shift+Tab indent.
+  // Ctrl+Enter sends from anywhere. The text keeps the markers as typed, so Codex reads a normal list.
+  const LIST_RE = /^(\s*)(•|\d{1,3}[.)])( +)(.*)$/;
+  function lineAround(pos) {
+    const v = input.value, s = v.lastIndexOf('\n', pos - 1) + 1;
+    let e = v.indexOf('\n', pos); if (e < 0) e = v.length;
+    return { s, e, text: v.slice(s, e) };
+  }
+  // replaces [s, e) like typing does (the change can be undone with Ctrl+Z and fires "input")
+  function typeOver(s, e, text) {
+    input.setSelectionRange(s, e);
+    if (!document.execCommand('insertText', false, text)) { input.setRangeText(text, s, e, 'end'); input.dispatchEvent(new Event('input')); }
+  }
+  function listKey(e) {
+    if (e.isComposing || e.altKey || e.ctrlKey || e.metaKey || input.selectionStart !== input.selectionEnd) return false;
+    const caret = input.selectionStart, ln = lineAround(caret), m = LIST_RE.exec(ln.text);
+    if (!m) return false;
+    const markEnd = ln.s + m[1].length + m[2].length + m[3].length;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!m[4].trim() && caret >= markEnd) { typeOver(ln.s, ln.e, m[1].length >= 2 ? m[1].slice(2) + m[2] + m[3] : ''); return true; }   // empty item: outdent, else end the list
+      const num = /^\d/.test(m[2]) ? (parseInt(m[2], 10) + 1) + m[2].slice(-1) : '•';
+      typeOver(caret, caret, '\n' + m[1] + num + ' ');
+      return true;
+    }
+    if (e.key === 'Backspace' && caret === markEnd) { e.preventDefault(); typeOver(ln.s, markEnd, m[1]); return true; }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (e.shiftKey) { if (m[1].length) { const cut = Math.min(2, m[1].length); typeOver(ln.s, ln.s + cut, ''); input.setSelectionRange(caret - cut, caret - cut); } }
+      else { typeOver(ln.s, ln.s, '  '); input.setSelectionRange(caret + 2, caret + 2); }
+      return true;
+    }
+    return false;
+  }
+  input.addEventListener('input', (e) => {
+    if (e.inputType !== 'insertText' || e.data !== ' ' || input.selectionStart !== input.selectionEnd) return;
+    const caret = input.selectionStart, ln = lineAround(caret), before = input.value.slice(ln.s, caret);
+    const m = /^(\s*)[-*] $/.exec(before);
+    if (m) { typeOver(ln.s + m[1].length, ln.s + m[1].length + 1, '•'); input.setSelectionRange(caret, caret); }
+  });
+
+  // ---------- code references: a symbol copied in an editor and pasted here becomes "#sym:name" (like Copilot) ----------
+  // The host checks that the pasted text is the selection of an editor and answers with its file and lines. The reference stays text
+  // in the input (marked by #input-hl behind it, the file shows on hover); the message carries the files and lines for Codex.
+  const hl = $('#input-hl');
+  const SYM_TEXT = /^[A-Za-z_$][\w$]*(?:(?:\.|::|->|#)[A-Za-z_$][\w$]*)*(?:\(\))?$/;
+  let pasteReq = 0;
+  state.refs = [];
+  const symToken = (name) => '#sym:' + name;
+  function liveRefs() { return state.refs.filter((r) => input.value.includes(r.token)); }
+  function syncHl() {
+    const refs = liveRefs();
+    if (!refs.length) { if (hl.firstChild) hl.textContent = ''; input.title = ''; return; }
+    hl.style.width = input.clientWidth + 'px';
+    const v = input.value, re = new RegExp(refs.map((r) => r.token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '(?![\\w$])', 'g');
+    hl.textContent = '';
+    let pos = 0;
+    for (const m of v.matchAll(re)) {
+      hl.append(v.slice(pos, m.index), h('mark', { text: m[0], 'data-tok': m[0] }));
+      pos = m.index + m[0].length;
+    }
+    hl.append(v.slice(pos) + '\n');   // a trailing newline keeps the last line's height
+    hl.scrollTop = input.scrollTop;
+  }
+  input.addEventListener('input', syncHl);
+  input.addEventListener('scroll', () => { hl.scrollTop = input.scrollTop; });
+  input.addEventListener('mousemove', (e) => {   // the marks lie under the textarea: hit-test them for the tooltip
+    let tip = '';
+    if (hl.firstChild) for (const mk of hl.querySelectorAll('mark')) {
+      if ([...mk.getClientRects()].some((r) => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom)) {
+        const ref = state.refs.find((r) => r.token === mk.dataset.tok);
+        if (ref) tip = ref.rel + ':' + ref.startLine + (ref.endLine > ref.startLine ? '-' + ref.endLine : '');
+        break;
+      }
+    }
+    if (input.title !== tip) input.title = tip;
+  });
+  function askPasteRef(e) {
+    const dt = e.clipboardData;
+    if (host !== 'vscode' || !dt) return;
+    const text = dt.getData('text/plain');
+    if (!text || text.length > 120 || /\n/.test(text) || !SYM_TEXT.test(text.trim())) return;
+    if (!Array.from(dt.types || []).includes('vscode-editor-data')) return;   // only copies from a VS Code editor
+    const at = input.selectionStart;
+    bridge.post({ type: 'pasteRef', text: text.trim(), requestId: ++pasteReq });
+    state.pasteWait = { id: pasteReq, at, text };
+  }
+  function onPasteRef(ev) {
+    const w = state.pasteWait;
+    if (!w || ev.requestId !== w.id || !ev.ref) return;
+    state.pasteWait = null;
+    // the pasted text is where it was put, unless the user typed over it meanwhile
+    let s = input.value.slice(w.at, w.at + w.text.length) === w.text ? w.at : input.value.lastIndexOf(w.text);
+    if (s < 0) return;
+    const name = w.text.trim(), lead = w.text.indexOf(name);
+    s += lead;
+    let token = symToken(name);
+    const same = state.refs.find((r) => r.token === token);
+    if (same && (same.path !== ev.ref.path || same.startLine !== ev.ref.startLine)) token = symToken(name) + '_' + (state.refs.length + 1);   // a second "x" elsewhere
+    if (!state.refs.some((r) => r.token === token)) state.refs.push(Object.assign({ token, name }, ev.ref));
+    const keep = input.selectionStart, delta = token.length - name.length;
+    typeOver(s, s + name.length, token);
+    const back = keep >= s + name.length ? keep + delta : keep;
+    input.setSelectionRange(back, back);
+    syncHl();
+  }
+
   sendBtn.addEventListener('click', () => { if (state.running || state.pending) bridge.post({ type: 'interrupt' }); else submit(); });
   function submit() {
     const text = input.value.trim();
     if ((!text && !state.images.length) || state.running || state.pending) return;
     const ctx = state.contexts.map((c) => Object.assign({}, c));
+    liveRefs().forEach((r) => ctx.push({ kind: 'symbol', token: r.token, name: r.name, path: r.path, rel: r.rel, startLine: r.startLine, endLine: r.endLine }));
+    state.refs = [];
     const images = state.images.slice();
     addUser(text, ctx, images);
     stick = true; scrollDown();
@@ -2332,6 +2477,7 @@
       case 'theme': applyTheme(ev.theme); break;
       case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
+      case 'pasteRef': onPasteRef(ev); break;
       case 'status':
         setConn(ev.state, ev.message);
         break;

@@ -317,6 +317,11 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'listThreads':
         this.onListThreads(m);
         break;
+      case 'pasteRef': {
+        const ref = this.pastedRef(orEmpty(str(m, 'text')));
+        this.post({ kind: 'pasteRef', requestId: intOf(m, 'requestId'), ref });
+        break;
+      }
       case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind':
         this.mcp ??= new McpSettings({
           appServer: () => this.session.appServer(), find: (p) => this.mcpFind(p),
@@ -503,6 +508,21 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.handleDrop(paths);
   }
 
+  /** The editor selection the pasted text was copied from (active editor first, then the visible ones), as file + lines; null if none. */
+  private pastedRef(text: string): Json | null {
+    if (!text) return null;
+    const eds = [vscode.window.activeTextEditor, ...vscode.window.visibleTextEditors].filter((e): e is vscode.TextEditor => !!e);
+    for (const ed of eds) {
+      const file = this.ws.filePath(ed);
+      if (!file) continue;
+      for (const sel of ed.selections) {
+        if (sel.isEmpty || ed.document.getText(sel).trim() !== text) continue;
+        return { path: file, rel: relative(file, this.session.threadCwd ?? this.cwd), startLine: sel.start.line + 1, endLine: sel.end.line + 1 };
+      }
+    }
+    return null;
+  }
+
   /** "Ask about selection": attach file + lines + text to the chat input. */
   addSelection(file: string, text: string, startLine: number, endLine: number, mode: string): void {
     this.post({ kind: 'context', action: 'add', item: { path: file, startLine, endLine, text } });
@@ -527,6 +547,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     const cwd = this.cwd;
     let prompt = '';
     const referenced: string[] = [];
+    const symbols: string[] = [];
     const mentions: { name: string; path: string }[] = [];
     if (Array.isArray(m.contexts)) {
       for (const c of m.contexts as Json[]) {
@@ -536,6 +557,11 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
           continue;
         }
         const p = relative(str(c, 'path'), cwd);
+        if (c.kind === 'symbol') { // "#sym:name" pasted from an editor: the token stays in the text, its file and lines go here
+          const tok = str(c, 'token'), a = intOf(c, 'startLine'), b = intOf(c, 'endLine');
+          if (tok && /^#sym:\S+$/.test(tok) && p && a > 0) symbols.push(tok + ' = ' + p + ':' + a + (b > a ? '-' + b : ''));
+          continue;
+        }
         if (c.kind === 'selection') {
           prompt += 'Selected code in ' + p + ' (lines ' + c.startLine + '-' + c.endLine + '):\n```\n' + orEmpty(str(c, 'text')) + '\n```\n\n';
         } else if (c.kind === 'mention') { // "@" picks, drops and "Add to Codexter chat": by path only, like the active file
@@ -548,6 +574,11 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     if (referenced.length > 0) {
       prompt += 'Referenced files (read them if needed):\n';
       for (const r of referenced) prompt += '- ' + r + '\n';
+      prompt += '\n';
+    }
+    if (symbols.length > 0) {
+      prompt += 'Referenced symbols (#sym:name = file:line):\n';
+      for (const s of symbols) prompt += '- ' + s + '\n';
       prompt += '\n';
     }
     prompt += orEmpty(str(m, 'text'));

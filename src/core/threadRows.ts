@@ -4,7 +4,7 @@
 const MAX_TITLE = 160;
 
 /** Context the extension itself prepends to a prompt ("Active file: ...", "Referenced files: ...", selections); not part of the title. */
-const PLUGIN_PREAMBLE = /^(?:(?:Active file: [^\n]*|Referenced files[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
+const PLUGIN_PREAMBLE = /^(?:(?:Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
 
 function shorten(text: string): string {
   const oneLine = text.replace(/[ \t\n\x0B\f\r]+/g, ' ').trim();

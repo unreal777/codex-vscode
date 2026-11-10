@@ -33,6 +33,10 @@ See `INSTALL.md` (English) or `INSTALL.de.md` (German): install the `.vsix` with
   over the titles and first messages of the newest 300 chats of the selection).
 - Gear button: in-panel settings (default model, default reasoning effort, models shown in the picker).
 - Commands: Codexter: Open panel, New chat, Open settings, Check for Codex updates, Ask/Explain/Fix selection, Add to Codexter chat. The view title has + (new chat) and a gear (settings, toggles).
+- Lists in the input: "- " or "* " at the start of a line becomes "• ", "1. " starts a numbered list; Enter (or Shift+Enter) continues
+  the list, Enter on an empty item ends it, Tab / Shift+Tab indent, Ctrl+Enter sends from anywhere.
+- Code references: a symbol copied in an editor and pasted into the input becomes `#sym:name` (marked, the file shows on hover);
+  Codex gets its file and line, and the name in the sent message opens the file.
 - MCP servers (gear > MCP servers): switch the servers of the Codex config on and off, check that one starts (it lists its tools),
   remove one, copy servers of VS Code's mcp.json (Copilot) to Codex, or add one by name (Codex searches the web for the setup and
   you confirm the command first). Written to ~/.codex/config.toml, which the Codex CLI and the Eclipse plugin share.
