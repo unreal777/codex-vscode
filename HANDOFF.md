@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.0)
+## Status (0.7.1)
+
+- 0.7.1: tabs in the top bar (in place of the title), every opened chat and the new chat are tabs. See "0.7.1".
 
 - 0.7.0: replies go on in the background, unread marks, notifications, today's chats as tabs. See "0.7.0".
 
@@ -39,6 +41,14 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.1
+
+- Tabs: #tabs moved into #topbar; from two tabs on the bar gets `with-tabs`, which hides #title and #proj. VS Code's own view
+  header ("Codexter | Chat") can not hold extension content, so this is the highest place.
+- A chat becomes a tab when it is opened (threadChanged -> ChatActivity.opened adds it), not only when a message is sent. A new chat
+  without a thread is a page-only "New chat" tab (no x). Closing the open tab (x, middle click, Delete) opens its neighbour, else a
+  new chat. Tabs shrink to 64px before the strip scrolls.
 
 ## 0.7.0
 

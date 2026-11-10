@@ -117,6 +117,7 @@ test('session: leaving a running chat keeps its reply in the background; its end
 test('page: tabs, unread dots, last answer, running reply of a loaded chat', () => {
   const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
   assert.match(app, /id="tabs"/);
+  assert.ok(app.includes("topbar.classList.toggle('with-tabs', show)"), '0.7.1: tabs in the top bar');
   assert.match(app, /case 'chats':/);
   assert.match(app, /case 'scrollToLastAnswer':/);
   assert.match(app, /turn\.status === 'inProgress' && idx === ev\.turns\.length - 1/);

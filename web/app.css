@@ -53,22 +53,23 @@ button { cursor: pointer; }
   display: flex; align-items: center; gap: 4px; padding: 6px 8px;
   border-bottom: 1px solid var(--border); flex: none; position: relative;
 }
-/* today's chats as tabs (below the top bar) */
-#tabs { display: flex; gap: 2px; padding: 4px 6px 0; border-bottom: 1px solid var(--border); flex: none; overflow-x: auto; scrollbar-width: none; }
+/* today's chats as tabs: in the top bar, in place of the chat title */
+#tabs { flex: 1 1 auto; min-width: 0; margin-right: auto; display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 #tabs::-webkit-scrollbar { display: none; }
 #tabs.hidden { display: none; }
-#tabs .tab { flex: 0 0 auto; max-width: 140px; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 4px 0 8px;
-  border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: var(--muted); cursor: pointer; outline: 0; font-size: 12px; }
+#topbar.with-tabs #title, #topbar.with-tabs #proj { display: none; }
+#tabs .tab { flex: 0 1 auto; min-width: 64px; max-width: 150px; display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 3px 0 8px;
+  border-radius: 6px; color: var(--muted); cursor: pointer; outline: 0; font-size: 12px; border: 1px solid transparent; }
 #tabs .tab:hover { background: var(--card-hover); color: var(--fg); }
 #tabs .tab:focus-visible { box-shadow: 0 0 0 1px var(--accent) inset; }
-#tabs .tab.cur { color: var(--fg); background: var(--bg); border-color: var(--border); margin-bottom: -1px; }
+#tabs .tab.cur { color: var(--fg); font-weight: 600; background: var(--card-hover); border-color: var(--border); }
 #tabs .tab.unread { color: var(--fg); font-weight: 600; }
 #tabs .tab-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #tabs .tab-mark { flex: none; }
 #tabs .tab-mark.spinner { width: 10px; height: 10px; }
-#tabs .tab-x { flex: none; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; opacity: 0; font-size: 14px; line-height: 1; }
+#tabs .tab-x { flex: none; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; opacity: 0; font-size: 14px; line-height: 1; font-weight: 400; }
 #tabs .tab:hover .tab-x, #tabs .tab:focus-within .tab-x, #tabs .tab.cur .tab-x { opacity: .7; }
-#tabs .tab-x:hover { opacity: 1; background: var(--card-hover); }
+#tabs .tab-x:hover { opacity: 1; background: var(--bg); }
 /* unread mark: a thick blue dot (tabs, History rows) */
 .udot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; margin-right: 6px; vertical-align: middle; }
 #tabs .udot { margin-right: 0; }

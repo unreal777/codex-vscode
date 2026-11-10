@@ -18,7 +18,7 @@
     historySearch: 'Search chats and projects…',
     historyLoading: 'Loading…',
     // today's chats as tabs, unread marks
-    tabsLabel: 'Today\'s chats of this project', tabUnread: 'New answer, not read yet', tabRunning: 'Working…', tabClose: 'Hide this tab (until the chat is used again)',
+    tabsLabel: 'Today\'s chats of this project', tabNew: 'New chat', tabUnread: 'New answer, not read yet', tabRunning: 'Working…', tabClose: 'Hide this tab (until the chat is used again)',
     // AI search of the History
     aiToggle: 'AI search: describe the chat in your own words, then press Enter (Codex reads the titles and first messages of the newest 300 chats)',
     aiSearchPh: 'Describe the chat, then press Enter…',
@@ -370,6 +370,7 @@
   app.innerHTML =
     '<div id="topbar">' +
     '<span id="conn" class="connecting" title=""></span><div id="title"></div><span id="proj" class="hidden"></span>' +
+    '<div id="tabs" class="hidden" role="tablist" aria-label="' + esc(STR.tabsLabel) + '"></div>' +
     '<button class="icon-btn" id="btn-new" type="button" title="' + esc(STR.newChatTitle) + '">' + ICON.plus + '</button>' +
     '<button class="icon-btn" id="btn-hist" type="button" title="' + esc(STR.history) + '">' + ICON.history + '</button>' +
     '<button class="icon-btn" id="btn-set" type="button" title="' + esc(STR.settings) + '" aria-label="' + esc(STR.settings) + '" aria-haspopup="dialog" aria-expanded="false">' + ICON.gear + '</button>' +
@@ -382,7 +383,6 @@
     '<div id="settings" class="hidden" role="dialog" aria-label="' + esc(STR.settings) + '"><div class="set-head">' +
     '<button class="icon-btn" id="set-back" type="button" title="' + esc(STR.settingsBack) + '" aria-label="' + esc(STR.settingsBack) + '">' + ICON.back + '</button>' +
     '<h2>' + esc(STR.settings) + '</h2></div><div id="set-body"></div></div>' +
-    '<div id="tabs" class="hidden" role="tablist" aria-label="' + esc(STR.tabsLabel) + '"></div>' +
     '<div id="cxstatus" class="hidden"></div>' +
     '<div id="feed"></div>' +
     '<div id="dock"><div id="sandbox" class="hidden"></div><div id="signin" class="hidden"></div><div id="plan" class="hidden"></div><div id="xproj" class="hidden"></div><div id="goal" class="hidden"></div><div id="chips"></div>' +
@@ -1628,7 +1628,7 @@
     state.modelsOpen = false;
     setBox.classList.toggle('hidden', !state.settingsOpen);
     gearBtn.setAttribute('aria-expanded', String(state.settingsOpen));
-    ['#topbar', '#tabs', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
+    ['#topbar', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
     if (state.settingsOpen) {
       if (state.historyOpen) toggleHistory(false);
       closePops(false);
@@ -1938,34 +1938,46 @@
   }
 
   // ---------- today's chats of this project as tabs (VS Code host) ----------
-  // The host sends them (event "chats"): a chat becomes a tab when a message is sent in it today. A blue dot = a reply that finished
-  // while the chat was not open and was not read yet; a spinner = its reply is running. Shown from two tabs on (or one that is not open).
+  // The host sends them (event "chats"): a chat becomes a tab when it is opened or used today. A blue dot = a reply that finished while
+  // the chat was not open and was not read yet; a spinner = its reply is running. A new chat without a message yet is the "New chat" tab.
+  // The strip sits in the top bar in place of the chat title, from two tabs on.
   state.chats = { unread: new Set(), tabs: [] };
-  const tabsEl = $('#tabs');
+  const tabsEl = $('#tabs'), topbar = $('#topbar');
   // the strip has no scrollbar: the mouse wheel scrolls it sideways
   tabsEl.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { tabsEl.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
   function renderTabs() {
-    const tabs = state.chats.tabs;
-    const show = host === 'vscode' && (tabs.length >= 2 || (tabs.length === 1 && tabs[0].id !== state.threadId));
+    const list = state.chats.tabs.slice();
+    if (!state.threadId && list.length) list.push({ id: '', title: STR.tabNew, unread: false, running: false });   // the open, still empty chat
+    const show = host === 'vscode' && list.length >= 2;
     tabsEl.classList.toggle('hidden', !show);
+    topbar.classList.toggle('with-tabs', show);
+    const focusedId = document.activeElement && tabsEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
     tabsEl.textContent = '';
     if (!show) return;
-    const focusedId = document.activeElement && tabsEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
-    tabs.forEach((t) => {
-      const cur = t.id === state.threadId, running = t.running || (cur && (state.running || state.pending));
-      const mark = running ? h('span', { class: 'tab-mark spinner' }) : t.unread && !cur ? h('span', { class: 'tab-mark udot' }) : null;
-      const tab = h('div', { class: 'tab' + (cur ? ' cur' : '') + (t.unread && !cur ? ' unread' : ''), role: 'tab', tabindex: '0', 'data-id': t.id, 'aria-selected': String(cur),
-        title: t.title + (running ? '\n' + STR.tabRunning : t.unread && !cur ? '\n' + STR.tabUnread : '') },
+    list.forEach((t, i) => {
+      const cur = t.id === (state.threadId || ''), running = t.running || (cur && (state.running || state.pending));
+      const unread = t.unread && !cur;
+      const mark = running ? h('span', { class: 'tab-mark spinner' }) : unread ? h('span', { class: 'tab-mark udot' }) : null;
+      const close = (e) => {
+        if (e) e.stopPropagation();
+        if (cur) {   // closing the open tab opens its neighbour (or a new chat), like a browser
+          const next = list[i + 1] || list[i - 1];
+          if (next && next.id) bridge.post({ type: 'resumeThread', threadId: next.id }); else bridge.post({ type: 'newChat' });
+        }
+        if (t.id) bridge.post({ type: 'tabClose', threadId: t.id });
+      };
+      const tab = h('div', { class: 'tab' + (cur ? ' cur' : '') + (unread ? ' unread' : ''), role: 'tab', tabindex: '0', 'data-id': t.id, 'aria-selected': String(cur),
+        title: t.title + (running ? '\n' + STR.tabRunning : unread ? '\n' + STR.tabUnread : '') },
         mark, h('span', { class: 'tab-t', text: t.title }),
-        h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×',
-          onclick: (e) => { e.stopPropagation(); bridge.post({ type: 'tabClose', threadId: t.id }); } }));
-      const open = () => { if (!cur) { toggleHistory(false); bridge.post({ type: 'resumeThread', threadId: t.id }); } };
+        t.id ? h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×', onclick: close }) : null);
+      const open = () => { if (!cur && t.id) { toggleHistory(false); bridge.post({ type: 'resumeThread', threadId: t.id }); } };
       tab.addEventListener('click', open);
+      tab.addEventListener('auxclick', (e) => { if (e.button === 1) { e.preventDefault(); close(e); } });   // middle click closes
       tab.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
-        else if (e.key === 'Delete') { e.preventDefault(); bridge.post({ type: 'tabClose', threadId: t.id }); }
+        else if (e.key === 'Delete') { e.preventDefault(); close(); }
         else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-          const all = [...tabsEl.querySelectorAll('.tab')], i = all.indexOf(tab), n = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+          const all = [...tabsEl.querySelectorAll('.tab')], k = all.indexOf(tab), n = all[(k + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
           e.preventDefault(); if (n) n.focus();
         }
       });
@@ -1973,7 +1985,7 @@
     });
     const c = tabsEl.querySelector('.tab.cur');
     if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    if (focusedId) { const f = tabsEl.querySelector('.tab[data-id="' + CSS.escape(focusedId) + '"]'); if (f) f.focus(); }
+    if (focusedId != null) { const f = tabsEl.querySelector('.tab[data-id="' + CSS.escape(focusedId) + '"]'); if (f) f.focus(); }
   }
   // A chat opened from a notification (or unread): show the start of its last answer instead of the end.
   function scrollToLastAnswer() {

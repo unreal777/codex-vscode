@@ -1,6 +1,6 @@
 // Chats beside the open one: a reply that finishes while its chat is not open gets an unread mark (History, tabs; gone when the chat
 // is opened, or after 3 days) and a VS Code notification whose "Open" button opens the chat at the start of its last answer.
-// Today's chats of this project are the tabs above the chat (workspaceState: per project, reset each day).
+// Today's chats of this project (opened or used today) are the tabs in the top bar (workspaceState: per project, reset each day).
 import * as vscode from 'vscode';
 import { addToday, dayKey, pruneUnread, removeToday, tabsOf, todayOf, TodayChats, UnreadMap } from './core/chatList';
 import { CodexSession } from './session';
@@ -52,10 +52,15 @@ export class ChatActivity {
     this.publish();
   }
 
-  /** A chat was opened: its mark goes away. */
+  /** A chat was opened (or started): it is one of today's tabs, and its mark goes away. */
   opened(threadId: string | null): void {
-    const u = this.unread();
-    if (threadId !== null && threadId in u) { delete u[threadId]; this.setUnread(u); }
+    if (threadId !== null) {
+      const u = this.unread();
+      if (threadId in u) { delete u[threadId]; this.setUnread(u); }
+      const t = this.today();
+      const next = addToday(t, threadId, this.session.titleOf(threadId) ?? '');
+      if (next !== t) this.setToday(next);
+    }
     this.publish();
   }
 
