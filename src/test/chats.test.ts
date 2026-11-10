@@ -43,7 +43,7 @@ rl.on('line', (line) => {
   if (m.method === 'thread/resume') {
     const id = m.params.threadId;
     const turns = id === 'A' ? [{ id: 'tA', status: 'inProgress', items: [] }] : [{ id: 't0', status: 'completed', items: [] }];
-    send({ id: m.id, result: { thread: { id, name: 'Chat ' + id, turns }, cwd: 'D:\\\\p' } });
+    send({ id: m.id, result: { thread: { id, name: 'Chat ' + id, turns }, cwd: 'D:\\\\p', collaborationMode: { mode: id === 'A' ? 'plan' : 'default', settings: {} } } });
   } else send({ id: m.id, result: { goal: null } });
 });
 `;
@@ -94,6 +94,7 @@ test('session: leaving a running chat keeps its reply in the background; its end
     const kinds = events.map((e) => e.kind + (e.method ? ':' + e.method : ''));
     assert.ok(kinds.indexOf('thread') < kinds.indexOf('notification:turn/started'), kinds.join());
     assert.equal(events.find((e) => e.kind === 'serverRequest').id, 7);
+    assert.equal(events.find((e) => e.kind === 'thread').planMode, true, '0.7.6: the thread\'s plan mode goes to the page');
 
     // opening B leaves A in the background again; A ends there: turnDone(background)
     events.length = 0;
@@ -162,4 +163,10 @@ test('0.7.5: pictures open in an editor tab of their own, the input gets its car
   const sync = fs.readFileSync(path.join(root, 'scripts', 'sync-web.mjs'), 'utf8');
   assert.ok(sync.includes("'imageEditor.js', 'imageEditor.css'"), 'the editor page is shipped');
   assert.ok(fs.existsSync(path.join(root, 'web', 'imageEditor.js')));
+});
+
+test('0.7.6: a loaded chat shows its plan mode, and an existing chat always says whether plan mode is on', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes('function applyThreadPlan(ev)'));
+  assert.ok(app.includes('const plan = state.planMode ? true : state.threadId || state.planUsed ? false : undefined;'));
 });

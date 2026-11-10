@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.5)
+## Status (0.7.6)
+
+- 0.7.6: plan mode follows the thread (chip shown for a chat in plan mode, removing it always switches it off). See "0.7.6".
 
 - 0.7.5: pictures in an editor tab of their own, input focus back after Alt+Tab. See "0.7.5".
 
@@ -49,6 +51,14 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.6
+
+- Plan mode is kept by the server per thread. The page only sent `plan: false` when it had seen plan mode on in this page life
+  (planUsed), so after a reload, the History or a tab a chat stayed in plan mode without a chip ("can not edit in Plan Mode").
+  Now: session.resume puts `planMode` (thread/resume collaborationMode.mode, newer servers) into the thread event and the page
+  shows the chip for it (applyThreadPlan, also on the kept-copy path); and every message of an existing chat sends plan true /
+  false, so a removed chip always switches plan mode off (collaborationMode default needs a model: model or effectiveModel).
 
 ## 0.7.5
 

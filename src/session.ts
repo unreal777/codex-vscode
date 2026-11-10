@@ -998,6 +998,9 @@ export class CodexSession {
         this.dropStaleApprovals();
         this.host.threadChanged?.(id);
         const e = this.threadEvent(thread, turns, false);
+        // the thread's collaboration mode (newer servers): the page shows the plan mode chip for it
+        const mode = r.collaborationMode?.mode;
+        if (mode === 'plan' || mode === 'default') e.planMode = mode === 'plan';
         if (g) e.goal = g;
         this.emit(e);
         if (this.turnId !== null) {

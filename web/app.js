@@ -2373,7 +2373,9 @@
     addUser(text, ctx, images);
     stick = true; scrollDown();
     if (text && state.title === STR.newChat) setTitle(text.split('\n')[0].slice(0, 60));
-    const plan = state.planMode ? true : state.planUsed ? false : undefined;   // false: leave plan mode that an earlier turn of this chat switched on
+    // true / false for an existing chat (its mode is kept by the server, and the page may not know it: reload, History, tab);
+    // a new chat only says it when plan mode is on
+    const plan = state.planMode ? true : state.threadId || state.planUsed ? false : undefined;
     if (state.planMode) state.planUsed = true; else if (plan === false) state.planUsed = false;
     bridge.post({ type: 'send', text, contexts: ctx, images: images.map((i) => ({ url: i.url, name: i.name })), plan,
       model: state.prefs.model, defaultModel: effectiveModel(), effort: state.prefs.effort, permissions: normPerm(state.prefs.permissions) });
@@ -2705,6 +2707,13 @@
     if (t.fontSize) document.body.style.fontSize = t.fontSize + 'px';
   }
 
+  // Plan mode is a setting of the thread on the server: a loaded chat shows its real mode (ev.planMode from thread/resume).
+  function applyThreadPlan(ev) {
+    if (typeof ev.planMode !== 'boolean') return;
+    state.planMode = ev.planMode;
+    if (ev.planMode) state.planUsed = true;
+    renderCChips();
+  }
   function loadThread(ev) {
     const th = ev.thread || {};
     if (ev.created) { // thread was just created for the message in the feed: keep what is shown
@@ -2718,6 +2727,7 @@
     if (state.restored && state.restored === th.id && state.threadId === th.id) {
       state.restored = null;
       if (sig === liveSig() && lastT.status !== 'inProgress') {   // the kept copy is what the server has: nothing to rebuild
+        applyThreadPlan(ev);
         setProject(ev.project, ev.cwd);
         if (ev.goal) { state.goal = ev.goal; renderGoal(); }
         updateRunning();
@@ -2729,6 +2739,7 @@
     resetConversation();
     state.threadId = th.id || null;
     state.turnCount = turns.length; state.lastTurnId = lastT.id || null; state.lastTurnStatus = lastT.status || null;
+    applyThreadPlan(ev);
     state.defaultsApplied = true;   // a loaded chat never gets the defaults over it
     setProject(ev.project, ev.cwd);
     setTitle(cleanTitle(th.name || th.preview) || STR.newChat);
