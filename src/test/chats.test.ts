@@ -127,3 +127,12 @@ test('page: tabs, unread dots, last answer, running reply of a loaded chat', () 
   assert.match(panel, /case 'chatTitle':/);
   assert.match(panel, /case 'tabClose':/);
 });
+
+test('0.7.2: kept chats for a fast tab switch, references drawn by the overlay', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes('function stashChat()') && app.includes('function restoreChat(id)') && app.includes('function openChat(id)'));
+  assert.ok(app.includes("if (p && p.threadId && state.threadId && p.threadId !== state.threadId) return;"), 'events of the chat just left are not drawn');
+  assert.ok(app.includes("id: 'sym-tip'"), 'own tooltip for references');
+  const css = fs.readFileSync(path.join(root, 'web', 'app.css'), 'utf8');
+  assert.ok(css.includes('#input.with-refs { color: transparent;'), 'the overlay draws the text when there are references');
+});

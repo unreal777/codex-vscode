@@ -481,6 +481,50 @@
     showEmpty(); renderPlan(null); updateRunning(); renderFooter();
   }
 
+  // ---------- built chats are kept while they are not shown (fast tab switch) ----------
+  // Leaving a finished chat moves its feed nodes and item state into chatCache. Opening it again (tab, History) puts them back at once;
+  // the host still resumes the thread, and its "thread" event only rebuilds the feed when the turns changed meanwhile (turnSig).
+  // A chat with a running reply is not kept: its copy would miss what streams while it is in the background.
+  const chatCache = new Map();
+  const CHAT_CACHE_MAX = 12;
+  const turnSig = (count, id, status) => count + '|' + (id || '') + '|' + (status || '');
+  function liveSig() { return turnSig(state.turnCount, state.lastTurnId, state.lastTurnStatus); }
+  function stashChat() {
+    const id = state.threadId;
+    if (!id) return;
+    chatCache.delete(id);
+    if (state.running || state.pending || !state.hasContent) return;
+    const c = { scroll: feed.scrollTop, stick, sig: liveSig(), items: state.items, approvals: state.approvals, reviews: state.reviews, turn: state.turn,
+      goal: state.goal, planUsed: state.planUsed, tokenUsage: state.tokenUsage, title: state.title, cwd: state.cwd, project: state.project,
+      turnCount: state.turnCount, lastTurnId: state.lastTurnId, lastTurnStatus: state.lastTurnStatus, frag: document.createDocumentFragment() };
+    while (feed.firstChild) c.frag.append(feed.firstChild);
+    state.items = new Map(); state.approvals = new Map(); state.reviews = new Map();
+    chatCache.set(id, c);
+    while (chatCache.size > CHAT_CACHE_MAX) chatCache.delete(chatCache.keys().next().value);
+  }
+  // Shows a kept chat right away; false when there is none.
+  function restoreChat(id) {
+    const c = chatCache.get(id);
+    if (!c || id === state.threadId) return false;
+    stashChat();
+    chatCache.delete(id);
+    Object.assign(state, { items: c.items, approvals: c.approvals, reviews: c.reviews, turn: c.turn, goal: c.goal, planUsed: c.planUsed, tokenUsage: c.tokenUsage,
+      turnCount: c.turnCount, lastTurnId: c.lastTurnId, lastTurnStatus: c.lastTurnStatus,
+      turnId: null, running: false, pending: false, turnFiles: new Set(), turnDiff: null, threadId: id, restored: id, defaultsApplied: true, hasContent: true });
+    feed.textContent = '';
+    feed.append(c.frag);
+    setTitle(c.title); setProject(c.project, c.cwd);
+    renderGoal(); renderPlan(null); renderFooter(); updateRunning();
+    stick = c.stick;
+    feed.scrollTop = c.scroll;
+    return true;
+  }
+  // Opens a chat from a tab or the History: the kept copy first (if any), then the host resumes it.
+  function openChat(id) {
+    restoreChat(id);
+    bridge.post({ type: 'resumeThread', threadId: id });
+  }
+
   function addUser(text, contexts, images, whenSec, reuse) {
     if (!reuse) beginTurn(whenSec);
     const syms = (contexts || []).filter((c) => c.kind === 'symbol');
@@ -1267,7 +1311,7 @@
   }
   function openHistoryRow(t) {
     toggleHistory(false);
-    bridge.post({ type: 'resumeThread', threadId: t.id });
+    openChat(t.id);
   }
 
   // The answer to the newest request replaces (or, for "Load more", extends) the list; answers to older keystrokes are dropped.
@@ -1962,7 +2006,7 @@
         if (e) e.stopPropagation();
         if (cur) {   // closing the open tab opens its neighbour (or a new chat), like a browser
           const next = list[i + 1] || list[i - 1];
-          if (next && next.id) bridge.post({ type: 'resumeThread', threadId: next.id }); else bridge.post({ type: 'newChat' });
+          if (next && next.id) openChat(next.id); else bridge.post({ type: 'newChat' });
         }
         if (t.id) bridge.post({ type: 'tabClose', threadId: t.id });
       };
@@ -1970,7 +2014,7 @@
         title: t.title + (running ? '\n' + STR.tabRunning : unread ? '\n' + STR.tabUnread : '') },
         mark, h('span', { class: 'tab-t', text: t.title }),
         t.id ? h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×', onclick: close }) : null);
-      const open = () => { if (!cur && t.id) { toggleHistory(false); bridge.post({ type: 'resumeThread', threadId: t.id }); } };
+      const open = () => { if (!cur && t.id) { toggleHistory(false); openChat(t.id); } };
       tab.addEventListener('click', open);
       tab.addEventListener('auxclick', (e) => { if (e.button === 1) { e.preventDefault(); close(e); } });   // middle click closes
       tab.addEventListener('keydown', (e) => {
@@ -2107,33 +2151,50 @@
   state.refs = [];
   const symToken = (name) => '#sym:' + name;
   function liveRefs() { return state.refs.filter((r) => input.value.includes(r.token)); }
+  // With references the textarea's own text is transparent and #input-hl (on top, clicks pass through except on the marks) draws the
+  // text, the references blue like VS Code's chat. A mark shows its file in #sym-tip on hover; a click on it puts the caret behind it.
+  const symTip = h('div', { id: 'sym-tip', class: 'hidden', role: 'tooltip' });
+  $('#input-wrap').append(symTip);
+  function hideSymTip() { symTip.classList.add('hidden'); }
+  function showSymTip(mk) {
+    const ref = state.refs.find((r) => r.token === mk.dataset.tok);
+    if (!ref) return;
+    symTip.textContent = '';
+    symTip.append(h('span', { class: 'st-name', text: ref.name }),
+      h('span', { class: 'st-path', text: ref.rel + ':' + ref.startLine + (ref.endLine > ref.startLine ? '-' + ref.endLine : '') }));
+    symTip.classList.remove('hidden');
+    // offsets, not client rects: they stay right when the page is zoomed (font size setting)
+    const left = hl.offsetLeft + mk.offsetLeft, top = hl.offsetTop + mk.offsetTop - hl.scrollTop;
+    const maxLeft = Math.max(0, $('#input-wrap').clientWidth - symTip.offsetWidth - 4);
+    symTip.style.left = Math.min(left, maxLeft) + 'px';
+    symTip.style.top = (top - symTip.offsetHeight - 4) + 'px';
+  }
   function syncHl() {
     const refs = liveRefs();
-    if (!refs.length) { if (hl.firstChild) hl.textContent = ''; input.title = ''; return; }
+    input.classList.toggle('with-refs', refs.length > 0);
+    hl.classList.toggle('on', refs.length > 0);
+    if (!refs.length) { if (hl.firstChild) hl.textContent = ''; hideSymTip(); return; }
     hl.style.width = input.clientWidth + 'px';
     const v = input.value, re = new RegExp(refs.map((r) => r.token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + '(?![\\w$])', 'g');
     hl.textContent = '';
     let pos = 0;
     for (const m of v.matchAll(re)) {
-      hl.append(v.slice(pos, m.index), h('mark', { text: m[0], 'data-tok': m[0] }));
-      pos = m.index + m[0].length;
+      const mk = h('mark', { text: m[0], 'data-tok': m[0] });
+      const end = m.index + m[0].length;
+      mk.addEventListener('mouseenter', () => showSymTip(mk));
+      mk.addEventListener('mouseleave', hideSymTip);
+      mk.addEventListener('mousedown', (e) => { e.preventDefault(); hideSymTip(); input.focus(); input.setSelectionRange(end, end); });
+      mk.addEventListener('wheel', (e) => { input.scrollTop += e.deltaY; }, { passive: true });
+      hl.append(v.slice(pos, m.index), mk);
+      pos = end;
     }
     hl.append(v.slice(pos) + '\n');   // a trailing newline keeps the last line's height
     hl.scrollTop = input.scrollTop;
   }
   input.addEventListener('input', syncHl);
-  input.addEventListener('scroll', () => { hl.scrollTop = input.scrollTop; });
-  input.addEventListener('mousemove', (e) => {   // the marks lie under the textarea: hit-test them for the tooltip
-    let tip = '';
-    if (hl.firstChild) for (const mk of hl.querySelectorAll('mark')) {
-      if ([...mk.getClientRects()].some((r) => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom)) {
-        const ref = state.refs.find((r) => r.token === mk.dataset.tok);
-        if (ref) tip = ref.rel + ':' + ref.startLine + (ref.endLine > ref.startLine ? '-' + ref.endLine : '');
-        break;
-      }
-    }
-    if (input.title !== tip) input.title = tip;
-  });
+  input.addEventListener('scroll', () => { hl.scrollTop = input.scrollTop; hideSymTip(); });
+  input.addEventListener('keydown', hideSymTip);
+  input.addEventListener('blur', hideSymTip);
   function askPasteRef(e) {
     const dt = e.clipboardData;
     if (host !== 'vscode' || !dt) return;
@@ -2377,14 +2438,17 @@
 
   // ---------- notifications ----------
   function onNotification(method, p) {
+    if (p && p.threadId && state.threadId && p.threadId !== state.threadId) return;
     switch (method) {
       case 'turn/started':
+        if (p.turn && p.turn.id && p.turn.id !== state.lastTurnId) { state.turnCount = (state.turnCount || 0) + 1; state.lastTurnId = p.turn.id; }
+        state.lastTurnStatus = 'inProgress';
         state.turnId = p.turn && p.turn.id; state.running = true; state.pending = false;
         state.turnFiles = new Set(); state.turnDiff = null; state.turnStartMs = Date.now();
         if (!state.turn || state.turn.done) beginTurn();
         state.turn.started = true; state.turn.startMs = Date.now();
         updateRunning(); break;
-      case 'turn/completed': finishTurn(p.turn || {}); break;
+      case 'turn/completed': state.lastTurnStatus = (p.turn && p.turn.status) || 'completed'; finishTurn(p.turn || {}); break;
       case 'item/started': upsertItem(p.item, 'started'); break;
       case 'item/completed': upsertItem(p.item, 'completed'); break;
       case 'item/agentMessage/delta': {
@@ -2512,8 +2576,22 @@
       reportTitle(); renderTabs();
       return;
     }
+    const turns = ev.turns || [], lastT = turns[turns.length - 1] || {};
+    const sig = turnSig(turns.length, lastT.id, lastT.status);
+    if (state.restored && state.restored === th.id && state.threadId === th.id) {
+      state.restored = null;
+      if (sig === liveSig() && lastT.status !== 'inProgress') {   // the kept copy is what the server has: nothing to rebuild
+        setProject(ev.project, ev.cwd);
+        if (ev.goal) { state.goal = ev.goal; renderGoal(); }
+        updateRunning();
+        return;
+      }
+    } else if (state.threadId && state.threadId !== th.id) {
+      stashChat();
+    }
     resetConversation();
     state.threadId = th.id || null;
+    state.turnCount = turns.length; state.lastTurnId = lastT.id || null; state.lastTurnStatus = lastT.status || null;
     state.defaultsApplied = true;   // a loaded chat never gets the defaults over it
     setProject(ev.project, ev.cwd);
     setTitle(cleanTitle(th.name || th.preview) || STR.newChat);
@@ -2597,11 +2675,12 @@
       }
       case 'mentions': onMentions(ev); break;
       case 'thread': loadThread(ev); break;
-      case 'newChat': resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
+      case 'newChat': stashChat(); state.restored = null; state.turnCount = 0; state.lastTurnId = null; state.lastTurnStatus = null; resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
       case 'cwd': setProject(ev.project, ev.cwd || ''); { const e = $('#empty'); if (e) showEmpty(); } break;
       case 'notification': onNotification(ev.method, ev.params || {}); break;
       case 'serverRequest': {
         const p = ev.params || {};
+        if (p.threadId && state.threadId && p.threadId !== state.threadId) break;   // the chat just left: shown again when it is opened
         append(approvalCard(ev.id, ev.method, p));
         break;
       }

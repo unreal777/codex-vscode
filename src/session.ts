@@ -975,13 +975,19 @@ export class CodexSession {
       try {
         const c = await this.connectBlocking();
         if (this._threadId !== id) undoLeave = this.leaveOpenThread();   // the open chat's reply goes on in the background
+        const t0 = Date.now();
         const r = await withTimeout(c.resumeThread(id, null, null, null, permissionSettings(this.host.permissionsPref()).reviewer), 60_000, 'thread/resume');
+        const t1 = Date.now();
         const thread = r.thread;
         let turns: Json[] = Array.isArray(thread?.turns) ? thread.turns : [];
+        // the turns (when resume did not bring them) and the goal are asked at the same time
+        const goal = withTimeout(c.getGoal(id), 10_000, 'thread/goal/get').then((g) => g.goal ?? null, () => null); // older Codex: no goals
         if (turns.length === 0) {
           const rr = await withTimeout(c.call('thread/read', { threadId: id, includeTurns: true }), 60_000, 'thread/read');
           if (Array.isArray(rr.thread?.turns)) turns = rr.thread.turns;
         }
+        const g = await goal;
+        this.log('[resume] ' + id + ': ' + turns.length + ' turns, resume ' + (t1 - t0) + ' ms, total ' + (Date.now() - t0) + ' ms');
         // a chat whose reply was running in the background: take it back (its reply keeps streaming into the view)
         const bg = this.background.get(id);
         this.background.delete(id);
@@ -992,10 +998,7 @@ export class CodexSession {
         this.dropStaleApprovals();
         this.host.threadChanged?.(id);
         const e = this.threadEvent(thread, turns, false);
-        try { // the chat's goal, if it has one (best effort: older Codex versions may not know goals)
-          const g = await withTimeout(c.getGoal(id), 10_000, 'thread/goal/get');
-          if (g.goal) e.goal = g.goal;
-        } catch { /* no goal info */ }
+        if (g) e.goal = g;
         this.emit(e);
         if (this.turnId !== null) {
           this.emit({ kind: 'notification', method: 'turn/started', params: { threadId: id, turn: { id: this.turnId } } });

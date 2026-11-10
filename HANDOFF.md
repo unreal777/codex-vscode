@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.1)
+## Status (0.7.2)
+
+- 0.7.2: fast tab switch (built chats are kept), blue #sym references with their own tooltip. See "0.7.2".
 
 - 0.7.1: tabs in the top bar (in place of the title), every opened chat and the new chat are tabs. See "0.7.1".
 
@@ -41,6 +43,19 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.2
+
+- Tab switch: leaving a finished chat moves its feed nodes and item maps into `chatCache` (app.js stashChat, at most 12).
+  openChat(id) (tabs, History) puts a kept chat back at once (restoreChat) and still asks the host to resume. The host's
+  "thread" event is compared by turnSig(count, last turn id, last status) with the live signature (turn/started and
+  turn/completed keep it current): unchanged -> the shown nodes stay; changed or in progress -> normal rebuild. Chats with a
+  running reply are not kept. The page now drops notifications and approvals of another thread (the one just left, until the
+  host switched); the session replays a left chat's approvals when it is opened again.
+- Session resume asks thread/goal/get in parallel with thread/read and logs "[resume] id: n turns, resume x ms, total y ms".
+- References: #input-hl now lies above the textarea (pointer-events only on the marks); with references the textarea text is
+  transparent and the overlay draws it, the marks in textLink blue. Hover shows #sym-tip (name + file:line), placed with offsets
+  (the old client-rect hit test broke with the page zoom of the font size setting); a click on a mark puts the caret behind it.
 
 ## 0.7.1
 
