@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.2)
+## Status (0.7.3)
+
+- 0.7.3: the Diff button of a changed file opens VS Code's git change view. See "0.7.3".
 
 - 0.7.2: fast tab switch (built chats are kept), blue #sym references with their own tooltip. See "0.7.2".
 
@@ -43,6 +45,14 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.3
+
+- Diff of one file (DiffProvider.openFileDiff): when the file is in a git repository (git extension API getRepository) and is in
+  its working tree, index or untracked changes, `git.openChange` opens VS Code's own change view (whole file, "a.ts (Working
+  Tree)"). Otherwise (no git, change already committed) the before/after rebuilt from Codex's diff as before; the raw .diff text
+  only when that fails too. A relative item path is resolved against the chat's folder. Checked in the isolated VS Code with a
+  temporary repository.
 
 ## 0.7.2
 

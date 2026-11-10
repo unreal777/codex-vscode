@@ -1,4 +1,4 @@
-// Diffs of Codex changes in VS Code's diff editor (port of CompareHelper.java). The "before" text is rebuilt from the unified diff
+// Diffs of Codex changes. One file: VS Code's git change view when the file has uncommitted changes (0.7.3), else VS Code's diff editor (port of CompareHelper.java). The "before" text is rebuilt from the unified diff
 // (Codex's fileChange items only carry the diff, and the file on disk already has the change). Both sides are virtual,
 // read-only documents of the scheme codexpanel-diff:, served from memory.
 import * as fs from 'node:fs';
@@ -7,6 +7,12 @@ import * as vscode from 'vscode';
 import { deletedContent, diffPath, parseGitDiff, reverseApply } from './core/unifiedDiff';
 
 export const DIFF_SCHEME = 'codexpanel-diff';
+
+// The parts of the git extension API (vscode.git, getAPI(1)) used here
+interface GitChange { readonly uri: vscode.Uri }
+interface GitApi {
+  getRepository(uri: vscode.Uri): { readonly state: { readonly workingTreeChanges: GitChange[]; readonly indexChanges: GitChange[]; readonly untrackedChanges?: GitChange[] } } | null;
+}
 const MAX_DOCS = 200;
 
 interface Entry {
@@ -46,12 +52,39 @@ export class DiffProvider implements vscode.TextDocumentContentProvider, vscode.
    * the file on disk is assumed to contain the change already.
    */
   async openFileDiff(file: string, kind: string | null, diff: string | null): Promise<void> {
+    if (await this.openGitChange(file)) return;
     const e = this.build(file, file, kind, diff ?? '');
     if (!e) {
       await this.open('Codex diff: ' + path.basename(file), [{ name: path.basename(file) + '.diff', before: '', after: diff ?? '' }]);
       return;
     }
     await this.open('Codex: ' + path.basename(file), [{ ...e, name: path.basename(file) }]);
+  }
+
+  /**
+   * VS Code's own git change view of the file (whole file, HEAD or index on the left, the working copy on the right), when the file is in
+   * a git repository and has uncommitted changes there. False otherwise (no git, not a repository, change already committed): the
+   * caller falls back to the before/after rebuilt from Codex's diff.
+   */
+  private async openGitChange(file: string): Promise<boolean> {
+    try {
+      const ext = vscode.extensions.getExtension<{ getAPI(v: 1): GitApi }>('vscode.git');
+      if (!ext || !file || !isFile(file)) return false;
+      const api = (ext.isActive ? ext.exports : await ext.activate()).getAPI(1);
+      const uri = vscode.Uri.file(file);
+      const repo = api.getRepository(uri);
+      if (!repo) return false;
+      const key = (u: vscode.Uri) => path.normalize(u.fsPath).toLowerCase();
+      const k = key(uri);
+      const s = repo.state;
+      const changed = [...s.workingTreeChanges, ...s.indexChanges, ...(s.untrackedChanges ?? [])].some((c) => key(c.uri) === k);
+      if (!changed) return false;
+      await vscode.commands.executeCommand('git.openChange', uri);
+      return true;
+    } catch (e) {
+      this.log('git change view not available for ' + file + ': ' + e);
+      return false;
+    }
   }
 
   /** Whole-turn diff ("diff --git" text); paths are relative to cwd. */

@@ -387,7 +387,10 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         void this.session.checkCodexNow();
         break;
       case 'openDiff':
-        await this.diffs.openFileDiff(orEmpty(str(m, 'path')), str(m, 'kind'), str(m, 'diff'));
+        { // the item's path may be relative to the chat's folder
+          const p = orEmpty(str(m, 'path')), base = this.session.threadCwd ?? this.cwd;
+          await this.diffs.openFileDiff(p && !path.isAbsolute(p) && base ? path.resolve(base, p) : p, str(m, 'kind'), str(m, 'diff'));
+        }
         break;
       case 'openTurnDiff':
         await this.diffs.openTurnDiff(this.cwd ?? this.ws.resolveTarget().path, str(m, 'diff'));

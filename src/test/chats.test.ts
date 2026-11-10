@@ -136,3 +136,9 @@ test('0.7.2: kept chats for a fast tab switch, references drawn by the overlay',
   const css = fs.readFileSync(path.join(root, 'web', 'app.css'), 'utf8');
   assert.ok(css.includes('#input.with-refs { color: transparent;'), 'the overlay draws the text when there are references');
 });
+
+test('0.7.3: Diff of a changed file opens the git change view first', () => {
+  const diff = fs.readFileSync(path.join(root, 'src', 'diff.ts'), 'utf8');
+  assert.ok(diff.includes("executeCommand('git.openChange', uri)"));
+  assert.ok(diff.indexOf('if (await this.openGitChange(file)) return;') > 0, 'tried before the rebuilt diff');
+});
