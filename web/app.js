@@ -81,6 +81,7 @@
     // history actions
     archive: 'Archive chat', unarchive: 'Unarchive chat', deleteChat: 'Delete chat', deleteAsk: 'Delete chat?', deleteYes: 'Delete', deleteNo: 'Cancel',
     showArchived: 'Show archived', noArchived: 'No archived chats', chatArchived: 'Chat archived', chatUnarchived: 'Chat restored', chatDeleted: 'Chat deleted',
+    renameChat: 'Rename chat', renameHint: 'Double-click or F2 to rename',
     actionFailed: (what, err) => 'Could not ' + what + ' the chat' + (err ? ': ' + err : ''),
     // in-panel settings
     settings: 'Settings', settingsBack: 'Back', setDefaultModel: 'Default model', setDefaultEffort: 'Default reasoning effort',
@@ -380,6 +381,7 @@
     plug: '<svg viewBox="0 0 16 16"><path d="M6 2v3M10 2v3M4.500 5h7v2.500a3.500 3.500 0 0 1-7 0zM8 11v3"/></svg>',
     archive: '<svg viewBox="0 0 16 16"><path d="M2 3.500h12v3H2zM3 6.500V13a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V6.500M6.500 9.500h3"/></svg>',
     unarchive: '<svg viewBox="0 0 16 16"><path d="M2 3.500h12v3H2zM3 6.500V13a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V6.500M8 12V8.500M6.200 10 8 8.200 9.800 10"/></svg>',
+    pencil: '<svg viewBox="0 0 16 16"><path d="M10.800 2.700l2.500 2.500L5.500 13H3v-2.500zM9.300 4.200l2.500 2.500"/></svg>',
     trash: '<svg viewBox="0 0 16 16"><path d="M2.500 4h11M6 4V2.500h4V4M4 4l.6 9.500h6.800L12 4M6.800 6.500v4.500M9.200 6.500v4.500"/></svg>',
     back: '<svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg>',
     gear: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/></svg>'
@@ -1049,7 +1051,68 @@
   });
 
   // ---------- header / history ----------
-  function setTitle(t) { state.title = t || STR.newChat; $('#title').textContent = state.title; $('#title').title = state.title; reportTitle(); }
+  function setTitle(t) {
+    state.title = t || STR.newChat;
+    if (renaming && renaming.where === 'title') return;   // the input stays; the title is shown when it closes
+    $('#title').textContent = state.title; $('#title').title = state.title + (state.threadId ? '\n' + STR.renameHint : ''); reportTitle();
+  }
+
+  // ---------- renaming a chat (History row, tab, the title) ----------
+  // An input in place of the name: Enter or leaving it saves, Escape keeps the old name. The new name shows at once; the host answers
+  // with threadAction "rename" (an error puts the old name back). While the input is open, re-renders of its place wait.
+  var renaming = null;   // {where: 'hist' | 'tab' | 'title', id}; var: setTitle may run before this line
+  function renameInline(where, el, id, current, after) {
+    if (!id || !el || renaming) return;
+    const inp = h('input', { class: 'rename', type: 'text', 'aria-label': STR.renameChat, maxlength: '160', spellcheck: 'false' });
+    inp.value = current || '';
+    let done = false;
+    const finish = (save) => {
+      if (done) return;
+      done = true; renaming = null;
+      const name = inp.value.replace(/\s+/g, ' ').trim(), changed = save && name !== '' && name !== current;
+      if (changed) renameChat(id, name, current);
+      after(changed ? name : null);
+    };
+    inp.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    for (const t of ['click', 'mousedown', 'dblclick', 'auxclick']) inp.addEventListener(t, (e) => e.stopPropagation());
+    inp.addEventListener('blur', () => finish(true));
+    renaming = { where, id };
+    el.replaceChildren(inp);
+    inp.focus(); inp.select();
+    if (document.activeElement !== inp) finish(false);   // not on screen (drawn anew meanwhile): never leave the renders waiting
+  }
+  // shows the name everywhere at once (History row, tab, title); old = what to put back when the host says no
+  function showName(id, name) {
+    const r = hist.rows.find((t) => t.id === id);
+    if (r) r.title = name;
+    const tab = state.chats.tabs.find((t) => t.id === id);
+    if (tab) tab.title = name;
+    if (id === state.threadId) setTitle(name); else renderTabs();
+    if (state.historyOpen) renderHistory();
+  }
+  const renameOld = new Map();
+  function renameChat(id, name, old) {
+    if (!renameOld.has(id)) renameOld.set(id, old);
+    showName(id, name);
+    bridge.post({ type: 'threadAction', action: 'rename', threadId: id, name });
+  }
+  function onRenamed(ev) {
+    const old = renameOld.get(ev.threadId);
+    renameOld.delete(ev.threadId);
+    if (ev.ok) { if (ev.name) showName(ev.threadId, ev.name); return; }
+    toast(STR.actionFailed('rename', ev.error));
+    if (old) showName(ev.threadId, old);
+  }
+  const renameTitle = () => {
+    if (!state.threadId) return;
+    renameInline('title', $('#title'), state.threadId, state.title, () => setTitle(state.title));
+  };
+  $('#title').addEventListener('dblclick', renameTitle);
+  // the chat id may arrive after its title: the tooltip says how to rename once there is a chat
+  $('#title').addEventListener('mouseenter', () => { if (!renaming) $('#title').title = state.title + (state.threadId ? '\n' + STR.renameHint : ''); });
   const reportedTitles = new Map();
   function reportTitle() {
     const id = state.threadId, t = state.title;
@@ -1254,6 +1317,7 @@
   }
 
   function renderHistory() {
+    if (renaming && renaming.where === 'hist') return;   // the open name input would be lost; it re-renders when it closes
     // a re-render (e.g. the next page arriving) must not drop the focus of a row button (confirm row, archive, delete)
     const ae = document.activeElement;
     const keep = ae && histList.contains(ae) && ae.dataset.act ? { id: ae.closest('.row') && ae.closest('.row').dataset.id, act: ae.dataset.act } : null;
@@ -1292,6 +1356,7 @@
       } else if (!busy) {
         const act = (kind, icon, label, fn) => h('button', { class: 'ract', type: 'button', 'data-act': kind, title: label, 'aria-label': label, onclick: (e) => { e.stopPropagation(); fn(); } }, h('span', { html: icon }));
         row.append(h('span', { class: 'ractions' },
+          act('rename', ICON.pencil, STR.renameChat, () => renameRow(t)),
           hist.archived ? act('unarchive', ICON.unarchive, STR.unarchive, () => threadAction('unarchive', t)) : act('archive', ICON.archive, STR.archive, () => threadAction('archive', t)),
           act('delete', ICON.trash, STR.deleteChat, () => askDelete(t.id))));
       }
@@ -1319,6 +1384,16 @@
     const b = id && histList.querySelector('.row[data-id="' + CSS.escape(id) + '"] [data-act="delete"]');
     (b || histQ).focus();
   }
+  function renameRow(t) {
+    const row = histList.querySelector('.row[data-id="' + CSS.escape(t.id) + '"]');
+    if (!row) return;
+    row.classList.add('renaming');
+    renameInline('hist', row.querySelector('.t'), t.id, t.title || '', () => {
+      renderHistory();
+      const b = histList.querySelector('.row[data-id="' + CSS.escape(t.id) + '"] [data-act="rename"]');
+      (b || histQ).focus({ preventScroll: true });
+    });
+  }
   function threadAction(action, t) {
     hist.confirm = null; hist.busy.add(t.id);
     renderHistory();
@@ -1327,6 +1402,7 @@
   }
   const ACTION_VERB = { archive: 'archive', unarchive: 'unarchive', delete: 'delete' };
   function onThreadAction(ev) {
+    if (ev.action === 'rename') { onRenamed(ev); return; }
     hist.busy.delete(ev.threadId);
     if (!ev.ok) { toast(STR.actionFailed(ACTION_VERB[ev.action] || ev.action, ev.error)); renderHistory(); return; }
     const gone = hist.rows.find((t) => t.id === ev.threadId);
@@ -1452,6 +1528,11 @@
       return;
     }
     if (e.target === histProj) return;
+    if (e.key === 'F2' && !hist.confirm) {   // in the search box too: renames the selected row
+      const inRow = e.target.closest && e.target.closest('.row'), id = inRow ? inRow.dataset.id : hist.rows[hist.sel] && hist.rows[hist.sel].id;
+      const t = id && hist.rows.find((r) => r.id === id);
+      if (t && !hist.busy.has(t.id)) { e.preventDefault(); renameRow(t); return; }
+    }
     if (e.key === 'Delete' && !hist.confirm) {
       // Delete on a focused row button asks about that row, anywhere else about the selected row (in the search box only with Ctrl)
       const inRow = e.target.closest && e.target.closest('.row'), id = inRow ? inRow.dataset.id : hist.rows[hist.sel] && hist.rows[hist.sel].id;
@@ -2215,6 +2296,7 @@
     const list = state.chats.tabs.slice();
     if (!state.threadId && list.length) list.push({ id: '', title: STR.tabNew, unread: false, running: false });   // the open, still empty chat
     const show = host === 'vscode' && list.length >= 2;
+    if (renaming && renaming.where === 'tab' && show) return;   // the open name input would be lost; it re-renders when it closes
     tabsEl.classList.toggle('hidden', !show);
     topbar.classList.toggle('with-tabs', show);
     const focusedId = document.activeElement && tabsEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
@@ -2233,14 +2315,28 @@
         if (t.id) bridge.post({ type: 'tabClose', threadId: t.id });
       };
       const tab = h('div', { class: 'tab' + (cur ? ' cur' : '') + (unread ? ' unread' : ''), role: 'tab', tabindex: '0', 'data-id': t.id, 'aria-selected': String(cur),
-        title: t.title + (running ? '\n' + STR.tabRunning : unread ? '\n' + STR.tabUnread : '') },
+        title: t.title + (running ? '\n' + STR.tabRunning : unread ? '\n' + STR.tabUnread : '') + (t.id ? '\n' + STR.renameHint : '') },
         mark, h('span', { class: 'tab-t', text: t.title }),
         t.id ? h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×', onclick: close }) : null);
       const open = () => { if (!cur && t.id) { toggleHistory(false); openChat(t.id); } };
+      const rename = () => {
+        if (!t.id) return;
+        // a double click on another tab opened that chat first, which may have drawn the strip anew: take the tab that is there now
+        const el = tabsEl.querySelector('.tab[data-id="' + CSS.escape(t.id) + '"]') || tab;
+        el.classList.add('renaming');
+        renameInline('tab', el.querySelector('.tab-t'), t.id, t.title, () => {
+          renderTabs();
+          const f = tabsEl.querySelector('.tab[data-id="' + CSS.escape(t.id) + '"]');
+          if (f) f.focus({ preventScroll: true });
+        });
+      };
       tab.addEventListener('click', open);
+      tab.addEventListener('dblclick', (e) => { if (!e.target.closest('.tab-x')) { e.preventDefault(); rename(); } });
       tab.addEventListener('auxclick', (e) => { if (e.button === 1) { e.preventDefault(); close(e); } });   // middle click closes
       tab.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        if (e.target !== tab) return;   // the name input handles its own keys
+        if (e.key === 'F2') { e.preventDefault(); rename(); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
         else if (e.key === 'Delete') { e.preventDefault(); close(); }
         else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
           const all = [...tabsEl.querySelectorAll('.tab')], k = all.indexOf(tab), n = all[(k + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];

@@ -117,6 +117,7 @@ Everything you expect from a Codex chat is there too:
 
 A few details:
 - **Diff** on a changed file opens VS Code's own git changes view.
+- **Rename a chat**: double-click its tab or title, press F2, or use the pencil in the History. The name is saved in Codex, so the CLI shows it too.
 - Archive, unarchive and delete chats in the History.
 - Colours and fonts follow the VS Code theme.
 - Codex is downloaded from the npm registry into `%LOCALAPPDATA%\CodexPanel\codex`, updated every 7 days and shared with the Eclipse plugin. Proxies (`http.proxy`, `HTTPS_PROXY`) work.

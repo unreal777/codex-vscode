@@ -100,7 +100,7 @@ async function main(): Promise<void> {
     }
     // History actions: only against the id that does not exist, so no real chat is archived, restored or deleted
     for (const [name, call] of [['thread/archive', () => c.archiveThread(ghost)], ['thread/unarchive', () => c.unarchiveThread(ghost)],
-      ['thread/delete', () => c.deleteThread(ghost)]] as const) {
+      ['thread/delete', () => c.deleteThread(ghost)], ['thread/name/set', () => c.renameThread(ghost, 'smoke')]] as const) {
       try {
         await timeout(call(), 30_000, name);
         check(name + ' is known to this Codex', true, 'no error for a missing thread');

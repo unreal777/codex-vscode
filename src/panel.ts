@@ -458,6 +458,11 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'threadAction': {
         const a = str(m, 'action'), id = str(m, 'threadId');
         if ((a === 'archive' || a === 'unarchive' || a === 'delete') && id) this.session.threadAction(a, id);
+        else if (a === 'rename' && id) {
+          void this.session.renameThread(id, orEmpty(str(m, 'name'))).then((ok) => {
+            if (ok) this.activity?.title(id, this.session.titleOf(id) ?? '');   // its tab
+          });
+        }
         break;
       }
       case 'retry':

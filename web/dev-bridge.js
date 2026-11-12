@@ -12,7 +12,7 @@
  *        &settings=1 (opens the in-panel settings after init, like the title-bar gear)  &fail=1 (archive/unarchive/delete answer an error)
  *        &nosettings=1 (init without settings: Codex defaults, nothing hidden)
  * Settings: init.settings has a default model, an effort and one hidden model; "settingsSave" is echoed as a "settings" event.
- * Archive/delete: threadAction moves a chat to the archived list (unarchive back, delete removes), answers ok and re-sends historyProjects.
+ * Archive/delete: threadAction moves a chat to the archived list (unarchive back, delete removes), answers ok and re-sends historyProjects; rename sets the title.
  * "+" menu: plugins come from PLUGINS below; "Files" answers pickFiles with two chips; "Goal" answers goalSet with a goal event (tokens grow);
  * the sketch and pasted images need no host.
  * History: 40 synthetic chats in 4 projects, newest first, 12 per page ("Load more"), search matches title + project like the Java side.
@@ -311,9 +311,15 @@
     },
     // chats per project (not archived, like the host)
     threadAction(m) {
-      const known = HISTORY_SEED.some((t) => t.id === m.threadId);
+      const known = HISTORY_SEED.some((t) => t.id === m.threadId) || (m.action === 'rename' && !!m.threadId);   // the open chat can be renamed too
       setTimeout(() => {
         if (q.get('fail') || !known) { push({ kind: 'threadAction', action: m.action, threadId: m.threadId, ok: false, error: known ? 'app-server is not reachable' : 'unknown chat' }); return; }
+        if (m.action === 'rename') {   // like Codex: thread/name/set, then the History lists the new name
+          const row = HISTORY_SEED.find((t) => t.id === m.threadId);
+          if (row) row.title = m.name;
+          window.codexUi.receive([{ kind: 'threadAction', action: 'rename', threadId: m.threadId, ok: true, name: m.name }]);
+          return;
+        }
         if (m.action === 'archive') archived.add(m.threadId);
         else if (m.action === 'unarchive') archived.delete(m.threadId);
         else if (m.action === 'delete') { deleted.add(m.threadId); archived.delete(m.threadId); }

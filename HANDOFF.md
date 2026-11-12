@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.8.3)
+## Status (0.8.4)
+
+- 0.8.4: rename a chat (History pencil, F2, double click on a tab or the title). See "0.8.4".
 
 - 0.8.3: README highlights only what Codexter adds to a Codex chat. See "0.8.3".
 
@@ -65,6 +67,20 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.8.4
+
+- Rename a chat: the pencil of a History row (or F2 on the selected row, also from the search box), a double click or F2 on a tab,
+  a double click on the title (shown while there are no tabs). An input takes the place of the name: Enter or leaving it saves,
+  Escape keeps the old name. The new name shows at once in the row, the tab and the title; the host answers threadAction
+  "rename" (ok + the cleaned name, or an error: a toast, and the old name comes back).
+- Host: panel threadAction rename -> session.renameThread (spaces folded, 160 characters, empty refused) -> thread/name/set
+  {threadId, name}; the title is remembered (titleOf) and the tab of today's chats gets it (ChatActivity.title). Codex finds the
+  chat by its rollout, so chats that are not loaded can be renamed too (a missing id answers "no rollout found").
+- While the input is open, renderHistory / renderTabs / setTitle leave its place alone (host events would drop the typing);
+  if the input could not get the focus (drawn anew meanwhile) it closes at once.
+- smoke: thread/name/set against the id that does not exist (read-only). Tests: src/test/rename.test.ts. dev page: rename answers
+  ok and sets the History title; &fail=1 answers an error.
 
 ## 0.8.3
 

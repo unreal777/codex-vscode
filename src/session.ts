@@ -921,6 +921,24 @@ export class CodexSession {
     })();
   }
 
+  /** Renames a chat (History, the title of the open chat). Answers with a "threadAction" event (action "rename", the name it got). */
+  async renameThread(threadId: string, name: string): Promise<boolean> {
+    const clean = name.replace(/\s+/g, ' ').trim().slice(0, 160);
+    let error: string | undefined = clean ? undefined : 'the name is empty';
+    if (clean) {
+      try {
+        const c = await this.connectBlocking();
+        await withTimeout(c.renameThread(threadId, clean), 30_000, 'thread/name/set');
+      } catch (e) {
+        error = describe(e);
+      }
+    }
+    const e: Json = { kind: 'threadAction', action: 'rename', threadId, ok: error === undefined };
+    if (error !== undefined) e.error = error; else { e.name = clean; this.titles.set(threadId, clean); }
+    this.emit(e);
+    return error === undefined;
+  }
+
   /** One server page; falls back to the slow scan-and-repair listing if this Codex does not know useStateDbOnly. */
   private async fetchThreadPage(c: AppServerClient, cwd: string[] | null, cursor: string | null, pageSize: number, archived = false): Promise<Json> {
     if (this.stateDbOnlySupported) {

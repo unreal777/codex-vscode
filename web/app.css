@@ -543,6 +543,17 @@ button { cursor: pointer; }
 .ract:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; color: var(--fg); }
 .ract span { display: inline-flex; }
 .ract svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* renaming a chat: an input in place of its name (History row, tab, title) */
+input.rename {
+  width: 100%; min-width: 60px; height: 22px; padding: 0 6px; box-sizing: border-box; font: inherit; font-weight: inherit;
+  color: var(--fg); background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; outline: 0;
+}
+#history .row.renaming .ractions, #history .row.renaming .when { display: none; }
+#history .row.renaming .t { flex: 1 1 auto; }
+#tabs .tab.renaming { max-width: none; flex: none; }
+#tabs .tab.renaming .tab-t { overflow: visible; flex: 1 1 auto; }
+#tabs .tab.renaming input.rename { width: 160px; height: 20px; }
+#title input.rename { width: 260px; max-width: 100%; }
 #history .row.busy { opacity: .5; pointer-events: none; cursor: default; }
 #history .row.asking { cursor: default; background: var(--err-soft); flex-wrap: wrap; }
 #history .row .confirm { flex: none; display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }

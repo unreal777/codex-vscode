@@ -142,6 +142,8 @@ export class AppServerClient {
   /** answers {thread} */
   unarchiveThread(threadId: string): Promise<Json> { return this.call('thread/unarchive', { threadId }); }
   deleteThread(threadId: string): Promise<Json> { return this.call('thread/delete', { threadId }); }
+  /** Sets the chat's name (Codex sends thread/name/updated for a loaded chat). */
+  renameThread(threadId: string, name: string): Promise<Json> { return this.call('thread/name/set', { threadId, name }); }
 
   /** @param sandbox read-only | workspace-write | danger-full-access */
   /** extra: developerInstructions, config overrides (core/instructions.ts threadExtras) */
