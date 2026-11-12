@@ -4,6 +4,7 @@
 !INSTALL.md
 !INSTALL.de.md
 !LICENSE
-!media/**
+!media/*
+!media/web/**
 !out/*.js
 !out/core/*.js

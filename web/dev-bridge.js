@@ -202,6 +202,9 @@
   let playing = null;
   const waiting = {}; // requestId -> resume fn
 
+  // the fixtures were recorded in other threads; the page drops notifications of a thread that is not open (0.7.0)
+  const ours = (p) => (p && p.threadId ? Object.assign({}, p, { threadId: 'dev-thread' }) : p);
+
   function replay() {
     const msgs = (fixture || []).filter((m) => m.method && !(m.params && m.params.item && m.params.item.type === 'userMessage'));
     const start = msgs.findIndex((m) => m.method === 'turn/started');
@@ -219,11 +222,11 @@
         if (playing !== gen) return;
         if (m.id != null) {
           // server request: show it and pause until the user decides
-          push({ kind: 'serverRequest', id: m.id, method: m.method, params: m.params });
+          push({ kind: 'serverRequest', id: m.id, method: m.method, params: ours(m.params) });
           waiting[m.id] = () => step();
           return;
         }
-        push({ kind: 'notification', method: m.method, params: m.params });
+        push({ kind: 'notification', method: m.method, params: ours(m.params) });
         step();
       }, gap);
     }

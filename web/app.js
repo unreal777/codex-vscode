@@ -2267,6 +2267,8 @@
   function typeOver(s, e, text) {
     input.setSelectionRange(s, e);
     if (!document.execCommand('insertText', false, text)) { input.setRangeText(text, s, e, 'end'); input.dispatchEvent(new Event('input')); }
+    // Chromium leaves the caret before a trailing newline when the text is empty (a list ended on the last line): put it behind the text
+    input.setSelectionRange(s + text.length, s + text.length);
   }
   function listKey(e) {
     if (e.isComposing || e.altKey || e.ctrlKey || e.metaKey || input.selectionStart !== input.selectionEnd) return false;

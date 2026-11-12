@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.8)
+## Status (0.7.9)
+
+- 0.7.9: README with the features and GIFs; a list ended on the last line keeps the caret on the new line. See "0.7.9".
 
 - 0.7.8: an opened chat keeps its own model / effort and shows its context usage at once. See "0.7.8".
 
@@ -55,6 +57,24 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.9
+
+- README.md is the extension's description: highlights with six GIFs in `media/readme/` (chat, tabs, history-ai, input, image, mcp),
+  then the rest, install, commands, settings, development. VS Code's extension page shows README images only from https:
+  URLs: relative paths and data: URIs are dropped by its sanitizer (checked in an isolated VS Code; its CSP is
+  `img-src https: data:`, but the src is gone before). So `npm run package` passes `--baseImagesUrl` (raw.githubusercontent.com,
+  main) and `--baseContentUrl` (github.com blob/main): the GIFs show once they are pushed and the repository is public.
+  They are not in the vsix (`!media/*` and `!media/web/**` instead of `!media/**`; in vsce a negation always wins).
+  package.json has `repository` now.
+- The GIFs were recorded from `web/dev.html` in headless Edge through DevTools (screencast frames with their timestamps, a drawn
+  mouse pointer, mock answers for tabs / AI search / MCP / #sym injected into the page) and put together with ffmpeg
+  (palettegen, variable frame delays). The recorder lives outside the repository; to redo one, drive dev.html the same way.
+- Input lists: Enter on an empty item at the end of the text ended the list but left the caret before the trailing newline
+  (Chromium, execCommand insertText with an empty text), so the next words went onto the line above. typeOver now puts the
+  caret behind the inserted text.
+- dev page: fixtures replay again. Their notifications carry the recorded threadId, which the page drops since 0.7.0 (another
+  chat); dev-bridge.js now gives them the dev thread's id.
 
 ## 0.7.8
 
