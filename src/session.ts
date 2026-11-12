@@ -11,6 +11,7 @@ import { locate, Located, NotFoundError } from './core/locator';
 import { permissionSettings, PermissionSettings } from './core/permissions';
 import { mapPlugins } from './core/plugins';
 import { AI_MAX_CHATS, buildSearchPrompt, parseSearchAnswer } from './core/aiSearch';
+import { lastTokenUsage } from './core/rollout';
 import { cwdKey, expandCwds, isListable, str, threadMatches, threadPreview, threadTitle } from './core/threadRows';
 import { normalizeDrive } from './core/winPath';
 import { CodexUpdater, errorMessage } from './updater';
@@ -1001,6 +1002,11 @@ export class CodexSession {
         // the thread's collaboration mode (newer servers): the page shows the plan mode chip for it
         const mode = r.collaborationMode?.mode;
         if (mode === 'plan' || mode === 'default') e.planMode = mode === 'plan';
+        // the chat keeps its own model and effort (not the defaults of new chats), and shows its context usage right away
+        const model = str(r, 'model') ?? str(thread ?? {}, 'model');
+        if (model) { e.model = model; e.effort = str(r, 'reasoningEffort') ?? str(thread ?? {}, 'reasoningEffort') ?? ''; }
+        const usage = lastTokenUsage(str(thread ?? {}, 'path'));
+        if (usage) e.tokenUsage = usage;
         if (g) e.goal = g;
         this.emit(e);
         if (this.turnId !== null) {

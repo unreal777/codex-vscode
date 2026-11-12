@@ -500,7 +500,8 @@
     if (state.running || state.pending || !state.hasContent) return;
     const c = { scroll: feed.scrollTop, stick, sig: liveSig(), items: state.items, approvals: state.approvals, reviews: state.reviews, turn: state.turn,
       goal: state.goal, planUsed: state.planUsed, tokenUsage: state.tokenUsage, title: state.title, cwd: state.cwd, project: state.project,
-      turnCount: state.turnCount, lastTurnId: state.lastTurnId, lastTurnStatus: state.lastTurnStatus, frag: document.createDocumentFragment() };
+      turnCount: state.turnCount, lastTurnId: state.lastTurnId, lastTurnStatus: state.lastTurnStatus, model: state.prefs.model, effort: state.prefs.effort,
+      frag: document.createDocumentFragment() };
     while (feed.firstChild) c.frag.append(feed.firstChild);
     state.items = new Map(); state.approvals = new Map(); state.reviews = new Map();
     chatCache.set(id, c);
@@ -518,6 +519,7 @@
     feed.textContent = '';
     feed.append(c.frag);
     setTitle(c.title); setProject(c.project, c.cwd);
+    state.prefs.model = c.model || ''; state.prefs.effort = c.effort || ''; fillModels(); postPrefs();
     renderGoal(); renderPlan(null); renderFooter(); updateRunning();
     stick = c.stick;
     feed.scrollTop = c.scroll;
@@ -1459,6 +1461,7 @@
     selEffort.append(h('option', { value: '', text: STR.effortDefault }));
     const m = state.models.find((x) => x.model === state.prefs.model) || state.models.find((x) => x.isDefault) || state.models[0];
     const efforts = m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : ['low', 'medium', 'high'];
+    if (state.prefs.effort && !efforts.includes(state.prefs.effort) && !state.models.length) efforts.push(state.prefs.effort);   // list not loaded yet
     efforts.forEach((e) => selEffort.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
     if (state.prefs.effort && !efforts.includes(state.prefs.effort)) state.prefs.effort = '';
     selEffort.value = state.prefs.effort || '';
@@ -2722,7 +2725,13 @@
   }
 
   // Plan mode is a setting of the thread on the server: a loaded chat shows its real mode (ev.planMode from thread/resume).
+  // A loaded chat also keeps its own model and effort (thread/resume), and shows its context usage (session file) at once.
   function applyThreadPlan(ev) {
+    if (typeof ev.model === 'string' && ev.model) {
+      state.prefs.model = ev.model; state.prefs.effort = ev.effort || '';
+      fillModels(); postPrefs();
+    }
+    if (ev.tokenUsage) { state.tokenUsage = ev.tokenUsage; renderFooter(); }
     if (typeof ev.planMode !== 'boolean') return;
     state.planMode = ev.planMode;
     if (ev.planMode) state.planUsed = true;

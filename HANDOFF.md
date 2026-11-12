@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.7)
+## Status (0.7.8)
+
+- 0.7.8: an opened chat keeps its own model / effort and shows its context usage at once. See "0.7.8".
 
 - 0.7.7: the closed input shows up to 7 lines, the end of the text in view. See "0.7.7".
 
@@ -53,6 +55,17 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.8
+
+- Model / effort: a chat opened again (startup restore, History, tab, branch) showed the defaults of new chats, and the next
+  message would have switched it to them. session.resume now puts thread/resume's `model` and `reasoningEffort` into the thread
+  event; the page sets them in the pickers (applyThreadPlan, also for a kept copy) and posts prefs. fillEfforts keeps an effort it
+  does not know while the model list is not loaded yet (after a reload the chat comes first).
+- Context usage: Codex sends thread/tokenUsage/updated only while a turn runs. The session file of the thread (thread.path, JSONL)
+  has a "token_count" event (payload.info: last_token_usage, total_token_usage, model_context_window) after each turn;
+  core/rollout.ts lastTokenUsage reads the end of the file (256 KB, then 4 MB) and maps the last one to the camelCase shape of
+  the notification; the thread event carries it as `tokenUsage`.
 
 ## 0.7.7
 
