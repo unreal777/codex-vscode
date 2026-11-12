@@ -170,3 +170,10 @@ test('0.7.6: a loaded chat shows its plan mode, and an existing chat always says
   assert.ok(app.includes('function applyThreadPlan(ev)'));
   assert.ok(app.includes('const plan = state.planMode ? true : state.threadId || state.planUsed ? false : undefined;'));
 });
+
+test('0.7.7: the closed input shows up to 7 lines with the end in view, a click opens it after the mouse button is up', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes('const CLOSED_LINES = 7;'));
+  assert.ok(app.includes("autoGrow('bottom');") && app.includes("autoGrow('keep');"));
+  assert.ok(app.includes("document.addEventListener('mouseup', () => { if (inputMouseDown) openInput(); });"));
+});

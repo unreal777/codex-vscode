@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.6)
+## Status (0.7.7)
+
+- 0.7.7: the closed input shows up to 7 lines, the end of the text in view. See "0.7.7".
 
 - 0.7.6: plan mode follows the thread (chip shown for a chat in plan mode, removing it always switches it off). See "0.7.6".
 
@@ -51,6 +53,15 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.7.7
+
+- Closed input: CLOSED_LINES 7 (fewer when less is written, empty = 1 line) and scrolled to the end (autoGrow('bottom')), so a
+  click lands where typing goes on. A click into the closed input opens it only on mouseup (growing during the mousedown would
+  move the text under the mouse before the caret is placed); opening keeps the distance to the end (autoGrow('keep')).
+- Checked in the browser with web/dev.html (python -m http.server in web/, built-in browser at 420x900): the isolated VS Code
+  did not start because the installed VS Code had an update pending (updating_version, new_Code.exe in its folder): a second
+  instance quits after ~30 s until VS Code is restarted.
 
 ## 0.7.6
 

@@ -2169,10 +2169,13 @@
     try { renderTabs(); } catch (e) { /* not set up yet */ }
   }
   // While the composer has the focus the input grows with its text up to half the panel (the chat above stays readable); when the focus
-  // leaves the composer it shrinks to at most three lines and its text scrolls. The composer's own buttons and menus keep it open.
+  // leaves the composer it shrinks to at most seven lines (fewer when less is written) showing the END of the text, so a click lands
+  // where typing goes on. The composer's own buttons and menus keep it open.
+  // anchor: 'bottom' = scroll to the end (closing), 'keep' = keep the distance to the end (opening: what was clicked stays in view).
   let inputOpen = false;
-  const CLOSED_LINES = 3;
-  function autoGrow() {
+  const CLOSED_LINES = 7;
+  function autoGrow(anchor) {
+    const fromBottom = Math.max(0, input.scrollHeight - input.scrollTop - input.clientHeight);
     input.style.height = 'auto';   // rows="1": one line
     let max;
     if (inputOpen) {
@@ -2183,6 +2186,8 @@
     }
     input.style.height = Math.min(input.scrollHeight, max) + 'px';
     input.style.overflowY = input.scrollHeight > max ? 'auto' : 'hidden';
+    if (anchor === 'bottom') input.scrollTop = input.scrollHeight;
+    else if (anchor === 'keep') input.scrollTop = Math.max(0, input.scrollHeight - input.clientHeight - fromBottom);
     try { syncHl(); } catch (e) { /* not set up yet */ }
     scrollDown();
   }
@@ -2195,9 +2200,18 @@
     if (!inputOpen) return;
     if (document.hasFocus() && DOCK.contains(document.activeElement)) return; // the focus came back
     inputOpen = false;
-    autoGrow();
+    autoGrow('bottom');
   }
-  input.addEventListener('focus', () => { clearTimeout(collapseTimer); if (!inputOpen) { inputOpen = true; autoGrow(); } });
+  // A click into the closed input: it opens after the mouse button is up, so the caret lands on the clicked character first
+  // (growing during the click would move the text under the mouse).
+  let inputMouseDown = false;
+  input.addEventListener('mousedown', () => { inputMouseDown = !inputOpen; });
+  function openInput() { inputMouseDown = false; if (!inputOpen) { inputOpen = true; autoGrow('keep'); } }
+  document.addEventListener('mouseup', () => { if (inputMouseDown) openInput(); });
+  input.addEventListener('focus', () => {
+    clearTimeout(collapseTimer);
+    if (!inputOpen && !inputMouseDown) openInput();
+  });
   DOCK.addEventListener('focusin', () => clearTimeout(collapseTimer));
   DOCK.addEventListener('focusout', (e) => {
     if (e.relatedTarget && DOCK.contains(e.relatedTarget)) return;
