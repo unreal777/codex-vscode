@@ -2,7 +2,7 @@
 
 **Codex with your ChatGPT subscription, in a chat panel that shows what the agent does.** Codexter runs the official Codex
 (`codex app-server`) in VS Code's secondary side bar. You see the reasoning, commands and file changes as they stream, and you
-approve each step with one click. Several chats run at the same time, and the History finds old chats by meaning.
+approve each step with one click. Several chats run at the same time, every project and git branch reopens its own chat, and the History finds old chats by meaning.
 
 Codex itself is downloaded and kept up to date by the extension. You sign in with your ChatGPT account from the panel, and no API key is needed.
 
@@ -23,6 +23,18 @@ Codex itself is downloaded and kept up to date by the extension. You sign in wit
 - **Open combined diff** shows all changes of the turn together.
 - The footer shows how full the context is (`Context 31.2k / 258.4k`) and your 5-hour and weekly limits.
 
+### Picks up where you left off: per project and per git branch
+
+- **Reopen VS Code and your chat is back.** Each project reopens the chat that was open when you closed VS Code, with its model,
+  reasoning effort, plan mode and context usage. **New chat** starts a fresh one.
+- **Every git branch has its own chat.**
+  - The chat you used on a branch (you sent a message while it was checked out) is remembered for 30 days.
+  - Check the branch out again, in VS Code or on the command line, and its chat opens by itself.
+  - A branch that has no chat yet keeps the open one; it joins the branch with your next message.
+- **A new branch takes your chat along.** Started on `main` and created the feature branch only at the end? The chat you were
+  working in moves to the new branch.
+- This memory is kept per project in VS Code, so other projects never see it.
+
 ### Several chats at once, as tabs
 
 ![Tabs of today's chats: a background chat finishes and gets a blue dot](media/readme/tabs.gif)
@@ -32,6 +44,17 @@ Codex itself is downloaded and kept up to date by the extension. You sign in wit
 - When a background reply ends, or a chat needs an approval, you get a notification. **Open** jumps to the start of the last answer.
 - **Notifications work outside VS Code too**: a Windows toast, a macOS or Linux notification. Click it to come back to that chat.
 - Every chat keeps its own model, reasoning effort, plan mode and context usage, also after a reload.
+
+### Drag and drop files, folders and editor tabs
+
+![Drag a file, a folder and an editor tab from VS Code onto Attach Files: each becomes a chip](media/readme/dnd.gif)
+
+- **From VS Code:** drag files, folders or editor tabs onto **Attach Files**, the small area under the chat. Each one becomes a chip above the input, and Codex gets its path. VS Code does not hand its own drags to the chat itself, so this area is the drop target. **Choose files...** next to it opens a file dialog.
+- **From the Windows Explorer:** drop files straight onto the chat.
+- **Paste paths:** VS Code's *Copy Path*, Windows Explorer's *Copy as path* or `file:` links pasted into the input also become chips.
+- **Right-click > Add to Codexter chat** works in the Explorer (also several files and folders), in the editor and on an editor tab.
+- **`@`** in the input picks files and folders of the project, with recently opened files first.
+- The **active editor file** is attached as a chip on its own. Selected code goes in with right-click > **Codexter: Ask / Explain / Fix selection**.
 
 ### Find any chat, even by meaning
 
@@ -53,17 +76,6 @@ Codex itself is downloaded and kept up to date by the extension. You sign in wit
   - Codex gets the exact location.
   - In the sent message, the name opens the file.
 - When the input is not in focus, it shrinks to 7 lines and shows the end of what you wrote. Alt+Tab away and back, and the caret is where you left it.
-
-### Drag and drop files, folders and editor tabs
-
-![Drag a file, a folder and an editor tab from VS Code onto Attach Files: each becomes a chip](media/readme/dnd.gif)
-
-- **From VS Code:** drag files, folders or editor tabs onto **Attach Files**, the small area under the chat. Each one becomes a chip above the input, and Codex gets its path. VS Code does not hand its own drags to the chat itself, so this area is the drop target. **Choose files...** next to it opens a file dialog.
-- **From the Windows Explorer:** drop files straight onto the chat.
-- **Paste paths:** VS Code's *Copy Path*, Windows Explorer's *Copy as path* or `file:` links pasted into the input also become chips.
-- **Right-click > Add to Codexter chat** works in the Explorer (also several files and folders), in the editor and on an editor tab.
-- **`@`** in the input picks files and folders of the project, with recently opened files first.
-- The **active editor file** is attached as a chip on its own. Selected code goes in with right-click > **Codexter: Ask / Explain / Fix selection**.
 
 ### Draw on a screenshot before you send it
 
@@ -109,7 +121,6 @@ Find them under the gear > **MCP servers**. Codex uses the same servers in the C
 ## More
 
 - **Models and modes:** the model and reasoning effort pickers sit under the input; the **+** menu turns on **plan mode**, sets a **goal** (Codex keeps working towards it) and adds **plugins**. Defaults for new chats and the models shown are in the gear's settings.
-- **Per project and branch:** opening a project reopens its last chat; every git branch remembers the chat used on it for 30 days, and checking the branch out opens it.
 - **Codex is managed for you:** downloaded from the npm registry into `%LOCALAPPDATA%\CodexPanel\codex`, checked for updates every 7 days, shared with the Eclipse plugin. Proxies (`http.proxy`, `HTTPS_PROXY`) are used for the download and handed to Codex.
 - **Fits the theme:** colours and fonts follow VS Code; the font size follows VS Code's panels or `codexPanel.fontSize`.
 
