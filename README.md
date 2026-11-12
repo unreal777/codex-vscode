@@ -52,10 +52,18 @@ Codex itself is downloaded and kept up to date by the extension. You sign in wit
 - **Code references, like in Copilot:** copy a symbol in an editor and paste it into the input. It becomes `#sym:calculateTotal`, blue, with its file and line on hover.
   - Codex gets the exact location.
   - In the sent message, the name opens the file.
-- **`@`** picks files and folders of the project. Recently opened files come first.
-- The active editor file is attached as a chip. Selected code goes in with right-click > **Codexter: Ask / Explain / Fix selection**.
-- Drag files from the Explorer onto the chat, or paste file paths into the input. Either way they become chips. **Add to Codexter chat** is also in the Explorer and editor context menus.
 - When the input is not in focus, it shrinks to 7 lines and shows the end of what you wrote. Alt+Tab away and back, and the caret is where you left it.
+
+### Drag and drop files, folders and editor tabs
+
+![Drag a file, a folder and an editor tab from VS Code onto Attach Files: each becomes a chip](media/readme/dnd.gif)
+
+- **From VS Code:** drag files, folders or editor tabs onto **Attach Files**, the small area under the chat. Each one becomes a chip above the input, and Codex gets its path. VS Code does not hand its own drags to the chat itself, so this area is the drop target. **Choose files...** next to it opens a file dialog.
+- **From the Windows Explorer:** drop files straight onto the chat.
+- **Paste paths:** VS Code's *Copy Path*, Windows Explorer's *Copy as path* or `file:` links pasted into the input also become chips.
+- **Right-click > Add to Codexter chat** works in the Explorer (also several files and folders), in the editor and on an editor tab.
+- **`@`** in the input picks files and folders of the project, with recently opened files first.
+- The **active editor file** is attached as a chip on its own. Selected code goes in with right-click > **Codexter: Ask / Explain / Fix selection**.
 
 ### Draw on a screenshot before you send it
 
