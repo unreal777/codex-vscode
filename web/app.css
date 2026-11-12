@@ -367,6 +367,12 @@ button { cursor: pointer; }
 #send.stop { background: var(--fg); color: var(--bg); }
 #footer { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11.5px; padding: 4px 4px 0; white-space: nowrap; overflow: hidden; }
 #footer span { overflow: hidden; text-overflow: ellipsis; }
+/* context usage and "Compact" (VS Code host) */
+#f-ctx { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+#f-compact { flex: none; padding: 0 2px; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
+#f-compact:hover:not(:disabled) { text-decoration: underline; }
+#f-compact:disabled { color: var(--muted); cursor: default; }
+#f-compact:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--fg) 22%, var(--bg)); border-radius: 6px; border: 2px solid var(--bg); }
@@ -587,6 +593,18 @@ button { cursor: pointer; }
 /* MCP servers (VS Code host) */
 .set-sec { font-weight: 600; padding-top: 8px; border-top: 1px solid var(--border); }
 .set-sub { font-weight: 600; font-size: 12px; margin-top: 8px; }
+/* instructions of the settings */
+.instr-src { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.instr-src label.set-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.set-instr { width: 100%; box-sizing: border-box; min-height: 72px; resize: vertical; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--input-bg, transparent); color: inherit; font: inherit; line-height: 1.4; }
+.set-instr:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.instr-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.instr-chip { height: 22px; padding: 0 8px; border: 1px solid var(--border); border-radius: 11px; background: none; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.instr-chip:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.instr-actions { align-items: center; }
+.mcp-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #fff); }
+.mcp-btn.primary:disabled { background: none; border-color: var(--border); color: var(--muted); }
 .mcp-list { display: flex; flex-direction: column; gap: 2px; }
 .mcp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 4px; }
 .mcp-row:hover, .mcp-row:focus-within { background: var(--card-hover); }

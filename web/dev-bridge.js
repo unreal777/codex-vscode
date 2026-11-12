@@ -200,6 +200,8 @@
   document.addEventListener('DOMContentLoaded', () => document.body.append(box));
 
   let playing = null;
+  let devInstructions = 'Answer briefly.';
+  let openThread = 'dev-thread';   // the chat on screen (a resumed history chat or the dev thread)
   const waiting = {}; // requestId -> resume fn
 
   // the fixtures were recorded in other threads; the page drops notifications of a thread that is not open (0.7.0)
@@ -269,6 +271,7 @@
       });
     },
     send(m) {
+      if (!threadCounter) openThread = 'dev-thread';
       if (!threadCounter++) push({ kind: 'thread', created: true, thread: { id: 'dev-thread', name: null, preview: m.text }, cwd: CWD, project: 'shop', turns: [] });
       if (q.get('other')) setTimeout(() => push({ kind: 'context', action: 'activeFile', item: Object.assign({ path: OTHER.projectPath + '\\src\\Invoice.java', startLine: 1 }, OTHER) }), 600);
       push({ kind: 'notification', method: 'thread/status/changed', params: { status: { type: 'active' } } });
@@ -320,7 +323,7 @@
     },
     settingsSave(m) {
       console.log('[dev] settingsSave', JSON.stringify(m));
-      settings = { defaultModel: m.defaultModel || '', defaultReasoningEffort: m.defaultReasoningEffort || '', hiddenModels: m.hiddenModels || [] };
+      settings = Object.assign({}, m); delete settings.type;   // like the host: every setting comes back
       setTimeout(() => window.codexUi.receive([{ kind: 'settings', settings }]), 60);
     },
     mentionSearch(m) {
@@ -343,6 +346,7 @@
       else push({ kind: 'insertText', text: m.text });
     },
     resumeThread(m) {
+      openThread = m.threadId;
       const picked = HISTORY_SEED.find((t) => t.id === m.threadId);
       const now = Math.floor(Date.now() / 1000);
       push({ kind: 'thread', thread: { id: m.threadId, name: picked ? picked.title : 'Resumed chat', preview: '' }, cwd: picked ? picked.cwd : CWD, project: picked ? picked.project : 'shop', turns: (function () {
@@ -375,6 +379,21 @@
       }, 1200);
     },
     goalClear() { push({ kind: 'notification', method: 'thread/goal/cleared', params: { threadId: 'dev-thread' } }); },
+    // instructions of the settings (VS Code host): Codex's developer_instructions, kept in memory here
+    instrRead() { setTimeout(() => push({ kind: 'codexInstructions', text: devInstructions, agents: 'C:\\Users\\dev\\.codex\\AGENTS.md' }), 300); },
+    instrWriteCodex(m) { devInstructions = m.text || ''; setTimeout(() => push({ kind: 'codexInstructions', text: devInstructions, agents: 'C:\\Users\\dev\\.codex\\AGENTS.md', saved: true }), 300); },
+    openAgents() { console.log('[dev] openAgents: VS Code would open ~/.codex/AGENTS.md'); },
+    // "Compact" in the footer: a turn with a contextCompaction item, the context usage drops
+    compact() {
+      const n = (method, params) => push({ kind: 'notification', method, params: Object.assign({ threadId: openThread }, params) });
+      setTimeout(() => n('turn/started', { turn: { id: 'compact-1', status: 'inProgress', items: [] } }), 200);
+      setTimeout(() => n('item/started', { item: { type: 'contextCompaction', id: 'cc-1' } }), 400);
+      setTimeout(() => {
+        n('item/completed', { item: { type: 'contextCompaction', id: 'cc-1' } });
+        n('thread/tokenUsage/updated', { tokenUsage: { last: { totalTokens: 18400 }, total: { totalTokens: 18400 }, modelContextWindow: 258400 } });
+        n('turn/completed', { turn: { id: 'compact-1', status: 'completed', items: [] } });
+      }, 2200);
+    },
     dropDebug(m) { console.log('[dev] dropDebug', JSON.stringify(m.info)); },
     openFile(m) {
       console.log('[dev] openFile', JSON.stringify(m));

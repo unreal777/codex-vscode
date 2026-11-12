@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter (Codex Subscription Chat with better UI)",
   "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.7.9",
+  "version": "0.8.0",
   "publisher": "codexpanel",
   "repository": {
     "type": "git",
@@ -305,6 +305,30 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "When a reply ends (or a chat asks for an approval) while VS Code is in the background, show a notification of the system (Windows, macOS, Linux) instead of VS Code's own. A click opens the chat."
+        },
+        "codexPanel.instructionsSource": {
+          "type": "string",
+          "enum": [
+            "codex",
+            "codexter"
+          ],
+          "enumDescriptions": [
+            "Codex's own instructions: `developer_instructions` of ~/.codex/config.toml (shared with the Codex CLI), edited in the gear of the panel.",
+            "The instructions of `codexPanel.instructions`, only in Codexter."
+          ],
+          "default": "codex",
+          "markdownDescription": "Whose instructions (how Codex should answer, e.g. briefly, in plain language) a new chat gets. AGENTS.md files always apply too."
+        },
+        "codexPanel.instructions": {
+          "type": "string",
+          "default": "",
+          "editPresentation": "multilineText",
+          "markdownDescription": "Codexter's own instructions for new chats, used when `#codexPanel.instructionsSource#` is `codexter`."
+        },
+        "codexPanel.autoCompactTokens": {
+          "type": "number",
+          "default": 0,
+          "markdownDescription": "Codex summarizes (compacts) a chat when its context reaches this many tokens. 0 = Codex's own limit (about 90 % of the model's window). Smaller keeps replies faster and the limits lower; bigger keeps more details. Applies to chats opened or started afterwards. **Compact** in the panel's footer compacts the open chat at once."
         },
         "codexPanel.fontSize": {
           "type": "number",

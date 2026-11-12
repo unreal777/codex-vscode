@@ -92,6 +92,19 @@
     setCommitModel: 'Model for commit messages and AI search', setCommitModelHint: '"Generate commit message" in Source Control and the AI search of the History. A fast model is enough.',
     setCommitEffort: 'Reasoning effort for commit messages and AI search', setCommitEffortHint: 'Low is fast and enough for both.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
+    instrTitle: 'Instructions', instrHint: 'How Codex should answer in every new chat, e.g. briefly, in plain language. AGENTS.md files always apply too.',
+    instrCodex: 'Codex\u2019s own', instrCodexter: 'Only in Codexter',
+    instrCodexHint: 'developer_instructions of ~/.codex/config.toml: the Codex CLI and the Eclipse plugin use them too.',
+    instrCodexterHint: 'New chats of Codexter get these instead of Codex\u2019s developer_instructions.',
+    instrPh: 'e.g. Answer briefly, in plain language.', instrSave: 'Save', instrSaved: 'Saved. New chats use it.',
+    instrAgents: 'Open AGENTS.md', instrAgentsTitle: 'Codex\u2019s global AGENTS.md (~/.codex): instructions for every chat of Codex', instrLoading: 'Reading the Codex config\u2026',
+    instrPresets: [['Brief', 'Answer briefly: the result first, no long introductions or summaries.'],
+      ['Plain language', 'Use plain, simple words that anyone can follow; explain a technical term the first time you use it.'],
+      ['My language', 'Answer in the language of my message.'],
+      ['Say what you do', 'Before you change files, say in one line what you are going to change.']],
+    ctxTitle: 'Context', ctxCompactAt: 'Compact a chat at', ctxCodex: 'Codex default (about 90 % of the window)',
+    ctxHint: 'Codex summarizes a chat when its context gets this big. Smaller keeps replies faster and uses less of your limits; bigger keeps more details. For chats opened or started afterwards. Compact in the footer does it now.',
+    compact: 'Compact', compactTitle: 'Compact the context now: Codex summarizes the chat so far, the chat goes on with the summary', compacting: 'Compacting\u2026',
     setNotify: 'System notifications', setNotifyHint: 'When a reply ends while VS Code is in the background, Windows (macOS, Linux) shows it over any program. A click opens the chat.',
     // MCP servers (settings, VS Code host)
     mcpTitle: 'MCP servers', mcpHint: 'Servers of the Codex config (~/.codex/config.toml, shared with the Codex CLI and Eclipse). Switching one off keeps it for later.',
@@ -333,6 +346,8 @@
       ai: false, aiCache: null /* {key, rows} of the last AI answer */, aiKey: null /* key of the AI request in flight */ },
     // MCP servers of the settings (VS Code host): servers null = not loaded; notes by server name ('' = the whole section)
     mcp: { servers: null, vscode: [], error: null, loading: false, notes: {}, finding: false, findError: null, query: '' },
+    // instructions of the settings: Codex's own text (null = not read yet), the text being edited (null = unchanged)
+    instr: { codex: null, error: null, agents: '', draft: null, note: null },
     // unread marks and today's tabs from the host (VS Code)
     chats: { unread: new Set(), tabs: [] },
     mention: { open: false, items: [], sel: 0, reqId: 0, start: 0, query: '', loading: false },
@@ -398,7 +413,7 @@
     '<button id="perm" type="button" class="tool perm" aria-haspopup="menu" aria-expanded="false" title="' + esc(STR.permButton) + '"><span class="pi"></span><span class="pl"></span></button>' +
     '<select id="sel-model" title="Model"></select><select id="sel-effort" title="Reasoning effort"></select><span class="spacer"></span>' +
     '<button id="send" type="button" title="' + esc(STR.send) + '">' + ICON.send + '</button></div></div>' +
-    '<div id="footer"><span id="f-tokens"></span><span id="f-limits"></span></div></div>' +
+    '<div id="footer"><span id="f-ctx"><span id="f-tokens"></span><button id="f-compact" class="hidden" type="button"></button></span><span id="f-limits"></span></div></div>' +
     '<div id="proj-menu" class="hidden" role="group" aria-label="' + esc(STR.projectFilter) + '"></div>' +
     '<div id="sketch" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.sketchTitle) + '"></div>' +
     '<div id="imgview" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.imageView) + '"></div>' +
@@ -1018,7 +1033,20 @@
     if (r) for (const w of [r.primary, r.secondary]) if (w) parts.push(winLabel(w.windowDurationMins) + ' ' + Math.round(w.usedPercent) + '%');
     $('#f-limits').textContent = parts.join(' · ');
     $('#f-limits').title = 'Codex usage limits (used)';
+    // Compact: an open chat with context in use, nothing running
+    const cb = $('#f-compact'), busy = state.running || state.pending;
+    cb.classList.toggle('hidden', host !== 'vscode' || !state.threadId || !t || (busy && !state.compacting));
+    cb.textContent = state.compacting ? STR.compacting : STR.compact;
+    cb.disabled = !!state.compacting;
+    cb.title = STR.compactTitle;
   }
+
+  $('#f-compact').addEventListener('click', () => {
+    if (!state.threadId || state.running || state.pending || state.compacting) return;
+    state.compacting = true; state.pending = true;
+    updateRunning();
+    bridge.post({ type: 'compact' });
+  });
 
   // ---------- header / history ----------
   function setTitle(t) { state.title = t || STR.newChat; $('#title').textContent = state.title; $('#title').title = state.title; reportTitle(); }
@@ -1492,7 +1520,9 @@
     hiddenModels: Array.isArray(o && o.hiddenModels) ? o.hiddenModels.map(String) : [],
     fontSize: Number.isFinite(o && o.fontSize) && o.fontSize > 0 ? Math.min(32, Math.max(8, Math.round(o.fontSize))) : 0,
     commitMessageModel: String((o && o.commitMessageModel) || ''), commitMessageEffort: String((o && o.commitMessageEffort) || ''),
-    systemNotifications: !(o && o.systemNotifications === false) });
+    systemNotifications: !(o && o.systemNotifications === false),
+    instructionsSource: o && o.instructionsSource === 'codexter' ? 'codexter' : 'codex', instructions: String((o && o.instructions) || ''),
+    autoCompactTokens: Number.isFinite(o && o.autoCompactTokens) && o.autoCompactTokens > 0 ? Math.round(o.autoCompactTokens) : 0 });
   // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
   let pageZoom = 1;
   function baseFontSize() {
@@ -1538,7 +1568,8 @@
     const st = state.settings;
     bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort,
       defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize,
-      commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort, systemNotifications: st.systemNotifications });
+      commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort, systemNotifications: st.systemNotifications,
+      instructionsSource: st.instructionsSource, instructions: st.instructions, autoCompactTokens: st.autoCompactTokens });
     applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
@@ -1617,6 +1648,8 @@
       field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM), field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE),
       h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
     if (host === 'vscode') {
+      setBody.insertBefore(renderInstructions(), $('#set-more'));
+      setBody.insertBefore(renderContextSettings(), $('#set-more'));
       // system notifications (VS Code in the background) on / off
       const cbN = h('input', { type: 'checkbox', id: 'set-notify', 'aria-describedby': 'set-notify-hint' });
       cbN.checked = st.systemNotifications;
@@ -1626,7 +1659,71 @@
       setBody.insertBefore(renderMcp(), $('#set-more'));
     }
     const again = keep && document.getElementById(keep);
-    if (again && !again.disabled) again.focus();
+    if (again && !again.disabled) {
+      again.focus();
+      if (keep === 'set-instr' && state.instr.caret != null) again.setSelectionRange(state.instr.caret, state.instr.caret);
+    }
+  }
+  // ---------- in-panel settings: instructions (Codex's own in config.toml, or Codexter's) and the context limit (VS Code host) ----------
+  function renderInstructions() {
+    const st = state.settings, ins = state.instr, src = st.instructionsSource;
+    const saved = src === 'codex' ? ins.codex : st.instructions;
+    const text = ins.draft != null ? ins.draft : saved || '';
+    const radio = (value, label) => {
+      const r = h('input', { type: 'radio', name: 'instr-src', id: 'set-instr-' + value, value });
+      r.checked = src === value;
+      r.addEventListener('change', () => { ins.draft = null; ins.note = null; saveSettings({ instructionsSource: value }); });
+      return h('label', { class: 'set-check', for: 'set-instr-' + value }, r, h('span', { text: label }));
+    };
+    const loading = src === 'codex' && ins.codex === null && !ins.error;
+    const ta = h('textarea', { id: 'set-instr', class: 'set-instr', rows: '4', spellcheck: 'false', placeholder: STR.instrPh, 'aria-label': STR.instrTitle, disabled: loading });
+    ta.value = text;
+    const dirty = () => ins.draft != null && ins.draft !== (saved || '');
+    const saveB = h('button', { class: 'mcp-btn primary', type: 'button', id: 'set-instr-save', text: STR.instrSave, disabled: !dirty() });
+    ta.addEventListener('input', () => { ins.draft = ta.value; ins.caret = ta.selectionStart; ins.note = null; saveB.disabled = !dirty(); });
+    ta.addEventListener('keyup', () => { ins.caret = ta.selectionStart; });
+    saveB.addEventListener('click', () => {
+      const v = ta.value.trim();
+      if (src === 'codex') { ins.codex = null; bridge.post({ type: 'instrWriteCodex', text: v }); }
+      else { ins.note = STR.instrSaved; saveSettings({ instructions: v }); }
+      ins.draft = null;
+      renderSettings();
+    });
+    const presets = h('div', { class: 'instr-presets' }, STR.instrPresets.map(([label, line]) => h('button', { class: 'instr-chip', type: 'button', text: '+ ' + label,
+      title: line, disabled: loading, onclick: () => {
+        const cur = ins.draft != null ? ins.draft : saved || '';
+        if (cur.includes(line)) return;
+        ins.draft = (cur.trim() ? cur.replace(/\s*$/, '') + '\n' : '') + line; ins.caret = ins.draft.length; ins.note = null;
+        renderSettings();
+        const t = document.getElementById('set-instr'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+      } })));
+    const agents = h('button', { class: 'set-link', type: 'button', id: 'set-agents', text: STR.instrAgents, title: ins.agents || STR.instrAgentsTitle,
+      onclick: () => bridge.post({ type: 'openAgents' }) });
+    const status = loading ? h('div', { class: 'mcp-note', role: 'status' }, h('span', { class: 'spinner' }), h('span', { text: STR.instrLoading }))
+      : ins.error && src === 'codex' ? h('div', { class: 'mcp-note bad', role: 'status', text: ins.error })
+      : ins.note ? h('div', { class: 'mcp-note', role: 'status', text: ins.note }) : null;
+    return h('div', { class: 'set-field instr' },
+      h('div', { class: 'set-sec', text: STR.instrTitle }), h('div', { class: 'hint', text: STR.instrHint }),
+      h('div', { class: 'instr-src', role: 'radiogroup', 'aria-label': STR.instrTitle }, radio('codex', STR.instrCodex), radio('codexter', STR.instrCodexter)),
+      h('div', { class: 'hint', text: src === 'codex' ? STR.instrCodexHint : STR.instrCodexterHint }),
+      ta, presets, h('div', { class: 'mcp-findrow instr-actions' }, saveB, agents), status);
+  }
+  function renderContextSettings() {
+    const st = state.settings;
+    const sel = h('select', { id: 'set-compact', 'aria-describedby': 'set-compact-hint' }, h('option', { value: '0', text: STR.ctxCodex }));
+    const choices = [100000, 150000, 200000, 250000, 300000, 400000];
+    if (st.autoCompactTokens && !choices.includes(st.autoCompactTokens)) choices.push(st.autoCompactTokens);
+    choices.sort((a, b) => a - b).forEach((n) => sel.append(h('option', { value: String(n), text: Math.round(n / 1000) + 'k tokens' })));
+    sel.value = String(st.autoCompactTokens || 0);
+    sel.addEventListener('change', () => saveSettings({ autoCompactTokens: parseInt(sel.value, 10) || 0 }));
+    return h('div', { class: 'set-field' }, h('div', { class: 'set-sec', text: STR.ctxTitle }),
+      h('label', { for: 'set-compact', text: STR.ctxCompactAt }), sel, h('div', { class: 'hint', id: 'set-compact-hint', text: STR.ctxHint }));
+  }
+  function onCodexInstructions(ev) {
+    const ins = state.instr;
+    ins.codex = ev.text == null ? '' : ev.text; ins.error = ev.error || null; ins.agents = ev.agents || '';
+    if (ev.saved) ins.note = STR.instrSaved;
+    renderSettings();
   }
   // ---------- in-panel settings: MCP servers of the Codex config (VS Code host) ----------
   function renderMcp() {
@@ -1695,7 +1792,10 @@
     if (state.settingsOpen) {
       if (state.historyOpen) toggleHistory(false);
       closePops(false);
-      if (host === 'vscode') { state.mcp.loading = true; bridge.post({ type: 'mcpList' }); }   // MCP servers of the Codex config
+      if (host === 'vscode') {
+        state.mcp.loading = true; bridge.post({ type: 'mcpList' });   // MCP servers of the Codex config
+        state.instr.codex = null; state.instr.error = null; state.instr.draft = null; state.instr.note = null; bridge.post({ type: 'instrRead' });
+      }
       renderSettings();
       $('#set-back').focus();
     } else if (!quiet) (gearBtn.offsetParent !== null ? gearBtn : input).focus();
@@ -2169,7 +2269,7 @@
     sendBtn.innerHTML = busy ? ICON.stop : ICON.send;
     sendBtn.title = busy ? STR.stop : STR.send;
     sendBtn.disabled = !busy && !input.value.trim() && !state.images.length;
-    try { renderTabs(); } catch (e) { /* not set up yet */ }
+    try { renderTabs(); renderFooter(); } catch (e) { /* not set up yet */ }
   }
   // While the composer has the focus the input grows with its text up to half the panel (the chat above stays readable); when the focus
   // leaves the composer it shrinks to at most seven lines (fewer when less is written) showing the END of the text, so a click lands
@@ -2606,7 +2706,7 @@
         if (!state.turn || state.turn.done) beginTurn();
         state.turn.started = true; state.turn.startMs = Date.now();
         updateRunning(); break;
-      case 'turn/completed': state.lastTurnStatus = (p.turn && p.turn.status) || 'completed'; finishTurn(p.turn || {}); break;
+      case 'turn/completed': state.lastTurnStatus = (p.turn && p.turn.status) || 'completed'; state.compacting = false; finishTurn(p.turn || {}); break;
       case 'item/started': upsertItem(p.item, 'started'); break;
       case 'item/completed': upsertItem(p.item, 'completed'); break;
       case 'item/agentMessage/delta': {
@@ -2740,6 +2840,7 @@
     renderCChips();
   }
   function loadThread(ev) {
+    state.compacting = false;
     const th = ev.thread || {};
     if (ev.created) { // thread was just created for the message in the feed: keep what is shown
       state.threadId = th.id || null;
@@ -2807,6 +2908,7 @@
       case 'theme': applyTheme(ev.theme); break;
       case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
+      case 'codexInstructions': onCodexInstructions(ev); break;
       case 'pasteRef': onPasteRef(ev); break;
       case 'imageEdited': {   // back from the editor tab: replaces the attached picture, or attaches a new sketch
         const im = ev.key && state.images.find((x) => x.key === ev.key);
@@ -2853,7 +2955,7 @@
       }
       case 'mentions': onMentions(ev); break;
       case 'thread': loadThread(ev); break;
-      case 'newChat': stashChat(); state.restored = null; state.turnCount = 0; state.lastTurnId = null; state.lastTurnStatus = null; resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
+      case 'newChat': stashChat(); state.compacting = false; state.restored = null; state.turnCount = 0; state.lastTurnId = null; state.lastTurnStatus = null; resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
       case 'cwd': setProject(ev.project, ev.cwd || ''); { const e = $('#empty'); if (e) showEmpty(); } break;
       case 'notification': onNotification(ev.method, ev.params || {}); break;
       case 'serverRequest': {
@@ -2876,7 +2978,7 @@
         syncActive(); break;
       }
       case 'error': errorCard(ev.title, ev.message, ev.actions); state.pending = false; updateRunning(); break;
-      case 'idle': state.pending = false; state.running = false; updateRunning(); break;
+      case 'idle': state.pending = false; state.running = false; state.compacting = false; updateRunning(); break;
       case 'install': state.install = ev.phase === 'idle' ? null : ev; renderCx(); break;
       case 'codexUpdated': state.updatedVersion = ev.version || null; renderCx(); break;
       case 'auth': {

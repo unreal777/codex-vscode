@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.7.9)
+## Status (0.8.0)
+
+- 0.8.0: instructions (Codex's own or Codexter's), Compact and the auto-compact limit; README: commit messages GIF. See "0.8.0".
 
 - 0.7.9: README with the features and GIFs; a list ended on the last line keeps the caret on the new line. See "0.7.9".
 
@@ -57,6 +59,22 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.8.0
+
+- Instructions (gear > Instructions, VS Code host): "Codex's own" edits `developer_instructions` of the user config.toml through
+  config/read + config/batchWrite (reloadUserConfig; '' removes the key), shared with the Codex CLI and Eclipse; "Only in Codexter"
+  keeps the text in `codexPanel.instructions` and sends it as `developerInstructions` of thread/start (new chats only: the
+  protocol does not say what a resume would do with it). Four ready-made lines (page STR.instrPresets) are appended to the text.
+  "Open AGENTS.md" opens $CODEX_HOME/AGENTS.md (an untitled editor with that path when there is none). core/instructions.ts.
+- Context: `codexPanel.autoCompactTokens` (0 = Codex's own, about 90 % of the window) goes as `config.model_auto_compact_token_limit`
+  into thread/start and thread/resume (host.threadExtras). "Compact" in the footer calls thread/compact/start; Codex runs it as a
+  turn (turn/started, a contextCompaction item = the "Context compacted" notice, turn/completed), the page shows "Compacting..."
+  until then. Not tried against a real Codex (no turns in tests): the fake app-server of instructions.test.ts checks the params.
+- README: "Commit messages with Codex" with media/readme/commit.gif, recorded in an isolated VS Code (installed vsix, a demo repo
+  in the temp folder, `codexPanel.codexPath` = a .cmd stand-in that writes a fixed message: no real Codex run). Breadcrumbs off,
+  so no local path shows.
+- dev page: mocks for instrRead / instrWriteCodex / openAgents / compact; settingsSave echoes every setting (like the host).
 
 ## 0.7.9
 

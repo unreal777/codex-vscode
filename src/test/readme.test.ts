@@ -11,7 +11,7 @@ const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
 test('README: every GIF it shows exists in media/readme (relative links for GitHub)', () => {
   const readme = read('README.md');
   const gifs = [...readme.matchAll(/!\[[^\]]*\]\((media\/readme\/[^)]+\.gif)\)/g)].map((m) => m[1]);
-  assert.deepEqual(gifs.sort(), ['chat', 'history-ai', 'image', 'input', 'mcp', 'tabs'].map((n) => `media/readme/${n}.gif`));
+  assert.deepEqual(gifs.sort(), ['chat', 'commit', 'history-ai', 'image', 'input', 'mcp', 'tabs'].map((n) => `media/readme/${n}.gif`));
   for (const g of gifs) {
     const size = fs.statSync(path.join(root, g)).size;
     assert.ok(size > 10_000 && size < 1_500_000, `${g}: ${size} bytes`);

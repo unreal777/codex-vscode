@@ -1,4 +1,5 @@
 // Codexter (Codex Panel) for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
+import { sanitizeContextSettings, threadExtras } from './core/instructions';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -94,6 +95,8 @@ export function activate(ctx: vscode.ExtensionContext): void {
     // AI search of the History panel: same fast model / effort as the commit messages, run outside any project (no AGENTS.md)
     ask: (prompt) => runCodexExec({ command: quick.locateCodex().command(), cwd: os.tmpdir(), env: quick.env(), prompt,
       model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 120_000, log, tag: 'search' }),
+    threadExtras: (forResume) => threadExtras(sanitizeContextSettings({ instructionsSource: cfg().get('instructionsSource'),
+      instructions: cfg().get('instructions'), autoCompactTokens: cfg().get('autoCompactTokens') }), forResume),
   };
   // Settings and Codex of the quick one-off runs (commit message, AI search)
   const quick = {

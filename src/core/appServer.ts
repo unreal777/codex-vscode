@@ -144,8 +144,9 @@ export class AppServerClient {
   deleteThread(threadId: string): Promise<Json> { return this.call('thread/delete', { threadId }); }
 
   /** @param sandbox read-only | workspace-write | danger-full-access */
-  startThread(cwd: string, model: string | null, approvalPolicy: string | null, sandbox: string | null, approvalsReviewer: string | null): Promise<Json> {
-    const p: Json = { cwd };
+  /** extra: developerInstructions, config overrides (core/instructions.ts threadExtras) */
+  startThread(cwd: string, model: string | null, approvalPolicy: string | null, sandbox: string | null, approvalsReviewer: string | null, extra: Json = {}): Promise<Json> {
+    const p: Json = { ...extra, cwd };
     if (model) p.model = model;
     if (approvalPolicy) p.approvalPolicy = approvalPolicy;
     if (sandbox) p.sandbox = sandbox;
@@ -153,8 +154,8 @@ export class AppServerClient {
     return this.call('thread/start', p);
   }
 
-  resumeThread(threadId: string, cwd: string | null, approvalPolicy: string | null, sandbox: string | null, approvalsReviewer: string | null): Promise<Json> {
-    const p: Json = { threadId };
+  resumeThread(threadId: string, cwd: string | null, approvalPolicy: string | null, sandbox: string | null, approvalsReviewer: string | null, extra: Json = {}): Promise<Json> {
+    const p: Json = { ...extra, threadId };
     if (cwd) p.cwd = cwd;
     if (approvalPolicy) p.approvalPolicy = approvalPolicy;
     if (sandbox) p.sandbox = sandbox;
@@ -197,6 +198,9 @@ export class AppServerClient {
   setGoal(threadId: string, objective: string): Promise<Json> {
     return this.call('thread/goal/set', { threadId, objective, origin: 'user' });
   }
+
+  /** Codex summarizes the chat so far; it runs like a turn (turn/started, a contextCompaction item, turn/completed). */
+  compactThread(threadId: string): Promise<Json> { return this.call('thread/compact/start', { threadId }); }
 
   clearGoal(threadId: string): Promise<Json> {
     return this.call('thread/goal/clear', { threadId, origin: 'user' });

@@ -50,6 +50,8 @@ export interface SessionHost {
   needsApproval?(threadId: string): void;
   /** One question to a temporary read-only `codex exec` run (fast model of the settings); resolves with the answer. Used by the AI search. */
   ask?(prompt: string): Promise<string>;
+  /** Extra params of thread/start (instructions of Codexter, auto-compact limit) or thread/resume (forResume: the limit only). */
+  threadExtras?(forResume: boolean): Json;
 }
 
 export type Sink = (event: Json) => void;
@@ -546,13 +548,13 @@ export class CodexSession {
   /** Starts the thread if there is none (first message, goal) or resumes it after a restart of the app-server. */
   private async ensureThread(c: AppServerClient, cwd: string, model: string, ps: PermissionSettings): Promise<string> {
     if (this._threadId === null) {
-      const r = await withTimeout(c.startThread(cwd, model, ps.approvalPolicy, ps.sandbox, ps.reviewer), 60_000, 'thread/start');
+      const r = await withTimeout(c.startThread(cwd, model, ps.approvalPolicy, ps.sandbox, ps.reviewer, this.host.threadExtras?.(false) ?? {}), 60_000, 'thread/start');
       this._threadCwd = cwd;
       this._threadId = r.thread.id;
       this.host.threadChanged?.(this._threadId);
       this.emit(this.threadEvent(r.thread, null, true));
     } else if (this.needsResume) {
-      await withTimeout(c.resumeThread(this._threadId, this._threadCwd, ps.approvalPolicy, ps.sandbox, ps.reviewer), 60_000, 'thread/resume');
+      await withTimeout(c.resumeThread(this._threadId, this._threadCwd, ps.approvalPolicy, ps.sandbox, ps.reviewer, this.host.threadExtras?.(true) ?? {}), 60_000, 'thread/resume');
       this.needsResume = false;
     }
     return this._threadId as string;
@@ -640,6 +642,22 @@ export class CodexSession {
         this.emit({ kind: 'goal', goal: r.goal ?? null });
       } catch (e) {
         this.emit({ kind: 'toast', message: 'Could not set the goal: ' + describe(e) });
+      }
+    });
+  }
+
+  /** "Compact" in the footer: Codex summarizes the open chat now (the reply events show it like a turn). */
+  compact(permissions: string): void {
+    const t = this._threadId;
+    if (t === null || this.turnId !== null) return;
+    void this.submit(async () => {
+      try {
+        const c = await this.connectBlocking();
+        await this.ensureThread(c, this._threadCwd ?? '', '', permissionSettings(permissions));
+        await withTimeout(c.compactThread(t), 60_000, 'thread/compact/start');
+      } catch (e) {
+        this.emit({ kind: 'toast', message: 'Could not compact the context: ' + describe(e) });
+        this.emit(ev('idle'));
       }
     });
   }
@@ -977,7 +995,8 @@ export class CodexSession {
         const c = await this.connectBlocking();
         if (this._threadId !== id) undoLeave = this.leaveOpenThread();   // the open chat's reply goes on in the background
         const t0 = Date.now();
-        const r = await withTimeout(c.resumeThread(id, null, null, null, permissionSettings(this.host.permissionsPref()).reviewer), 60_000, 'thread/resume');
+        const r = await withTimeout(c.resumeThread(id, null, null, null, permissionSettings(this.host.permissionsPref()).reviewer, this.host.threadExtras?.(true) ?? {}),
+          60_000, 'thread/resume');
         const t1 = Date.now();
         const thread = r.thread;
         let turns: Json[] = Array.isArray(thread?.turns) ? thread.turns : [];

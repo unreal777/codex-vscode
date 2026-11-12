@@ -66,6 +66,26 @@ Codex itself is downloaded and kept up to date by the extension. You sign in wit
 - **Save changes** (Ctrl+S) replaces the attached picture, so Codex sees what you circled.
 - **Sketch** (in the **+** menu) starts from a blank page.
 
+### Commit messages with Codex
+
+![Source Control: the Codexter button writes the commit message from the staged changes](media/readme/commit.gif)
+
+- The Codexter button in the **Source Control** view (or *Codexter: Generate commit message*) writes the message from the staged changes. With nothing staged, it uses all changes.
+- It runs a fast model of its own (`commitMessageModel`, GPT-6 Luna by default), separate from the chat.
+- The run is read-only and stays out of your History.
+
+### Tell Codex how to answer, and keep the context small
+
+- **Instructions** (gear > Instructions) apply to every new chat, for example "answer briefly, in plain language". Ready-made lines are one click away.
+- You choose where the instructions live:
+  - **Codex's own** are written to `developer_instructions` in `~/.codex/config.toml`, so the Codex CLI uses them too;
+  - **Only in Codexter** keeps them in VS Code.
+- **Open AGENTS.md** opens Codex's global `AGENTS.md` for longer rules.
+- **Compact** next to the context usage in the footer makes Codex summarize the chat right away, and the chat goes on from the summary.
+- **Compact a chat at** (gear > Context) sets when Codex compacts on its own:
+  - a smaller limit keeps replies faster and uses less of your limits;
+  - a bigger one keeps more details.
+
 ### MCP servers without editing TOML
 
 ![MCP settings: check a server, switch one on, copy one from VS Code, add one by name with AI](media/readme/mcp.gif)
@@ -81,7 +101,6 @@ Find them under the gear > **MCP servers**. Codex uses the same servers in the C
 ## More
 
 - **Models and modes:** the model and reasoning effort pickers sit under the input; the **+** menu turns on **plan mode**, sets a **goal** (Codex keeps working towards it) and adds **plugins**. Defaults for new chats and the models shown are in the gear's settings.
-- **Commit messages:** the Codexter button in the Source Control view (or *Codexter: Generate commit message*) writes the message from the staged changes (all changes when nothing is staged), with a fast model of its own (`commitMessageModel`, GPT-6 Luna by default). The run is read-only and stays out of your History.
 - **Per project and branch:** opening a project reopens its last chat; every git branch remembers the chat used on it for 30 days, and checking the branch out opens it.
 - **Codex is managed for you:** downloaded from the npm registry into `%LOCALAPPDATA%\CodexPanel\codex`, checked for updates every 7 days, shared with the Eclipse plugin. Proxies (`http.proxy`, `HTTPS_PROXY`) are used for the download and handed to Codex.
 - **Fits the theme:** colours and fonts follow VS Code; the font size follows VS Code's panels or `codexPanel.fontSize`.
@@ -116,6 +135,9 @@ The panel opens in the secondary side bar (VS Code 1.106+; the activity bar befo
 | `codexPanel.hiddenModels` | none | Models hidden from the picker |
 | `codexPanel.commitMessageModel` | `gpt-6-luna` | Model for commit messages and the AI search |
 | `codexPanel.commitMessageEffort` | `low` | Reasoning effort for both |
+| `codexPanel.instructionsSource` | `codex` | Whose instructions new chats get: Codex's own or `codexter` |
+| `codexPanel.instructions` | empty | Codexter's own instructions |
+| `codexPanel.autoCompactTokens` | 0 (Codex's) | Compact a chat when its context reaches this many tokens |
 | `codexPanel.systemNotifications` | on | Notifications of the system while VS Code is in the background |
 | `codexPanel.fontSize` | 0 (like VS Code) | Font size of the panel |
 | `codexPanel.autosave` | on | Save modified editors before a message is sent |
@@ -140,7 +162,7 @@ Run it from source: open this folder in VS Code and press F5 (Extension Developm
 changes in `HANDOFF.md`.
 
 - `src/core/` has no vscode imports: `jsonrpc`, `appServer`, `locator`, `installer`, `tar`, `http` (proxy tunnelling), `fileLinks`, `fileIndex`,
-  `threadRows`, `droppedPaths`, `unifiedDiff`, `aiSearch`, `mcpServers`, `chatList`, `osNotify`, `rollout`.
+  `threadRows`, `droppedPaths`, `unifiedDiff`, `aiSearch`, `mcpServers`, `chatList`, `osNotify`, `rollout`, `instructions`.
 - `src/session.ts`, `src/updater.ts` (no vscode imports): the Codex session and the updater.
 - `src/extension.ts`, `panel.ts` (webview view), `chatActivity.ts`, `mcpSettings.ts`, `imageEditor.ts`, `dropTarget.ts`, `workspace.ts`,
   `mentions.ts`, `diff.ts`, `proxy.ts`: the VS Code glue.

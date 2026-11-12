@@ -1,7 +1,9 @@
 // The Codex chat view: a webview showing media/web (the same page as the Eclipse plugin), wired to the shared CodexSession.
 // Port of CodexView.java. Host -> page: webview.postMessage(array of events) -> window.codexUi.receive (see media/vscode-bridge.js).
 // Page -> host: window.__codexPost(JSON string) -> onDidReceiveMessage.
+import { agentsFile, codexInstructionsOf, InstructionsSource, sanitizeContextSettings } from './core/instructions';
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { resolveDropped } from './core/droppedPaths';
@@ -56,9 +58,11 @@ export interface PanelSettings {
   commitMessageModel: string; commitMessageEffort: string;
   /** system notifications while VS Code is in the background (else VS Code's own) */
   systemNotifications: boolean;
+  /** core/instructions.ts: whose instructions new chats get, Codexter's own text, the auto-compact limit (0 = Codex's) */
+  instructionsSource: InstructionsSource; instructions: string; autoCompactTokens: number;
 }
 const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort',
-  'systemNotifications'];
+  'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 /** '' = a new chat keeps the permissions used last */
 const PERMISSIONS = ['', 'ask', 'auto', 'full', 'custom'];
@@ -72,7 +76,7 @@ export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
   return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '',
     defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize),
     commitMessageModel: s(o?.commitMessageModel), commitMessageEffort: EFFORTS.includes(s(o?.commitMessageEffort)) ? s(o?.commitMessageEffort) : '',
-    systemNotifications: o?.systemNotifications !== false };
+    systemNotifications: o?.systemNotifications !== false, ...sanitizeContextSettings(o) };
 }
 
 /** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
@@ -248,6 +252,26 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     }
   }
 
+  /** Codex's own instructions (developer_instructions of config.toml): read, or written first when text is given ('' removes them). */
+  private async codexInstructions(text: string | null): Promise<void> {
+    const agents = agentsFile({ ...process.env });
+    try {
+      const c = await this.session.appServer();
+      if (text !== null) await c.writeConfig([{ keyPath: 'developer_instructions', value: text.trim() === '' ? null : text.trim() }]);
+      const r = await c.readConfig();
+      this.post({ kind: 'codexInstructions', text: codexInstructionsOf(r), agents, saved: text !== null });
+    } catch (e) {
+      this.post({ kind: 'codexInstructions', text: null, agents, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  /** Codex's global AGENTS.md in an editor; a new (unsaved) one when there is none yet. */
+  private async openAgentsFile(): Promise<void> {
+    const f = agentsFile({ ...process.env });
+    const uri = fs.existsSync(f) ? vscode.Uri.file(f) : vscode.Uri.file(f).with({ scheme: 'untitled' });
+    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(uri));
+  }
+
   /** The view title gear: the page toggles its own settings view. */
   showSettings(): void {
     this.post({ kind: 'showSettings' });
@@ -418,6 +442,18 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         break;
       case 'settingsSave':
         this.saveSettings(m);
+        break;
+      case 'compact':
+        this.session.compact(this.prefs.permissions());
+        break;
+      case 'instrRead':
+        void this.codexInstructions(null);
+        break;
+      case 'instrWriteCodex':
+        void this.codexInstructions(typeof m.text === 'string' ? m.text : '');
+        break;
+      case 'openAgents':
+        void this.openAgentsFile();
         break;
       case 'threadAction': {
         const a = str(m, 'action'), id = str(m, 'threadId');
