@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.cod
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.8.2)
+## Status (0.8.3)
+
+- 0.8.3: README highlights only what Codexter adds to a Codex chat. See "0.8.3".
 
 - 0.8.2: README: section on the chat of the last session and of each git branch; drag and drop moved up. See "0.8.2".
 
@@ -63,6 +65,12 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.8.3
+
+- README: the Highlights keep only what Codexter adds to a plain Codex chat (chats per project and branch, tabs and notifications,
+  AI search, commit messages, picture editor, #sym and lists, drag and drop, MCP, instructions and context); the usual chat
+  (cards, approvals, Markdown, diffs, pickers) is one short section "The chat itself" with chat.gif. The repository is public now.
 
 ## 0.8.2
 
