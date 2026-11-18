@@ -6,7 +6,7 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as net from 'node:net';
 import * as path from 'node:path';
-import { CodexInstaller, checkDue, checkUrl, compareVersions, digestFile, parseManifest, platformTag, readState, verifyIntegrity } from '../core/installer';
+import { CodexInstaller, checkDue, checkUrl, compareVersions, digestFile, exeName, parseManifest, platformTag, readState, verifyIntegrity } from '../core/installer';
 import { extractTarGz } from '../core/tar';
 import { locate } from '../core/locator';
 import { paxRecord, tgz, tmpDir } from './helpers';
@@ -43,7 +43,7 @@ test('manifest: only stable per-platform versions are accepted', () => {
   assert.throws(() => parseManifest(sha1, 'win32-x64'), /lacks tarball\/sha512/);
   const evilTarball = { name: '@openai/codex', version: '0.166.0-win32-x64', dist: { tarball: 'https://evil.example.com/x.tgz', integrity: 'sha512-AAAA' } };
   assert.throws(() => parseManifest(evilTarball, 'win32-x64'), /refusing/);
-  assert.match(platformTag(), /^win32-(x64|arm64)$/);
+  assert.match(platformTag(), /^(win32|linux|darwin)-(x64|arm64)$/);
 });
 
 test('version compare', () => {
@@ -150,21 +150,22 @@ test('integrity: right sha512 passes; flipped byte, wrong hash and sha1 are reje
   const r = { version: '9.9.9', tarball: 'https://registry.npmjs.org/x.tgz', integrity: expected };
   await assert.rejects(inst.installFromFile(badFile, r, noProgress), /integrity check failed/);
   assert.ok(!fs.existsSync(path.join(base, 'codex/9.9.9')) && !fs.existsSync(path.join(base, 'codex/.tmp-9.9.9')), 'nothing installed after rejection');
-  await assert.rejects(inst.installFromFile(goodFile, r, noProgress), /codex\.exe not found/);
+  await assert.rejects(inst.installFromFile(goodFile, r, noProgress), /codex(\.exe)? not found/);
   assert.ok(!fs.existsSync(path.join(base, 'codex/.tmp-9.9.9')) && !fs.existsSync(path.join(base, 'codex/9.9.9')), 'tmp dir removed after failed install');
   assert.ok(!fs.existsSync(path.join(base, 'codex/current.json')), 'current.json untouched by a failed install');
 });
 
-// The one executable we can fake without shipping a binary: node.exe prints "v<version>" for --version, and the installer only
-// requires that the output contains the version string.
-test('full install from file: layout, current.json format, previous version, cleanup (Windows)', { skip: process.platform !== 'win32' }, async () => {
+// The one executable we can fake without shipping a binary: node prints "v<version>" for --version, and the installer only
+// requires that the output contains the version string. Runs on every platform: on macOS and Linux the file is "codex" and must
+// come out of the archive executable (mode 755), or the validation could not start it.
+test('full install from file: layout, current.json format, previous version, cleanup', async () => {
   const dir = tmpDir('installer-full-');
   const version = process.versions.node;
-  const triple = 'x86_64-pc-windows-msvc';
+  const triple = process.platform === 'win32' ? 'x86_64-pc-windows-msvc' : process.platform === 'darwin' ? 'aarch64-apple-darwin' : 'x86_64-unknown-linux-musl';
   const archive = path.join(dir, 'codex.tgz');
   fs.writeFileSync(archive, tgz([
     { name: 'package/package.json', content: '{}' },
-    { name: `package/vendor/${triple}/bin/codex.exe`, content: fs.readFileSync(process.execPath) },
+    { name: `package/vendor/${triple}/bin/${exeName()}`, content: fs.readFileSync(process.execPath), mode: 0o755 },
     { name: `package/vendor/${triple}/codex-resources/helper.txt`, content: 'helper' },
   ]));
   const integrity = 'sha512-' + (await digestFile(archive)).toString('base64');
@@ -176,7 +177,7 @@ test('full install from file: layout, current.json format, previous version, cle
   fs.mkdirSync(path.join(root, '0.0.9'), { recursive: true });
   fs.mkdirSync(path.join(root, '.tmp-0.2.0'), { recursive: true });
   fs.writeFileSync(path.join(root, '.dl-0.2.0.tgz'), 'partial');
-  const exe010 = path.join(root, '0.1.0', 'vendor', 'codex.exe');
+  const exe010 = path.join(root, '0.1.0', 'vendor', exeName());
   fs.writeFileSync(exe010, 'x');
   fs.writeFileSync(path.join(root, 'current.json'), JSON.stringify({
     version: '0.1.0', exePath: exe010, installedAt: '2026-11-04T12:51:25.165428700Z', lastCheck: '2026-11-04T14:12:19.647810100Z',
@@ -192,7 +193,7 @@ test('full install from file: layout, current.json format, previous version, cle
   const state = readState(base);
   assert.equal(state.version, version);
   assert.equal(state.previous, '0.1.0');
-  assert.equal(state.exe, path.join(root, version, 'vendor', triple, 'bin', 'codex.exe'));
+  assert.equal(state.exe, path.join(root, version, 'vendor', triple, 'bin', exeName()));
   assert.ok(fs.existsSync(state.exe as string));
   assert.ok(fs.existsSync(path.join(root, version, 'vendor', triple, 'codex-resources', 'helper.txt')), 'helpers next to codex.exe');
   assert.ok(!fs.existsSync(path.join(root, '.tmp-' + version)), 'no temp folder left');

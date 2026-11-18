@@ -1,11 +1,17 @@
 # Codexter (Codex Panel for VS Code): handoff
 
-Visible name is **Codexter** since 0.4.0. The extension id stays `codexpanel.codex-panel`, the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
+Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.codex-panel` since 0.9.0 (Marketplace publisher UnrealDeveloper; 0.8.x and older were `codexpanel.codex-panel`, a different extension for VS Code: uninstall it before installing 0.9.0), the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
 
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.8.4)
+## Status (0.10.0)
+
+- 0.10.0: code review triage, MCP tool approvals, Clarify side chats (also under plans), README GIFs for review and Clarify.
+  Their notes are the last entries of "0.9.0".
+
+- 0.9.0: the managed Codex install works on macOS and Linux too (not tried on real machines); MIT licence, icon,
+  "unofficial" wording and PUBLISHING.md for the Marketplace. See "0.9.0".
 
 - 0.8.4: rename a chat (History pencil, F2, double click on a tab or the title). See "0.8.4".
 
@@ -67,6 +73,175 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.9.0
+
+- Managed Codex install on macOS and Linux (x64, arm64), until now Windows only:
+  - `installer.ts`: `platformTag(platform, arch)` gives the npm dist-tag (`win32|linux|darwin`-`x64|arm64`; anything else throws
+    "there is no managed Codex install for ..."), the STABLE regex accepts those six, `exeName()` is `codex.exe` on Windows and
+    `codex` elsewhere, `findExe` looks for it in `vendor/<triple>/bin`. The npm packages have the same layout on every platform
+    (checked for 0.167.2: `vendor/x86_64-unknown-linux-musl/bin/codex`, `vendor/aarch64-apple-darwin/bin/codex`, no links).
+  - `tar.ts`: a file that is executable in the archive gets mode 755, everything else 644 (`headerMode`, `fileModeFor`; setuid and
+    write bits for others are never kept); chmod after writing on macOS and Linux. Without it `codex --version` could not start.
+  - `locator.ts`: `codex` on the PATH that is npm's link to `.../@openai/codex/bin/codex.js` is replaced by the native executable
+    of the package behind it (`nativeBehindShim`), so no `node` is needed on VS Code's PATH. `globVendor` uses `exeName()`.
+  - The copy lives in the extension's global storage there (`extension.ts codexBase`: no LOCALAPPDATA); on Windows nothing changed,
+    it is still `%LOCALAPPDATA%\CodexPanel`, shared with the Eclipse plugin.
+  - NOT tried on a real macOS or Linux machine (no WSL or Docker here). Checked on Windows: the real `linux-x64` and `darwin-arm64`
+    packages pass the manifest check, the sha512 check and the tar reader, and `findExe` finds `bin/codex`. Open points there:
+    the first start of the downloaded binary (Gatekeeper on macOS), the sign-in round trip, the Linux sandbox (bwrap).
+    The full install test (`installer.test.ts`) runs on every platform now and would show a mode problem.
+  - Texts: README (platform note, where Codex is stored), INSTALL.md, INSTALL.de.md, the `codexPath` setting and the two error
+    messages no longer say Windows or `codex.exe` only.
+- For the Marketplace (made by the publishing session, see `PUBLISHING.md`): `LICENSE` is MIT with a note on the bundled
+  licences, `package.json` has `license`, `icon` (`media/icon.png`, 256x256, drawn from `media/readme/icon.svg`: two chat bubbles, `</>` and "..."; the side bar icon `media/codex.svg` is its outline), `keywords` (codex, openai, chatgpt, gpt, ai chat, ...), the
+  `displayName` "Codexter: chat for OpenAI Codex (unofficial)" (no "GPT" in the name: OpenAI's brand rules) and a new `description`;
+  `scripts/package.mjs` no longer passes `--skip-license`; the README intro says "unofficial", where Codex is downloaded from,
+  and that the project is not affiliated with OpenAI. 0.9.0 is on the Marketplace.
+- Tests: `src/test/platforms.test.ts`.
+- Draw on an attached image file: a file chip of a png/jpg/jpeg/gif/webp/bmp (dropped, picked, @) opens in the drawing editor tab
+  instead of VS Code's image viewer (`imageFileOpen`; the host reads it with `core/imageFile.ts imageFileUrl`, max 25 MB). Save
+  sends `imageEdited` with key `file:<path>`; the page attaches the drawn-on picture (scaled to 2048 px like a pasted one,
+  `addImageSrc`) and removes the file chip (`replaceFileWithImage`). The file on disk is never changed. Test in `chats.test.ts`.
+- Chat names by AI (`core/chatTitle.ts`, `session.autoName`, setting `codexPanel.autoChatNames` auto | first | off, default auto):
+  after a `turn/completed` with status completed (open or background chat) the answers are counted per chat (`answerCounts`; read
+  once with `thread/read`, then counted). After the 1st and every 5th answer: `thread/read` with turns, `transcriptOf` (user text
+  without the extension's context lines, last answer of each turn), `buildTitlePrompt` (first message + the latest 7, 800 chars
+  each, the current name) to `host.ask` (the quick model), `cleanTitle`, `renameThread(id, title, auto = true)`.
+  Named by hand = the chat's name differs from the one the AI gave it (`host.autoNameOf`, globalState `codexPanel.autoNames`,
+  the newest 2000); a manual rename deletes the entry. `host.renamed` updates the tab (the panel no longer does).
+  The sparkle in the rename input (`suggestTitle` -> `titleSuggested`) only fills the input; Enter on the unchanged suggestion
+  renames with `auto: true`. Not yet seen with a real turn: whether `thread/read` right after `turn/completed` already counts that
+  turn (if not, the first name comes one answer later). Tests: `src/test/chatTitle.test.ts`.
+- Dictation (mic button, Windows; setting `codexPanel.dictation`, default on). Findings first:
+  - VS Code webviews can not use the microphone (the webview iframe `allow` has no `microphone`; getUserMedia gives
+    NotAllowedError, checked in VS Code 1.146), so the extension records: `media/mic-win.ps1` (PowerShell + C# over winmm waveIn
+    through the wave mapper, 24 kHz 16-bit mono, one base64 line per 100 ms, READY first, "stop" on stdin; ~0.8 s to READY).
+    `core/micRecorder.ts` starts it. macOS/Linux have no recorder yet (`micSupported`), the button is hidden there.
+  - No Codex model takes audio (model/list: text and image only; a `localAudio` input is ignored: "I can't access the audio").
+    What works with the ChatGPT sign-in is the experimental voice mode `thread/realtime/*` (only with `--experimental` in the
+    schema; text output needs `version: "v2"`): it transcribes the user well (Russian checked), but the voice model answers and
+    hands tasks to Codex (`background_agent` -> a turn); the prompt does not stop that.
+  - So `session.startDictation(owner)`: recorder starts at once (audio queued), `thread/start` ephemeral read-only in the temp
+    folder (never in the History), `thread/realtime/start` {outputModality text, v2, websocket, includeStartupContext false};
+    on `thread/realtime/started` the queue is sent (`appendAudio`), then live. Only `thread/realtime/transcript/done` with role
+    user is used (`dictationText`, put in at the caret by the page); assistant text is dropped; `turn/started` there is
+    interrupted at once. Every notification of a dictation chat is swallowed (`dictThreads`), even after it ended.
+  - Stop (button, Esc, 10 min, recorder end): recorder stops, 1.2 s of silence ends the last segment, waits for the open
+    segments' text (`speaking`, at most 8 s), `thread/realtime/stop`. Events carry `owner` (the view id); the panel's sink drops
+    other views' ones.
+  - Checked against the real Codex with a synthesized Russian WAV through `CodexSession` (text in ~1-2 s per phrase, stop 1.6 s),
+    and the recorder alone on the real microphone (counts only). Not yet: a real voice through the whole thing, and how much of
+    the plan's usage it costs. Tests: `src/test/dictation.test.ts`.
+  - Level meter: every recorded 100 ms chunk gives a `dictationLevel` event (`pcmLevel`: RMS in dBFS, -55..-10 dB -> 0..1); the
+    page draws 21 bars left of the mic button (`#micwave`, newest on the right) while listening.
+  - The panel's own settings (gear) have the dictation switch with the warning (experimental, its own voice model, tokens)
+    and the AI chat names choice, under the quick model; both are `PanelSettings` keys. `init.dictation` is only whether
+    the host can record; the button shows when that and `settings.dictation` are true, and turning it off stops a dictation.
+  - Languages (`codexPanel.dictationLanguages`: an array of codes from the fixed list `LANGUAGES` of
+    `core/dictationLanguages.ts`, default `["en"]`, `[]` = any; the panel shows a checkbox multi-select, list sent in
+    `init.dictationLangs`; no free text on purpose). `thread/realtime/start` has no language option (only voice, model,
+    prompt and instructions), and the user once got a Chinese phrase for noise. The names go into the voice model's prompt
+    (effect on the transcription not measured), and a user phrase whose letters are at least a third in a script none of the
+    languages uses is dropped (`dictationDropped` -> toast "say it again"). Latin always passes (code names).
+- Open on startup (`codexPanel.openOnStartup`, off; gear checkbox under System notifications): at activation
+  (`onStartupFinished`) `showView()` reveals the view of this VS Code's side bar, which replaces the container shown last there
+  (Copilot Chat); then the keyboard goes back to the active editor. Checked in the isolated VS Code: secondary side bar closed,
+  restart with the setting on, Codexter is shown (that profile has no Copilot, so the swap from Copilot Chat itself was not seen).
+- Edit the last message / Fork from an answer. Checked on throwaway chats in a temp folder (deleted afterwards): new chats are
+  `historyMode: "paginated"` (the user's recent ones too); `thread/revert {threadId, beforeTurnId}` drops that turn and all later
+  ones (history only, files stay), the next `turn/start` goes on from there; `thread/fork {threadId, lastTurnId}` copies the
+  turns through that one. A source chat can NOT be deleted while a fork of it exists ("forked history still references it").
+  - Page: every `.turn` has `data-turn` (turn id from `thread` turns and `turn/started`). The pencil (`.uedit`, last turn only,
+    CSS `#feed > .turn:last-child`) puts the message's text and pictures into the input (`state.edit`, `#editbar`, Esc/Cancel
+    restore the draft) and interrupts a running reply. Sending posts `replaceTurnId`, removes that turn from the feed
+    (`dropEditedTurn`) and ignores late events of it (`droppedTurns`). Context chips of the old message are not restored.
+  - Host: `SendRequest.replaceTurnId` -> `session.cutTurn` (waits up to 15 s for an interrupted reply, `thread/revert`); on
+    failure: toast, the typed text back into the input (`focus` event), the chat resumed, nothing sent.
+  - Fork (`.afork` under the final answer of each finished turn, added in `endTurn`): `session.forkFrom(turnId, permissions)`
+    -> `thread/fork` (lastTurnId, cwd and permissions of the chat, excludeTurns), name "<title> (fork)" (AI may rename it later),
+    `resume(fork)` opens it. Tests: `src/test/editfork.test.ts`.
+  - Deleting a chat that has forks: `thread/delete` fails with "forked history still references it" (`FORK_REFUSAL`); the
+    session then finds the forks (`forksOf`: thread/list rows carry `forkedFromId`, live and archived chats, forks of forks,
+    ordered so a fork's forks come first) and answers the failed delete with `forks: [{id, title}]`. The History row asks
+    "N forks use this chat. Delete them too?" (`hist.forkAsk`); "Delete all" sends `deleteWithForks`: each fork is deleted
+    (a `threadAction` with `quiet: true` per fork, no toast), then the chat.
+- Code review triage (port of the user's old Copilot review tool): **+ > Code review** (VS Code host) or the command `codexPanel.review` (-> `startReview` event) asks the host for the project's
+  `REVIEW_INSTRUCTIONS.md` (`core/reviewFile.ts`: from the chat's folder up to the repository root; an open editor counts, unsaved text
+  too; gear > Code review links to it or creates it from `TEMPLATE`; no file or an empty one = `DEFAULT_PROMPT` and a toast) and sends it plus a format part (`FORMAT_MARK` "---\nCodexter review
+  format ...") as a normal turn in the open chat; text in the input is added as "For this review: ...". Codex ends its answer with
+  a fenced block ` ```codexter-findings ` holding `{"findings": [{severity, file, line, title, problem, fix, locations?}]}`.
+  - All logic is in `web/review.js` (`window.CodexReview`, pure, loaded by the Node tests from media/web): request / isRequest /
+    displayText, findBlock / hideBlock / parse (lenient: filePath, "a.ts:12", suggestedFix, description, ...; severity words map to
+    critical | medium | suggestion = red / yellow / green), the triage state (start, decide, back, goTo: an answer moves to the next
+    open card, wrapping; all answered = the overview; a change after that returns to it), summary / isSummary / parseSummary.
+  - app.js: `addUser` shows a review request without the format part (tag "Code review", no Edit pencil, `turn.dataset.review`);
+    `renderAgent` never shows the block (a spinner "Preparing the findings..." while it streams); `endTurn` -> `attachReview` puts
+    the cards (`.review`, `renderTriage`, `rvCard`, `rvOverview`) into the final answer. No block in a review turn that completed:
+    toast, the answer stays. Broken JSON: toast, the raw answer is shown. "Send answers to Codex" -> `sendText(summary)` (same chat,
+    no context chips, refused while a reply runs). The answers live in `reviewMem` (turn id -> state) for the page's life; a loaded
+    chat whose next message is "Codexter review answers ..." shows the review as sent with those answers (`settleReview`).
+  - Not used: the app-server's own `review/start` (Codex 0.167 schema): its target is uncommittedChanges | baseBranch | commit |
+    custom instructions, and the result is an `exitedReviewMode` item with the review as plain text, no structured findings, and
+    Codex's own review prompt; dynamic tools were not needed since all findings come at once at the end.
+  - dev page: `fixture=synthetic-review&host=vscode&autoplay=0` (+ > Code review; 5 findings; the answers get a short reply).
+    Tests: `src/test/review.test.ts`.
+- MCP tool approvals (found in the live check of the code review, 2026-11-17): Codex asks before an MCP tool call (e.g.
+  serena `replace_content`) with the server request `mcpServer/elicitation/request`; until now `appServer.ts` answered
+  "Unsupported by Codex Panel" and Codex reported "user rejected MCP tool call" (no file changed through such tools).
+  - Shape (codex 0.167.2 schema, `McpServerElicitationRequestParams` / `...Response`): params `{threadId, turnId?, serverName,
+    mode: form | openai/form | openaiForm | url, message, requestedSchema?, url?, elicitationId?, _meta?}`; response
+    `{action: accept | decline | cancel, content?, _meta?}`. Codex's own tool approval is a form with an empty schema and
+    `_meta.codex_approval_kind: "mcp_tool_call"`, `persist` (offered: "session" / "always"), `tool_title`, `tool_params`
+    (key names seen in the codex binary; `tool_params_display` handled as text or a list of {name|display_name, value}).
+  - `core/elicitation.ts elicitationResponse(params, decision)`: decline -> `{action: decline, content: null}`, accept ->
+    `{action: accept, content: <schema defaults, {} for the tool approval>}` (url mode: content null), acceptForSession ->
+    plus `_meta: {persist: "session"}` when Codex offers it. `session.ts` registers the method beside the other approvals
+    (same pendingApprovals / background replay), `approve()` answers through it.
+  - Page: `approvalCard` -> `elicitationCard`: "Codex wants to use the MCP tool <tool> (<server>)", the message, the arguments;
+    Allow / Allow for session (only if `persist` has "session") / Deny (`decisionCard`, shared with the other approvals).
+    Any other elicitation: "The MCP server <name> asks", the message, a URL link (`data-url` -> openUrl) for url mode, Allow / Deny.
+  - Not done: a form for elicitations with real fields (accept sends only the schema defaults); "always" persistence is not
+    offered. Not yet seen with a real turn (only the fake app-server and the dev page with injected events).
+    Tests: `src/test/elicitation.test.ts`.
+- Clarify side chats (a question about one answer without touching the main chat; built after 0.9.0's fork, verified live 2026-11-17):
+  - A side chat is a `thread/fork {lastTurnId}` of the open chat at that answer's turn, made with the FIRST question (an opened
+    pane that is closed unasked leaves nothing behind): `session.sideAsk` -> `sideCreate` (reads the parent with `thread/read` to
+    get `base` = number of the main chat's turns in the fork, forks with `sandbox: 'read-only'`, `approvalPolicy: 'never'`,
+    names it "↳ Clarify: <first words of the answer>"). Every turn is `turn/start` with `approvalPolicy never` and
+    `sandboxPolicy readOnly`; the question text gets `SIDE_MARK` in front (keeps Codex on the question, cut again when shown).
+    After a restart of the app-server the side chat is `thread/resume`d read-only first (`sideLoaded`). Checked in the rollout
+    files of a real run: the side chat has `sandbox_policy read-only`, `approval_policy never`, `forked_from_id` = the main chat;
+    the main chat's rollout has no trace of the questions (one turn, workspace-write as before).
+  - The link store `core/sideChats.ts`: parent chat -> answer (turn id) -> [{id, at, title, base}], in globalState
+    `codexPanel.sideChats` (host `sideLinks` / `saveSideLinks`; the session keeps a copy and re-reads on every change, since another
+    window shares globalState; at most 400 parent chats). Nothing is written into the chats. Codex has no free metadata field on
+    a thread, so this is the only link; losing it only loses the badge (the side chats stay in Codex, named with the arrow).
+  - Hidden from the History: `listThreads` and `aiSearch` skip rows whose id is in the store or whose name starts with
+    `SIDE_PREFIX` ("↳ ", survives a lost store). Not hidden from `forksOf`, so deleting the parent chat offers "N forks ... delete
+    them too" with the side chats listed, and a delete (or delete with forks) also forgets their links (`forgetSide`).
+    Never counted as a chat: no tab, no unread mark, no notification, no AI name, no `chatUsed` / `threadChanged`.
+  - Events: a notification whose threadId is a side chat goes to `sideNotification` -> `sideEvent {id, method, params}` (turn and
+    item events, deltas, errors) and never to the main feed; approvals / MCP elicitations of a side chat are declined at once
+    (`sideEvent sideDenied` -> a note). `sideOpen {parent, turnId, side, turns, running, created?, error?}` (turns = the side chat's own,
+    `sideTurns`), `sideLinks {threadId, links}` (sent after a chat is opened when it has links, and after a change).
+    Failures come as `sideEvent sideFailed`. Page -> host: `sideAsk`, `sideShow`, `sideInterrupt` (panel.ts).
+  - Page (app.js "Clarify"): `.aside` button after `.afork` under the final answer of a finished turn (also in a review answer: the triage cards stay
+    above the buttons, checked on the dev page); "Clarify" or "N clarifications" (blue, always visible). The pane
+    `#side` slides in over the chat from the right (`#side-backdrop` closes it, Esc, back arrow), header "↳ Clarifying" + the
+    first words of the answer, the source answer gets a blue bar (`.side-src`), tabs 1..n and "+ New", a note (read-only, what is
+    known, cost), own feed with its own small renderer (user bubble, markdown answer streaming, status line with the running
+    command), own input (Enter sends, Shift+Enter newline, the send button is Stop while a reply runs). Leaving the chat
+    (`stashChat`, `resetConversation`) closes the pane. dev page: mock `sideAsk` / `sideShow` (`&sidefail=1`).
+  - Not done: removing one side chat from the pane (delete the parent chat to clean up), model / effort are the chat bar's, a reply
+    that was running when the pane was reopened shows its end only (no partial text), no pane while another overlay (History,
+    settings) is open on purpose (it covers them). Tests: `src/test/side.test.ts`.
+  - Throwaway chats of the live check (isolated VS Code, folder %TEMP%\codexter-clarify-demo): main
+    01a1e9bc-e918-7fa3-bf4a-6a0a16e2fafd ("Explaining Shop Total and Discount Functions") and its hidden side chat
+    01a1e9bd-b307-7961-ade8-3a74d0c099bb.
+- Opening a chat that is not kept in the page (History, tab): `openChat(id, title)` shows `#chatload` (spinner, "Opening
+  chat...", the title) over the dimmed feed (`#feed.dim`) after 150 ms, until the `thread` event, an `error`, `newChat` or 90 s.
+  A kept chat (chatCache) opens at once without it.
 
 ## 0.8.4
 

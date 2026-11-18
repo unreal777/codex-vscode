@@ -1,4 +1,5 @@
 // Codexter (Codex Panel) for VS Code: entry point. Wires the session, the webview view, commands and the workspace glue.
+import { DEFAULT_LANGUAGES } from './core/dictationLanguages';
 import { sanitizeContextSettings, threadExtras } from './core/instructions';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -9,6 +10,7 @@ import { ChatActivity } from './chatActivity';
 import { ImageEditor } from './imageEditor';
 import { generateCommitMessage } from './commitMessage';
 import { DEFAULT_QUICK_MODEL, mcpServerNames, readCodexConfig, runCodexExec } from './core/commitMessage';
+import { micSupported, startWindowsRecorder } from './core/micRecorder';
 import { locate } from './core/locator';
 import { DiffProvider } from './diff';
 import { DROP_VIEW_IDS, DropTarget } from './dropTarget';
@@ -22,10 +24,16 @@ import { fsPathOf, WorkspaceBridge } from './workspace';
 let session: CodexSession | undefined;
 /** workspaceState key: id of the chat that was open in this project. */
 const LAST_THREAD_KEY = 'codexPanel.lastThread';
+/** thread id -> the name the AI gave it (globalState, the newest AUTO_NAMES_MAX) */
+const AUTO_NAMES_KEY = 'codexPanel.autoNames';
+const AUTO_NAMES_MAX = 2000;
+/** parent chat -> answer -> its Clarify side chats (globalState, see core/sideChats.ts) */
+const SIDE_LINKS_KEY = 'codexPanel.sideChats';
 
 /**
- * Directory holding the managed Codex copy (<base>/codex/...): %LOCALAPPDATA%\CodexPanel, the same folder the Eclipse plugin uses,
- * because Codex is ~500 MB and both IDEs must not break each other. Falls back to the extension's global storage.
+ * Directory holding the managed Codex copy (<base>/codex/...). Windows: %LOCALAPPDATA%\CodexPanel, the same folder the Eclipse
+ * plugin uses, because Codex is ~500 MB and both IDEs must not break each other. macOS and Linux (no LOCALAPPDATA), or when that
+ * folder can not be made: the extension's global storage.
  */
 function codexBase(ctx: vscode.ExtensionContext): string {
   const local = process.env.LOCALAPPDATA;
@@ -97,6 +105,25 @@ export function activate(ctx: vscode.ExtensionContext): void {
       model: quick.model(), effort: quick.effort(), mcpOff: quick.mcpOff(), timeoutMs: 120_000, log, tag: 'search' }),
     threadExtras: (forResume) => threadExtras(sanitizeContextSettings({ instructionsSource: cfg().get('instructionsSource'),
       instructions: cfg().get('instructions'), autoCompactTokens: cfg().get('autoCompactTokens') }), forResume),
+    // AI chat names: the setting, and the names the AI gave (a chat renamed by hand is left alone)
+    autoNameMode: () => cfg().get<string>('autoChatNames', 'auto'),
+    autoNameOf: (id) => ctx.globalState.get<Record<string, string>>(AUTO_NAMES_KEY, {})[id],
+    rememberAutoName: (id, name) => {
+      const all = { ...ctx.globalState.get<Record<string, string>>(AUTO_NAMES_KEY, {}) };
+      if (name === null && !(id in all)) return;
+      delete all[id];   // re-added last: the oldest go first when the list is full
+      if (name !== null) all[id] = name;
+      const ids = Object.keys(all);
+      for (const old of ids.slice(0, Math.max(0, ids.length - AUTO_NAMES_MAX))) delete all[old];
+      void ctx.globalState.update(AUTO_NAMES_KEY, all);
+    },
+    renamed: (id, name) => activity?.title(id, name),
+    // Clarify side chats: which answers have which side chats (never written into the chats themselves)
+    sideLinks: () => ctx.globalState.get<unknown>(SIDE_LINKS_KEY),
+    saveSideLinks: (store) => { void ctx.globalState.update(SIDE_LINKS_KEY, store); },
+    // dictation: the extension records the microphone (webviews may not); Windows only for now
+    dictationLanguages: () => cfg().get<unknown>('dictationLanguages', DEFAULT_LANGUAGES),
+    startRecorder: micSupported() ? (ev) => startWindowsRecorder(path.join(ctx.extensionPath, 'media', 'mic-win.ps1'), ev, log) : undefined,
   };
   // Settings and Codex of the quick one-off runs (commit message, AI search)
   const quick = {
@@ -143,7 +170,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(images);
   providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; p.activity = act; p.images = images; });
   act.publish();
-  // a click on a system notification opens vscode://codexpanel.codex-panel/open?thread=<id>
+  // a click on a system notification opens vscode://UnrealDeveloper.codex-panel/open?thread=<id>
   ctx.subscriptions.push(vscode.window.registerUriHandler({
     handleUri: (uri: vscode.Uri) => {
       if (uri.path !== '/open') return;
@@ -161,6 +188,17 @@ export function activate(ctx: vscode.ExtensionContext): void {
     await providers[secondary ? 1 : 0].reveal();
     return current();
   };
+
+  // codexPanel.openOnStartup: show Codexter in its side bar when VS Code starts (else VS Code shows the view used last there,
+  // e.g. Copilot Chat); the keyboard goes back to the editor, like at any start
+  if (cfg().get<boolean>('openOnStartup', false)) {
+    void (async () => {
+      try {
+        await showView();
+        if (vscode.window.activeTextEditor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+      } catch (e) { log('[startup] open Codexter: ' + String(e)); }
+    })();
+  }
 
   // Native drop target: workbench drags (editor tabs, VS Code Explorer) never reach the webview, but they reach a tree view.
   const drop = new DropTarget((found) => { void showView().then((p) => p.handleDrop(found)); }, log);
@@ -186,6 +224,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
       if (paths.length > 0) (await showView()).addFiles(paths);
     }),
     vscode.commands.registerCommand('codexPanel.openSettings', async () => (await showView()).showSettings()),
+    vscode.commands.registerCommand('codexPanel.review', async () => (await showView()).startReview()),
     vscode.commands.registerCommand('codexPanel.checkUpdates', () =>
       vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Codex: checking for updates...' }, async () => {
         const msg = await s.checkCodexNow();

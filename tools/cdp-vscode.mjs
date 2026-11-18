@@ -20,7 +20,7 @@ if (cmd === 'list') { for (const t of targets) console.log(t.type, t.title, t.ur
 const workbench = targets.find(t => t.type === 'page' && /workbench/.test(t.url));
 // CDP_PURPOSE=webviewPanel picks an editor tab of the extension (image editor) instead of the chat view (webviewView)
 const purpose = process.env.CDP_PURPOSE || 'webviewView';
-const webview = targets.find(t => t.type === 'iframe' && /^vscode-webview:/.test(t.url) && /codexpanel.codex-panel/i.test(t.url) && (purpose === 'webviewView') === t.url.includes('purpose=webviewView'));
+const webview = targets.find(t => t.type === 'iframe' && /^vscode-webview:/.test(t.url) && /unrealdeveloper.codex-panel/i.test(t.url) && (purpose === 'webviewView') === t.url.includes('purpose=webviewView'));
 const target = (cmd === 'workbench' || cmd === 'shot') ? workbench : webview;
 if (!target) { console.error('target not found (is the Codex view open?):', targets.map(t => t.type + ' ' + t.url.slice(0, 100))); process.exit(2); }
 

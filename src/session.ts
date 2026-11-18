@@ -1,7 +1,9 @@
 // One Codex conversation service per VS Code window (port of CodexSession.java). Owns the app-server process, talks the
 // protocol and publishes UI events ({"kind": ...}, see web/app.js) to the registered sinks.
 // No vscode imports: everything host specific comes in through SessionHost.
+import { dictationPrompt, DictationLanguages, isForeign, parseLanguages } from './core/dictationLanguages';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { AppServerClient } from './core/appServer';
 import { ProxyConfig } from './core/http';
@@ -11,7 +13,11 @@ import { locate, Located, NotFoundError } from './core/locator';
 import { permissionSettings, PermissionSettings } from './core/permissions';
 import { mapPlugins } from './core/plugins';
 import { AI_MAX_CHATS, buildSearchPrompt, parseSearchAnswer } from './core/aiSearch';
+import { ELICITATION_METHOD, elicitationResponse } from './core/elicitation';
+import { autoNameMode, buildTitlePrompt, ChatMessage, cleanTitle, shouldAutoName, transcriptOf } from './core/chatTitle';
+import { MIC_RATE, pcmLevel, Recorder, RecorderEvents } from './core/micRecorder';
 import { lastTokenUsage } from './core/rollout';
+import { addSide, findSide, forgetChat, isSideRow, linksOf, normalizeStore, sideIds, SideStore, sideQuestion, sideTitle, sideTurns } from './core/sideChats';
 import { cwdKey, expandCwds, isListable, str, threadMatches, threadPreview, threadTitle } from './core/threadRows';
 import { normalizeDrive } from './core/winPath';
 import { CodexUpdater, errorMessage } from './updater';
@@ -52,7 +58,51 @@ export interface SessionHost {
   ask?(prompt: string): Promise<string>;
   /** Extra params of thread/start (instructions of Codexter, auto-compact limit) or thread/resume (forResume: the limit only). */
   threadExtras?(forResume: boolean): Json;
+  /** codexPanel.autoChatNames: off | first | auto */
+  autoNameMode?(): string;
+  /** The name the AI gave this chat last (a chat whose name differs was named by hand and is left alone). */
+  autoNameOf?(threadId: string): string | undefined;
+  /** Remembers the AI's name of a chat; null: named by hand. */
+  rememberAutoName?(threadId: string, name: string | null): void;
+  /** A chat got a new name (its tab). */
+  renamed?(threadId: string, name: string): void;
+  /** Starts the microphone for dictation (missing where it can not record). */
+  startRecorder?(ev: RecorderEvents): Recorder;
+  /** setting codexPanel.dictationLanguages: codes like ['en', 'ru'] ([] = any language) */
+  dictationLanguages?(): unknown;
+  /** The stored links "answer -> side chats" (Clarify), as saved before; undefined = none yet. */
+  sideLinks?(): unknown;
+  /** Saves the links of the side chats. */
+  saveSideLinks?(store: SideStore): void;
 }
+
+/** One dictation: microphone -> Codex realtime (voice mode, text output) on a hidden ephemeral chat -> the user's words as text. */
+interface Dictation {
+  /** the view that started it (only it gets the text) */
+  owner: string;
+  /** the languages the user speaks: a hint for the voice model, and phrases in another script are dropped */
+  langs: DictationLanguages;
+  threadId: string | null;
+  rec: Recorder | null;
+  /** the voice session is up (audio can be sent) */
+  live: boolean;
+  /** audio recorded before the voice session was up */
+  queue: { data: string; bytes: number }[];
+  /** speech segments heard whose text has not come yet */
+  speaking: number;
+  stopping: boolean;
+  recEnded: boolean;
+  draining: boolean;
+  lastText: number;
+  timer: NodeJS.Timeout | null;
+}
+
+/** Longest dictation; then it stops by itself. */
+export const DICTATION_MAX_MS = 10 * 60_000;
+/** After the end of the recording: how long to wait for the text of the last words. */
+export const DICTATION_TAIL_MS = 8_000;
+/** The voice model is told to stay silent (it answers anyway; its answers and the tasks it hands to Codex are dropped). */
+const DICTATION_PROMPT = 'You are a silent dictation microphone. The user dictates text for later. Do not reply, do not call any tool or function, never start the background agent.';
 
 export type Sink = (event: Json) => void;
 
@@ -69,6 +119,8 @@ const HISTORY_MAX_SCAN_PAGES = 40;
 /** A search page stops scanning as soon as it has this many matches. */
 const HISTORY_WANTED = 30;
 const SURVEY_MAX_PAGES = 50;
+/** Codex's refusal to delete a chat that a fork still uses. */
+const FORK_REFUSAL = /forked history still references/i;
 const SURVEY_MAX_AGE_MS = 60_000;
 
 const withTimeout = <T>(p: Promise<T>, ms: number, what = 'request'): Promise<T> =>
@@ -93,6 +145,10 @@ export interface SendRequest {
   mentions: { name: string; path: string }[];
   /** true: plan mode on, false: switch plan mode off again, undefined: leave it */
   plan?: boolean;
+  /** "Edit" of the last message: this turn (and what came after it) is cut from the chat first, then the message is sent */
+  replaceTurnId?: string;
+  /** the typed text, put back into the input when the edit can not be done */
+  editText?: string;
 }
 
 /** access mode -> [thread sandbox, turn sandbox policy type, approval policy] */
@@ -110,6 +166,7 @@ export function reviewer(approvals: string | null | undefined): string {
 }
 
 const ev = (kind: string): Json => ({ kind });
+const cut = (s: string, n: number): string => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
 const describe = (t: unknown): string => (t instanceof RpcError ? t.message : String((t as Error)?.message ?? t));
 
 export class CodexSession {
@@ -121,6 +178,18 @@ export class CodexSession {
   private readonly background = new Map<string, { turnId: string | null; cwd: string | null }>();
   /** Titles of the chats seen in this window (thread name or first message), for notifications and tabs. */
   private readonly titles = new Map<string, string>();
+  /** Finished answers per chat, counted for the AI names (read once from the chat, then counted here). */
+  private readonly answerCounts = new Map<string, number>();
+  /** Chats whose AI name is being written. */
+  private readonly naming = new Set<string>();
+  /** Clarify side chats: the links (a copy of the host's store), the side chats the app-server has loaded read-only, their running turns. */
+  private sideStore: SideStore | null = null;
+  private sideIdCache: Set<string> | null = null;
+  private readonly sideLoaded = new Set<string>();
+  private readonly sideTurnOf = new Map<string, string>();
+  /** The running dictation (mic button), or null. */
+  private dict: Dictation | null = null;
+  private readonly dictThreads = new Set<string>();
   private readonly recentLog: string[] = [];
   private readonly updater: CodexUpdater;
   /** The Java session runs its work on one executor thread; here a promise chain keeps the same order. */
@@ -277,17 +346,20 @@ export class CodexSession {
         onClosed: (reason) => {
           if (this.client !== c) return;
           this.connected = false;
+          if (this.dict) this.dictationFail(this.dict, 'Codex stopped');
           this.needsResume = this._threadId !== null;
           this.turnId = null;
           this.pendingApprovals.clear();
           this.background.clear();
+          this.sideLoaded.clear();
+          this.sideTurnOf.clear();
           this.host.chatsChanged?.();
           this.status('closed', 'Codex app-server stopped: ' + reason);
           this.error('Codex stopped', reason + this.lastLog(), false);
           this.emit(ev('idle'));
         },
       });
-      for (const m of ['item/commandExecution/requestApproval', 'item/fileChange/requestApproval', 'item/permissions/requestApproval']) {
+      for (const m of ['item/commandExecution/requestApproval', 'item/fileChange/requestApproval', 'item/permissions/requestApproval', ELICITATION_METHOD]) {
         c.onServerRequest(m, (req) => this.handleApprovalRequest(req));
       }
       this.client = c;
@@ -309,10 +381,10 @@ export class CodexSession {
       if (e instanceof Reported) {
         this.status('error', e.message);
         this.error('Could not download Codex', e.message +
-          '\nCheck the proxy settings (VS Code setting "http.proxy"), or point the Codexter settings to your own codex.exe.', true);
+          '\nCheck the proxy settings (VS Code setting "http.proxy"), or install Codex yourself and set its path in the Codexter settings.', true);
       } else if (e instanceof NotFoundError) {
         this.status('error', 'codex not found');
-        this.error('codex was not found', e.message + '\nSet the path to codex.exe in the Codexter settings.', true);
+        this.error('codex was not found', e.message + '\nSet the path to your Codex executable in the Codexter settings.', true);
       } else {
         this.status('error', describe(e));
         this.error('Could not start Codex', describe(e) + this.lastLog(), true);
@@ -474,6 +546,14 @@ export class CodexSession {
       return;
     }
     const tid = typeof params.threadId === 'string' ? params.threadId : null;
+    if (tid !== null && this.dictThreads.has(tid)) {   // the hidden chats of the dictation: never shown, even after it ended
+      if (this.dict !== null && tid === this.dict.threadId) this.dictationNotification(this.dict, method, params);
+      return;
+    }
+    if (tid !== null && this.sideIdSet().has(tid)) {   // a Clarify side chat: only its own pane shows it
+      this.sideNotification(tid, method, params);
+      return;
+    }
     if (method === 'thread/name/updated' && tid !== null) {
       const name = str(params, 'threadName') ?? str(params, 'name');
       if (name) this.titles.set(tid, name);
@@ -489,7 +569,11 @@ export class CodexSession {
     } else if (method === 'turn/completed') {
       this.turnId = null;
       this.host.refreshHook(this._threadCwd);
-      if (this._threadId !== null) this.host.turnDone?.(this._threadId, false, str(params.turn ?? {}, 'status') ?? 'completed');
+      const status = str(params.turn ?? {}, 'status') ?? 'completed';
+      if (this._threadId !== null) {
+        this.host.turnDone?.(this._threadId, false, status);
+        if (status === 'completed') this.autoName(this._threadId);
+      }
       this.host.chatsChanged?.();
     } else if (method === 'item/completed') {
       if (params.item && params.item.type === 'fileChange') this.host.refreshHook(this._threadCwd);
@@ -508,7 +592,9 @@ export class CodexSession {
       this.background.delete(tid);
       this.dropStaleApprovals();
       this.host.refreshHook(bg.cwd);
-      this.host.turnDone?.(tid, true, str(params.turn ?? {}, 'status') ?? 'completed');
+      const status = str(params.turn ?? {}, 'status') ?? 'completed';
+      this.host.turnDone?.(tid, true, status);
+      if (status === 'completed') this.autoName(tid);
       this.host.chatsChanged?.();
     } else if (method === 'item/completed' && params.item && params.item.type === 'fileChange') {
       this.host.refreshHook(bg.cwd);
@@ -518,6 +604,11 @@ export class CodexSession {
   private handleApprovalRequest(req: Json): void {
     this.pendingApprovals.set(String(req.id), req);
     const tid = req.params?.threadId;
+    if (typeof tid === 'string' && this.sideIdSet().has(tid)) {   // a side chat is read-only: whatever it asks for is declined
+      this.approve(String(req.id), 'decline');
+      this.emit({ kind: 'sideEvent', id: tid, method: 'sideDenied', params: {} });
+      return;
+    }
     if (typeof tid === 'string' && tid !== this._threadId && this.background.has(tid)) {
       this.host.needsApproval?.(tid);   // shown when the chat is opened again
       return;
@@ -525,7 +616,7 @@ export class CodexSession {
     this.emit({ kind: 'serverRequest', id: req.id, method: req.method, params: req.params });
   }
 
-  /** @param decision accept | acceptForSession | decline */
+  /** @param decision accept | acceptForSession | decline (| cancel for an MCP elicitation) */
   approve(requestId: string, decision: string): void {
     const req = this.pendingApprovals.get(String(requestId));
     this.pendingApprovals.delete(String(requestId));
@@ -538,6 +629,8 @@ export class CodexSession {
         if (asked && typeof asked === 'object') for (const [k, v] of Object.entries(asked)) if (v !== null) granted[k] = v;
       }
       c.respond(req.id, { permissions: granted, scope: decision === 'acceptForSession' ? 'session' : 'turn' });
+    } else if (req.method === ELICITATION_METHOD) {
+      c.respond(req.id, elicitationResponse(req.params, decision));   // MCP tool approval (or an MCP server's own question)
     } else {
       c.respondDecision(req.id, decision);
     }
@@ -601,6 +694,7 @@ export class CodexSession {
         const c = await this.connectBlocking();
         const ps = permissionSettings(req.permissions);
         const threadId = await this.ensureThread(c, cwd, req.model, ps);
+        if (req.replaceTurnId && !(await this.cutTurn(c, threadId, req.replaceTurnId, req.editText ?? ''))) { this.emit(ev('idle')); return; }
         let collaboration: Json | null = null;
         if (req.plan !== undefined) {
           const model = req.model || req.defaultModel;
@@ -628,6 +722,56 @@ export class CodexSession {
         this.emit(ev('idle'));
       }
     });
+  }
+
+  /**
+   * "Edit" of the last message: a running reply is interrupted (and awaited), then thread/revert drops the turn and everything after
+   * it from the chat's history (files Codex changed stay as they are). False when that failed: the chat is shown again as the
+   * server has it and the typed text goes back into the input.
+   */
+  private async cutTurn(c: AppServerClient, threadId: string, turnId: string, text: string): Promise<boolean> {
+    try {
+      if (this.turnId !== null) {
+        this.interrupt();
+        for (let i = 0; i < 150 && this.turnId !== null; i++) await new Promise((r) => setTimeout(r, 100));
+        if (this.turnId !== null) throw new Error('the running reply did not stop');
+      }
+      await withTimeout(c.call('thread/revert', { threadId, beforeTurnId: turnId }), 30_000, 'thread/revert');
+      this.log('[edit] ' + threadId + ': cut from turn ' + turnId);
+      return true;
+    } catch (e) {
+      this.log('[edit] ' + threadId + ' failed: ' + describe(e));
+      this.emit({ kind: 'toast', message: 'Could not replace the last message: ' + describe(e) });
+      this.emit({ kind: 'focus', text });
+      void this.resume(threadId);   // the page shows the chat as it is again
+      return false;
+    }
+  }
+
+  /**
+   * "Fork" of an answer: a new chat with the history up to and including that answer's turn (thread/fork lastTurnId), opened in
+   * place of this one (a running reply goes on in the background). The new chat is named "<title> (fork)". Note: Codex then
+   * refuses to delete the source chat while the fork exists.
+   */
+  forkFrom(turnId: string, permissions: string): void {
+    const source = this._threadId;
+    if (source === null) return;
+    void (async () => {
+      try {
+        const c = await this.connectBlocking();
+        const ps = permissionSettings(permissions);
+        const r = await withTimeout(c.call('thread/fork', { threadId: source, lastTurnId: turnId, cwd: this._threadCwd, approvalPolicy: ps.approvalPolicy,
+          sandbox: ps.sandbox, approvalsReviewer: ps.reviewer, excludeTurns: true }), 60_000, 'thread/fork');
+        const id = str(r.thread ?? {}, 'id');
+        if (!id) throw new Error('Codex returned no chat');
+        this.log('[fork] ' + source + ' through turn ' + turnId + ' -> ' + id);
+        const title = this.titles.get(source);
+        if (title) await this.renameThread(id, cut(title.replace(/ \(fork(?: \d+)?\)$/, ''), 150) + ' (fork)', true);
+        await this.resume(id);
+      } catch (e) {
+        this.emit({ kind: 'toast', message: 'Could not fork the chat: ' + describe(e) });
+      }
+    })();
   }
 
   /** "Goal" of the "+" menu: thread/goal/set (the thread is started first when there is none). Answers with a "goal" event. */
@@ -809,6 +953,7 @@ export class CodexSession {
         const pageSize = scanning ? HISTORY_SCAN_PAGE : HISTORY_PAGE;
         const projectByCwd = new Map<string, string>();
         const rows: Json[] = [];
+        const sides = this.sideIdSet(true);   // Clarify side chats are not listed (the answer's badge opens them)
         let next: string | null = cursor;
         let pages = 0;
         do {
@@ -816,7 +961,7 @@ export class CodexSession {
           const page = await this.fetchThreadPage(c, cwdFilter, next, pageSize, archived);
           pages++;
           for (const thread of page.data ?? []) {
-            if (!isListable(thread)) continue;
+            if (!isListable(thread) || isSideRow(thread, sides)) continue;
             const cwd = str(thread, 'cwd');
             if (cwd) this.seenCwds.add(cwd);
             const key = cwdKey(cwd);
@@ -861,6 +1006,7 @@ export class CodexSession {
         const cwdFilter = selected.length > 0 ? expandCwds(selected, this.seenCwds) : null;
         const rows: Json[] = [];
         const projectByCwd = new Map<string, string>();
+        const sides = this.sideIdSet(true);
         let next: string | null = null;
         let pages = 0;
         do {
@@ -868,7 +1014,7 @@ export class CodexSession {
           const page = await this.fetchThreadPage(c, cwdFilter, next, HISTORY_SCAN_PAGE, archived);
           pages++;
           for (const thread of page.data ?? []) {
-            if (!isListable(thread) || rows.length >= AI_MAX_CHATS) continue;
+            if (!isListable(thread) || isSideRow(thread, sides) || rows.length >= AI_MAX_CHATS) continue;
             const cwd = str(thread, 'cwd');
             if (cwd) this.seenCwds.add(cwd);
             const key = cwdKey(cwd);
@@ -902,27 +1048,146 @@ export class CodexSession {
   threadAction(action: string, threadId: string): void {
     void (async () => {
       let error: string | undefined;
+      let forks: { id: string; title: string }[] = [];
       try {
         const c = await this.connectBlocking();
         if (action === 'archive') await withTimeout(c.archiveThread(threadId), 30_000, 'thread/archive');
         else if (action === 'unarchive') await withTimeout(c.unarchiveThread(threadId), 30_000, 'thread/unarchive');
-        else if (action === 'delete') await withTimeout(c.deleteThread(threadId), 30_000, 'thread/delete');
-        else throw new Error('unknown action ' + action);
+        else if (action === 'delete') {
+          try {
+            await withTimeout(c.deleteThread(threadId), 30_000, 'thread/delete');
+          } catch (e) {
+            // Codex keeps a chat while a fork of it exists: name the forks, the page asks whether to delete them too
+            if (FORK_REFUSAL.test(describe(e))) forks = await this.forksOf(c, threadId).catch(() => []);
+            throw e;
+          }
+        } else if (action === 'deleteWithForks') {
+          // the forks first (a fork's own forks before it), then the chat
+          for (const f of await this.forksOf(c, threadId)) {
+            await withTimeout(c.deleteThread(f.id), 30_000, 'thread/delete');
+            this.log('[delete] fork ' + f.id + ' of ' + threadId);
+            this.forgetSide(f.id);
+            this.emit({ kind: 'threadAction', action: 'delete', threadId: f.id, ok: true, quiet: true });
+            if (this._threadId === f.id) this.newChat();
+          }
+          await withTimeout(c.deleteThread(threadId), 30_000, 'thread/delete');
+          action = 'delete';
+        } else throw new Error('unknown action ' + action);
       } catch (e) {
         error = describe(e);
+        if (action === 'deleteWithForks') action = 'delete';
       }
       const e: Json = { kind: 'threadAction', action, threadId, ok: error === undefined };
       if (error !== undefined) e.error = error;
+      if (forks.length > 0) e.forks = forks;
       this.emit(e);
       if (error !== undefined) return;
+      if (action === 'delete') this.forgetSide(threadId);
       this.projectSurvey = null;
       if (action !== 'unarchive' && this._threadId === threadId) this.newChat();
       try { await this.surveyProjects(await this.connectBlocking()); } catch { /* the filter keeps its list */ }
     })();
   }
 
-  /** Renames a chat (History, the title of the open chat). Answers with a "threadAction" event (action "rename", the name it got). */
-  async renameThread(threadId: string, name: string): Promise<boolean> {
+  /** The chat's name, its messages and its number of turns (thread/read). */
+  private async readChat(threadId: string): Promise<{ name: string | null; msgs: ChatMessage[]; turns: number }> {
+    const c = await this.connectBlocking();
+    const rr = await withTimeout(c.call('thread/read', { threadId, includeTurns: true }), 60_000, 'thread/read');
+    const turns: Json[] = Array.isArray(rr.thread?.turns) ? rr.thread.turns : [];
+    return { name: str(rr.thread ?? {}, 'name'), msgs: transcriptOf(turns), turns: turns.length };
+  }
+
+  /** The quick model's name for a chat; '' when it gave none. */
+  private async writeTitle(msgs: ChatMessage[], current: string | null): Promise<string> {
+    const ask = this.host.ask?.bind(this.host);
+    if (!ask) throw new Error('AI names are not available here');
+    if (msgs.length === 0) throw new Error('the chat has no messages yet');
+    return cleanTitle(await ask(buildTitlePrompt(msgs, current)));
+  }
+
+  /**
+   * After a finished answer: names the chat by AI (codexPanel.autoChatNames) after its first answer and, in "auto", every
+   * AUTO_NAME_EVERY answers. A chat named by hand (its name is not the one the AI gave it) is left alone. Failures are only logged.
+   */
+  private autoName(threadId: string): void {
+    const mode = autoNameMode(this.host.autoNameMode?.());
+    if (mode === 'off' || !this.host.ask || this.naming.has(threadId)) return;
+    const known = this.answerCounts.get(threadId);
+    if (known !== undefined) {
+      this.answerCounts.set(threadId, known + 1);
+      if (!shouldAutoName(mode, known + 1)) return;
+    }
+    this.naming.add(threadId);
+    void (async () => {
+      try {
+        const chat = await this.readChat(threadId);
+        this.answerCounts.set(threadId, chat.turns);
+        if (!shouldAutoName(mode, chat.turns)) return;
+        if (chat.name && chat.name !== this.host.autoNameOf?.(threadId)) return;   // named by hand
+        const t0 = Date.now();
+        const title = await this.writeTitle(chat.msgs, chat.name);
+        this.log('[name] ' + threadId + ' after ' + chat.turns + ' turns: "' + title + '" (' + ((Date.now() - t0) / 1000).toFixed(1) + ' s)');
+        if (title && title !== chat.name) await this.renameThread(threadId, title, true);
+      } catch (e) {
+        this.log('[name] ' + threadId + ' failed: ' + describe(e));
+      } finally {
+        this.naming.delete(threadId);
+      }
+    })();
+  }
+
+  /** "Suggest a name" of the rename input: answers with a "titleSuggested" event (name, or error); renames nothing. */
+  suggestTitle(threadId: string): void {
+    void (async () => {
+      const e: Json = { kind: 'titleSuggested', threadId };
+      try {
+        const chat = await this.readChat(threadId);
+        e.name = await this.writeTitle(chat.msgs, null);
+        if (!e.name) e.error = 'no name came back';
+      } catch (ex) {
+        e.error = describe(ex);
+      }
+      this.emit(e);
+    })();
+  }
+
+  /**
+   * Every fork of a chat, forks of forks too (thread/list rows carry forkedFromId; archived chats are scanned as well), in the
+   * order they can be deleted: a fork's own forks come before it.
+   */
+  private async forksOf(c: AppServerClient, threadId: string): Promise<{ id: string; title: string }[]> {
+    const children = new Map<string, { id: string; title: string }[]>();
+    for (const archived of [false, true]) {
+      let next: string | null = null, pages = 0;
+      do {
+        const page = await this.fetchThreadPage(c, null, next, HISTORY_SCAN_PAGE, archived);
+        for (const t of page.data ?? []) {
+          const from = str(t, 'forkedFromId');
+          if (!from || typeof t.id !== 'string') continue;
+          const list = children.get(from) ?? [];
+          list.push({ id: t.id, title: threadTitle(str(t, 'name'), str(t, 'preview')) });
+          children.set(from, list);
+        }
+        next = str(page, 'nextCursor');
+      } while (next !== null && ++pages < HISTORY_MAX_SCAN_PAGES);
+    }
+    const out: { id: string; title: string }[] = [];
+    const seen = new Set<string>([threadId]);
+    const visit = (id: string) => {
+      for (const f of children.get(id) ?? []) {
+        if (seen.has(f.id)) continue;
+        seen.add(f.id);
+        visit(f.id);
+        out.push(f);
+      }
+    };
+    visit(threadId);
+    return out;
+  }
+
+  /** Renames a chat (History, the title of the open chat). Answers with a "threadAction" event (action "rename", the name it got).
+   *  auto: the name is the AI's (it may be renewed later); otherwise the chat counts as named by hand. */
+  async renameThread(threadId: string, name: string, auto = false): Promise<boolean> {
     const clean = name.replace(/\s+/g, ' ').trim().slice(0, 160);
     let error: string | undefined = clean ? undefined : 'the name is empty';
     if (clean) {
@@ -934,7 +1199,14 @@ export class CodexSession {
       }
     }
     const e: Json = { kind: 'threadAction', action: 'rename', threadId, ok: error === undefined };
-    if (error !== undefined) e.error = error; else { e.name = clean; this.titles.set(threadId, clean); }
+    if (error !== undefined) e.error = error;
+    else {
+      e.name = clean;
+      if (auto) e.auto = true;
+      this.titles.set(threadId, clean);
+      this.host.rememberAutoName?.(threadId, auto ? clean : null);
+      this.host.renamed?.(threadId, clean);
+    }
     this.emit(e);
     return error === undefined;
   }
@@ -1046,6 +1318,7 @@ export class CodexSession {
         if (usage) e.tokenUsage = usage;
         if (g) e.goal = g;
         this.emit(e);
+        this.emitSideLinks(id, false);
         if (this.turnId !== null) {
           this.emit({ kind: 'notification', method: 'turn/started', params: { threadId: id, turn: { id: this.turnId } } });
           for (const req of this.pendingApprovals.values()) {   // approvals asked while it was in the background
@@ -1067,7 +1340,277 @@ export class CodexSession {
     });
   }
 
+  // ---- Clarify side chats ----
+  // A question about one answer goes to a fork of the chat made at that answer (thread/fork lastTurnId), run read-only: thread sandbox
+  // read-only, approval policy never, every turn with sandboxPolicy readOnly, and whatever it still asks for is declined. The fork is
+  // linked to the answer in the host's store (core/sideChats.ts), never written into the main chat, hidden from the History, and
+  // made only with the first question. Its events go to the page as sideOpen / sideEvent, never to the main chat's feed.
+
+  /** The links of the side chats: read from the host once, then kept here; `fresh` reads them again (another window may have changed them). */
+  private sideLinksNow(fresh = false): SideStore {
+    if (this.sideStore === null || (fresh && this.host.sideLinks)) {
+      const raw = this.host.sideLinks ? this.host.sideLinks() : this.sideStore;
+      this.sideStore = normalizeStore(raw ?? this.sideStore ?? {});
+      this.sideIdCache = null;
+    }
+    return this.sideStore;
+  }
+
+  private sideIdSet(fresh = false): Set<string> {
+    const store = this.sideLinksNow(fresh);
+    return (this.sideIdCache ??= sideIds(store));
+  }
+
+  private changeSides(fn: (s: SideStore) => SideStore): void {
+    this.sideStore = fn(this.sideLinksNow(true));
+    this.sideIdCache = null;
+    this.host.saveSideLinks?.(this.sideStore);
+  }
+
+  /** A chat was deleted: its links (a parent chat) or its place in them (a side chat) go. */
+  private forgetSide(id: string): void {
+    const s = this.sideLinksNow(true);
+    if (!(id in s) && !sideIds(s).has(id)) return;
+    this.changeSides((x) => forgetChat(x, id));
+    this.sideLoaded.delete(id);
+  }
+
+  /** Tells the page which answers of a chat have side chats (always: also an empty list, after the last one went). */
+  private emitSideLinks(parent: string, always: boolean): void {
+    const links = linksOf(this.sideLinksNow(true), parent);
+    if (always || Object.keys(links).length > 0) this.emit({ kind: 'sideLinks', threadId: parent, links });
+  }
+
+  private sideNotification(tid: string, method: string, params: Json): void {
+    if (method === 'turn/started') this.sideTurnOf.set(tid, str(params.turn ?? {}, 'id') ?? '');
+    else if (method === 'turn/completed') this.sideTurnOf.delete(tid);
+    if (['turn/started', 'turn/completed', 'item/started', 'item/completed', 'item/agentMessage/delta', 'error'].includes(method)) {
+      this.emit({ kind: 'sideEvent', id: tid, method, params });
+    }
+  }
+
+  /** The side chat must be loaded in the app-server (after a restart of it) with the read-only settings before a turn runs in it. */
+  private async ensureSideLoaded(c: AppServerClient, id: string): Promise<void> {
+    if (this.sideLoaded.has(id)) return;
+    await withTimeout(c.resumeThread(id, null, 'never', 'read-only', null, this.host.threadExtras?.(true) ?? {}), 60_000, 'thread/resume');
+    this.sideLoaded.add(id);
+  }
+
+  /** Makes the side chat of an answer: a read-only fork through that turn, named after the answer, linked in the store. */
+  private async sideCreate(c: AppServerClient, parent: string, turnId: string, excerpt: string): Promise<string> {
+    // the fork starts with the main chat's turns up to this answer; the side chat's own turns come after them
+    const rr = await withTimeout(c.call('thread/read', { threadId: parent, includeTurns: true }), 60_000, 'thread/read');
+    const turns: Json[] = Array.isArray(rr.thread?.turns) ? rr.thread.turns : [];
+    const at = turns.findIndex((t) => t?.id === turnId);
+    if (at < 0) throw new Error('this answer is not saved in the chat yet, try again in a moment');
+    const r = await withTimeout(c.call('thread/fork', { threadId: parent, lastTurnId: turnId, cwd: this._threadCwd, approvalPolicy: 'never',
+      sandbox: 'read-only', excludeTurns: true }), 60_000, 'thread/fork');
+    const id = str(r.thread ?? {}, 'id');
+    if (!id) throw new Error('Codex returned no chat');
+    const entry = { id, at: Date.now(), title: sideTitle(excerpt), base: at + 1 };
+    this.sideLoaded.add(id);
+    this.changeSides((s) => addSide(s, parent, turnId, entry));   // linked before anything else happens to it
+    this.log('[clarify] ' + parent + ' turn ' + turnId + ' -> ' + id + ' (read-only, ' + entry.base + ' turns of the main chat)');
+    try { await withTimeout(c.renameThread(id, entry.title), 30_000, 'thread/name/set'); } catch (e) { this.log('[clarify] name failed: ' + describe(e)); }
+    this.emit({ kind: 'sideOpen', parent, turnId, side: { id, at: entry.at, title: entry.title }, turns: [], running: false, created: true });
+    this.emitSideLinks(parent, true);
+    return id;
+  }
+
+  /**
+   * A question about an answer. sideId null: the first question of a new side chat (the fork is made now); else a further question of
+   * that side chat. The question is sent read-only; the reply streams as sideEvent events. A failure comes as sideEvent "sideFailed".
+   */
+  sideAsk(a: { threadId: string; turnId: string; sideId: string | null; excerpt: string; text: string; model: string; effort: string }): void {
+    const text = a.text.trim();
+    if (!text || !a.turnId) return;
+    void (async () => {
+      let id = a.sideId;
+      try {
+        const c = await this.connectBlocking();
+        if (id === null) {
+          if (this._threadId !== a.threadId) throw new Error('the chat is not open any more');
+          id = await this.sideCreate(c, a.threadId, a.turnId, a.excerpt);
+        } else {
+          if (findSide(this.sideLinksNow(true), id) === null) throw new Error('this clarification is gone');
+          await this.ensureSideLoaded(c, id);
+        }
+        if (this.sideTurnOf.has(id)) throw new Error('the previous question is still being answered');
+        const r = await withTimeout(c.startTurn(id, [AppServerClient.textInput(sideQuestion(text))], null, a.model || null, a.effort || null,
+          'never', 'readOnly', null), 60_000, 'turn/start');
+        if (r.turn?.id) this.sideTurnOf.set(id, r.turn.id);
+      } catch (e) {
+        this.log('[clarify] failed: ' + describe(e));
+        this.emit({ kind: 'sideEvent', id: id ?? '', method: 'sideFailed', params: { message: describe(e), parent: a.threadId, turnId: a.turnId } });
+      }
+    })();
+  }
+
+  /** Opens a side chat again (the answer's badge): its own turns, and whether its reply still runs. Answers with a sideOpen event. */
+  sideShow(sideId: string): void {
+    void (async () => {
+      const found = findSide(this.sideLinksNow(true), sideId);
+      try {
+        if (!found) throw new Error('this clarification is gone');
+        const c = await this.connectBlocking();
+        await this.ensureSideLoaded(c, sideId);
+        const rr = await withTimeout(c.call('thread/read', { threadId: sideId, includeTurns: true }), 60_000, 'thread/read');
+        this.emit({ kind: 'sideOpen', parent: found.parent, turnId: found.turn, side: { id: sideId, at: found.entry.at, title: found.entry.title },
+          turns: sideTurns(rr.thread?.turns ?? [], found.entry.base), running: this.sideTurnOf.has(sideId) });
+      } catch (e) {
+        this.emit({ kind: 'sideOpen', parent: found?.parent ?? '', turnId: found?.turn ?? '', side: { id: sideId }, turns: [], running: false, error: describe(e) });
+      }
+    })();
+  }
+
+  sideInterrupt(sideId: string): void {
+    const c = this.client, t = this.sideTurnOf.get(sideId);
+    if (c && t) c.interruptTurn(sideId, t).catch(() => undefined);
+  }
+
+  // ---- dictation ----
+
+  /** Can this window dictate (a microphone recorder exists here)? */
+  get dictationAvailable(): boolean { return !!this.host.startRecorder; }
+
+  private dictEmit(d: Dictation, e: Json): void { this.emit({ ...e, owner: d.owner }); }
+
+  /**
+   * Dictation (the mic button): records the microphone and sends it to Codex's voice mode (thread/realtime, experimental, text
+   * output, version v2) on a hidden ephemeral chat. The text of what the user said comes as "dictationText" events; the voice
+   * model's own answers are dropped and every task it hands to Codex is interrupted at once. State: "dictation" events.
+   */
+  startDictation(owner: string): void {
+    if (this.dict !== null) return;
+    const start = this.host.startRecorder?.bind(this.host);
+    if (!start) { this.emit({ kind: 'dictation', owner, state: 'off', error: 'Dictation works on Windows only for now.' }); return; }
+    const d: Dictation = { owner, langs: parseLanguages(this.host.dictationLanguages?.() ?? []), threadId: null, rec: null, live: false, queue: [], speaking: 0, stopping: false, recEnded: false, draining: false, lastText: 0, timer: null };
+    this.dict = d;
+    this.dictEmit(d, { kind: 'dictation', state: 'starting' });
+    d.timer = setTimeout(() => this.stopDictation(), DICTATION_MAX_MS);
+    try {
+      d.rec = start({
+        onReady: () => { if (this.dict === d && !d.stopping) this.dictEmit(d, { kind: 'dictation', state: 'listening' }); },
+        onChunk: (data, bytes) => this.dictationAudio(d, data, bytes),
+        onEnd: (err) => {
+          d.recEnded = true;
+          if (err) this.dictationFail(d, 'Microphone: ' + err); else this.dictationDrain(d);
+        },
+      });
+    } catch (e) {
+      this.dictationFail(d, 'Microphone: ' + describe(e));
+      return;
+    }
+    void (async () => {
+      try {
+        const c = await this.connectBlocking();
+        const th = await withTimeout(c.call('thread/start', { cwd: os.tmpdir(), ephemeral: true, approvalPolicy: 'never', sandbox: 'read-only' }), 30_000, 'thread/start');
+        if (this.dict !== d) return;
+        d.threadId = str(th.thread ?? {}, 'id');
+        if (!d.threadId) throw new Error('Codex started no chat for the dictation');
+        this.dictThreads.add(d.threadId);
+        await withTimeout(c.call('thread/realtime/start', { threadId: d.threadId, outputModality: 'text', version: 'v2', transport: { type: 'websocket' },
+          prompt: dictationPrompt(DICTATION_PROMPT, d.langs), includeStartupContext: false }), 30_000, 'thread/realtime/start');
+      } catch (e) {
+        this.dictationFail(d, 'Codex voice mode: ' + describe(e));
+      }
+    })();
+  }
+
+  /** Ends the recording; the text of the last words still comes, then the state goes "off". */
+  stopDictation(): void {
+    const d = this.dict;
+    if (d === null || d.stopping) return;
+    d.stopping = true;
+    this.dictEmit(d, { kind: 'dictation', state: 'stopping' });
+    if (d.rec && !d.recEnded) d.rec.stop(); else this.dictationDrain(d);
+  }
+
+  private dictationAudio(d: Dictation, data: string, bytes: number): void {
+    if (this.dict !== d) return;
+    // the level bars next to the mic button (10 a second, 2 decimals are enough)
+    if (!d.stopping) this.dictEmit(d, { kind: 'dictationLevel', level: Math.round(pcmLevel(data) * 100) / 100 });
+    if (!d.live) { d.queue.push({ data, bytes }); return; }
+    this.sendDictationAudio(d, data, bytes);
+  }
+
+  private sendDictationAudio(d: Dictation, data: string, bytes: number): void {
+    const c = this.client;
+    if (!c || !d.threadId) return;
+    c.call('thread/realtime/appendAudio', { threadId: d.threadId, audio: { data, numChannels: 1, sampleRate: MIC_RATE, samplesPerChannel: Math.floor(bytes / 2) } })
+      .catch((e) => this.log('[dictation] appendAudio: ' + describe(e)));
+  }
+
+  private dictationNotification(d: Dictation, method: string, params: Json): void {
+    if (method === 'thread/realtime/started') {
+      d.live = true;
+      const q = d.queue;
+      d.queue = [];
+      for (const a of q) this.sendDictationAudio(d, a.data, a.bytes);
+      if (d.recEnded) this.dictationDrain(d);
+    } else if (method === 'thread/realtime/itemAdded') {
+      if (params.item?.type === 'input_audio_buffer.speech_started') d.speaking++;
+    } else if (method === 'thread/realtime/transcript/done') {
+      if (params.role !== 'user') return;   // the voice model's answer
+      d.speaking = Math.max(0, d.speaking - 1);
+      d.lastText = Date.now();
+      const text = typeof params.text === 'string' ? params.text.trim() : '';
+      if (!text) return;
+      if (isForeign(text, d.langs)) {   // e.g. a Chinese phrase while the user speaks Russian: noise taken for words
+        this.log('[dictation] dropped, not in ' + d.langs.names.join(', ') + ': ' + text);
+        this.dictEmit(d, { kind: 'dictationDropped', text });
+        return;
+      }
+      this.dictEmit(d, { kind: 'dictationText', text });
+    } else if (method === 'turn/started') {   // the voice model handed a task to Codex: not wanted here
+      const turnId = params.turn?.id;
+      if (this.client && d.threadId && typeof turnId === 'string') this.client.call('turn/interrupt', { threadId: d.threadId, turnId }).catch(() => undefined);
+    } else if (method === 'thread/realtime/error') {
+      this.dictationFail(d, 'Codex voice mode: ' + (str(params, 'message') ?? 'error'));
+    } else if (method === 'thread/realtime/closed') {
+      if (d.stopping) this.dictationFinish(d, null);
+      else this.dictationFail(d, 'Codex closed the voice mode (' + (str(params, 'reason') ?? 'no reason') + ')');
+    }
+  }
+
+  /** The recording is over: a second of silence ends the last words, their text is awaited (DICTATION_TAIL_MS at most). */
+  private dictationDrain(d: Dictation): void {
+    if (this.dict !== d || d.draining) return;
+    if (!d.stopping) { d.stopping = true; this.dictEmit(d, { kind: 'dictation', state: 'stopping' }); }   // the recorder ended by itself
+    if (!d.live) return;   // drained once the voice session is up (or ended by a failure)
+    d.draining = true;
+    const quiet = Buffer.alloc(MIC_RATE / 10 * 2).toString('base64');
+    for (let i = 0; i < 12; i++) this.sendDictationAudio(d, quiet, MIC_RATE / 10 * 2);
+    const until = Date.now() + DICTATION_TAIL_MS;
+    const check = () => {
+      if (this.dict !== d) return;
+      const settled = d.speaking === 0 && Date.now() - d.lastText > 300;
+      if (settled || Date.now() >= until) { this.dictationFinish(d, null); return; }
+      setTimeout(check, 200);
+    };
+    setTimeout(check, 1500);   // the server needs the silence to end the segment
+  }
+
+  private dictationFail(d: Dictation, error: string): void {
+    if (this.dict !== d) return;
+    this.log('[dictation] ' + error);
+    d.stopping = true;
+    if (d.rec && !d.recEnded) d.rec.stop();
+    this.dictationFinish(d, error);
+  }
+
+  private dictationFinish(d: Dictation, error: string | null): void {
+    if (this.dict !== d) return;
+    this.dict = null;
+    if (d.timer) clearTimeout(d.timer);
+    if (this.client && d.threadId) this.client.call('thread/realtime/stop', { threadId: d.threadId }).catch(() => undefined);
+    const e: Json = { kind: 'dictation', state: 'off' };
+    if (error) e.error = error;
+    this.dictEmit(d, e);
+  }
+
   dispose(): void {
+    if (this.dict) { const d = this.dict; this.dict = null; d.rec?.stop(); if (d.timer) clearTimeout(d.timer); }
     this.disposed = true;
     const c = this.client;
     this.client = null;

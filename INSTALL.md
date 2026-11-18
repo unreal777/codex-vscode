@@ -1,7 +1,7 @@
 # Codex in VS Code
 
 A chat panel for the OpenAI Codex agent inside VS Code, the same panel as the Eclipse plugin.
-You only need **VS Code 1.90 or newer** on Windows. No Node.js, no npm, no `codex login`:
+You only need **VS Code 1.90 or newer** on Windows, macOS or Linux (x64 or arm64; tested on Windows). No Node.js, no npm, no `codex login`:
 the extension downloads Codex and lets you sign in.
 
 ## Install
@@ -48,8 +48,8 @@ the extension downloads Codex and lets you sign in.
 - **Long answers read top to bottom.** Your message is a wide block, the answer uses the full width. When Codex is done, its steps
   (thinking, commands, file reads) fold into one **Worked for 1m 17s** line; click it to see them. Changed files and approvals stay visible.
 - **`AGENTS.md`** in your repository is read by Codex automatically (new chats only).
-- Codex is stored once per Windows user in `%LOCALAPPDATA%\CodexPanel` (about 500 MB). The Eclipse plugin uses the same folder,
-  so a Codex downloaded by one is used by the other.
+- Codex is stored once per user (about 500 MB). On Windows that is `%LOCALAPPDATA%\CodexPanel`: the Eclipse plugin uses the same folder,
+  so a Codex downloaded by one is used by the other. On macOS and Linux it is the extension's own storage.
 - Corporate proxy: the download uses VS Code's `http.proxy` setting (or `HTTPS_PROXY`) and is also handed to Codex.
 - Log: View > Output > **Codexter**.
 
@@ -57,7 +57,7 @@ the extension downloads Codex and lets you sign in.
 
 | Problem | Fix |
 |---|---|
-| Codex download fails | Check `http.proxy` in Settings (`https://registry.npmjs.org` must be reachable). Or install Codex yourself and set Codexter > Codex Source to "own" and the path to `codex.exe`. |
+| Codex download fails | Check `http.proxy` in Settings (`https://registry.npmjs.org` must be reachable). Or install Codex yourself and set Codexter > Codex Source to "own" and the path to your Codex (`codex.exe`, or `codex` on macOS and Linux). |
 | Dropped file does nothing | Drop it on **Attach files** under the chat, paste its path, or use **Add to Codexter chat** / `@`. |
 | Sign-in does not finish | Click Cancel, then sign in again. Port 1455 on localhost must be free. |
 | Panel is blank | Run **Developer: Reload Window**; check the Output channel **Codexter**. |

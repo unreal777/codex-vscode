@@ -1,6 +1,6 @@
 # Codexter (Codex Panel for VS Code): concept
 
-Visible name since 0.4.0: Codexter. The extension id stays `codexpanel.codex-panel`, the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
+Visible name since 0.4.0: Codexter. The extension id is `UnrealDeveloper.codex-panel` since 0.9.0 (Marketplace publisher; before: `codexpanel.codex-panel`), the settings stay `codexPanel.*` and the vsix keeps the name `codex-panel-<version>.vsix`.
 
 Goal: a Codex chat panel for VS Code. It started as a one-to-one port of the Eclipse plugin (`..\codex-panel`); the Java code is still
 a useful reference for the core (session, installer, history), but the two are separate projects now and VS Code gets its own features.

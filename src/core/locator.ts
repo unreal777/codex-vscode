@@ -1,7 +1,7 @@
 // Finds the codex executable without relying on npm shell wrappers (port of CodexLocator.java).
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { readState } from './installer';
+import { exeName, readState } from './installer';
 
 export class Located {
   constructor(public readonly file: string, public readonly source: string, public readonly version: string | null = null) {}
@@ -36,7 +36,7 @@ function isDir(p: string): boolean {
 /**
  * Order: explicit path, managed copy (if useManaged), CODEX_EXECUTABLE / npm global / PATH.
  * @param override    path configured in settings, may be empty
- * @param managedBase directory holding the managed copy (%LOCALAPPDATA%\CodexPanel)
+ * @param managedBase directory holding the managed copy (%LOCALAPPDATA%\CodexPanel on Windows)
  */
 export function locate(override?: string | null, managedBase?: string | null, useManaged = false, env: NodeJS.ProcessEnv = process.env): Located {
   const tried: string[] = [];
@@ -76,12 +76,28 @@ export function locateSystem(tried: string[] = [], env: NodeJS.ProcessEnv = proc
       if (!dir.trim()) continue;
       for (const ext of exts) {
         const f = path.join(dir.trim(), 'codex' + ext);
-        if (isFile(f)) return new Located(f, 'PATH');
+        if (isFile(f)) return (win ? null : nativeBehindShim(f)) ?? new Located(f, 'PATH');
       }
     }
     tried.push('PATH');
   }
   return null;
+}
+
+/**
+ * macOS / Linux: "codex" on the PATH is usually npm's link to <prefix>/lib/node_modules/@openai/codex/bin/codex.js, a script that
+ * needs "node" on the PATH of VS Code. The real executable sits in the package next to it: start that one directly.
+ */
+export function nativeBehindShim(shim: string): Located | null {
+  try {
+    const real = fs.realpathSync(shim);
+    if (path.basename(path.dirname(real)) !== 'bin') return null;
+    const pkg = path.dirname(path.dirname(real));   // .../node_modules/@openai/codex
+    if (path.basename(pkg) !== 'codex' || path.basename(path.dirname(pkg)) !== '@openai') return null;
+    return globVendor(path.join(pkg, 'node_modules', '@openai'));
+  } catch {
+    return null;
+  }
 }
 
 function globVendor(openaiScope: string): Located | null {
@@ -92,7 +108,7 @@ function globVendor(openaiScope: string): Located | null {
       const vendor = path.join(openaiScope, pkg, 'vendor');
       if (!isDir(vendor)) continue;
       for (const triple of fs.readdirSync(vendor)) {
-        const exe = path.join(vendor, triple, 'bin', 'codex.exe');
+        const exe = path.join(vendor, triple, 'bin', exeName());
         if (isFile(exe)) return new Located(exe, 'npm vendor');
       }
     }

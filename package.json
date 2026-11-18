@@ -1,20 +1,37 @@
 {
   "name": "codex-panel",
-  "displayName": "Codexter (Codex Subscription Chat with better UI)",
-  "description": "Codexter: Codex chat (your ChatGPT subscription) for VS Code with a better UI, in the secondary side bar.",
-  "version": "0.8.4",
-  "publisher": "codexpanel",
+  "displayName": "Codexter: chat for OpenAI Codex (unofficial)",
+  "description": "Unofficial chat panel for OpenAI Codex and GPT models with your ChatGPT subscription: a chat per project and git branch, tabs, history search, commit messages. Not affiliated with OpenAI.",
+  "version": "0.10.0",
+  "publisher": "UnrealDeveloper",
   "repository": {
     "type": "git",
     "url": "https://github.com/unreal777/codex-vscode.git"
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
     "AI",
     "Chat"
+  ],
+  "keywords": [
+    "codex",
+    "openai",
+    "openai codex",
+    "chatgpt",
+    "gpt",
+    "ai",
+    "ai chat",
+    "chat",
+    "agent",
+    "coding agent",
+    "ai assistant",
+    "mcp",
+    "commit message",
+    "git"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
@@ -118,6 +135,10 @@
       {
         "command": "codexPanel.checkUpdates",
         "title": "Codexter: Check for Codex updates"
+      },
+      {
+        "command": "codexPanel.review",
+        "title": "Codexter: Code review"
       }
     ],
     "keybindings": [
@@ -200,7 +221,7 @@
         "codexPanel.codexPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Path to `codex.exe`. Empty = use the managed copy (or `CODEX_EXECUTABLE`, npm global, `PATH`)."
+          "markdownDescription": "Path to your own Codex executable (`codex.exe` on Windows, `codex` on macOS and Linux). Empty = use the managed copy (or `CODEX_EXECUTABLE`, npm global, `PATH`)."
         },
         "codexPanel.codexSource": {
           "type": "string",
@@ -276,7 +297,7 @@
         "codexPanel.commitMessageModel": {
           "type": "string",
           "default": "gpt-6-luna",
-          "markdownDescription": "Model for *Generate commit message* and the AI search of the History panel (a fast one is enough). Default: GPT-6-Luna. Empty = the Codex default (config.toml)."
+          "markdownDescription": "Model for *Generate commit message*, the AI search of the History panel and the AI chat names (a fast one is enough). Default: GPT-6-Luna. Empty = the Codex default (config.toml)."
         },
         "codexPanel.commitMessageEffort": {
           "type": "string",
@@ -299,12 +320,162 @@
             "High",
             "Extra high"
           ],
-          "markdownDescription": "Reasoning effort for *Generate commit message* and the AI search. Low is fast and enough for both."
+          "markdownDescription": "Reasoning effort for *Generate commit message*, the AI search and the AI chat names. Low is fast and enough for all of them."
+        },
+        "codexPanel.dictation": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "**Experimental.** Show the microphone button in the input (Windows only for now). Your words go to Codex's voice mode and come back as text in the input; nothing is sent to the chat until you send it. **Dictation uses tokens of your ChatGPT plan** (the voice mode runs a model the whole time the microphone is on). The voice mode is experimental in Codex itself, so a Codex update may break it."
+        },
+        "codexPanel.dictationLanguages": {
+          "type": "array",
+          "default": [
+            "en"
+          ],
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "hy",
+              "be",
+              "bg",
+              "zh",
+              "cs",
+              "da",
+              "nl",
+              "en",
+              "fi",
+              "fr",
+              "ka",
+              "de",
+              "el",
+              "he",
+              "hi",
+              "hu",
+              "id",
+              "it",
+              "ja",
+              "kk",
+              "ko",
+              "no",
+              "fa",
+              "pl",
+              "pt",
+              "ro",
+              "ru",
+              "sr",
+              "es",
+              "sv",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "vi"
+            ],
+            "enumItemLabels": [
+              "Arabic (ar)",
+              "Armenian (hy)",
+              "Belarusian (be)",
+              "Bulgarian (bg)",
+              "Chinese (zh)",
+              "Czech (cs)",
+              "Danish (da)",
+              "Dutch (nl)",
+              "English (en)",
+              "Finnish (fi)",
+              "French (fr)",
+              "Georgian (ka)",
+              "German (de)",
+              "Greek (el)",
+              "Hebrew (he)",
+              "Hindi (hi)",
+              "Hungarian (hu)",
+              "Indonesian (id)",
+              "Italian (it)",
+              "Japanese (ja)",
+              "Kazakh (kk)",
+              "Korean (ko)",
+              "Norwegian (no)",
+              "Persian (fa)",
+              "Polish (pl)",
+              "Portuguese (pt)",
+              "Romanian (ro)",
+              "Russian (ru)",
+              "Serbian (sr)",
+              "Spanish (es)",
+              "Swedish (sv)",
+              "Thai (th)",
+              "Turkish (tr)",
+              "Ukrainian (uk)",
+              "Urdu (ur)",
+              "Vietnamese (vi)"
+            ],
+            "enumDescriptions": [
+              "Arabic",
+              "Armenian",
+              "Belarusian",
+              "Bulgarian",
+              "Chinese",
+              "Czech",
+              "Danish",
+              "Dutch",
+              "English",
+              "Finnish",
+              "French",
+              "Georgian",
+              "German",
+              "Greek",
+              "Hebrew",
+              "Hindi",
+              "Hungarian",
+              "Indonesian",
+              "Italian",
+              "Japanese",
+              "Kazakh",
+              "Korean",
+              "Norwegian",
+              "Persian",
+              "Polish",
+              "Portuguese",
+              "Romanian",
+              "Russian",
+              "Serbian",
+              "Spanish",
+              "Swedish",
+              "Thai",
+              "Turkish",
+              "Ukrainian",
+              "Urdu",
+              "Vietnamese"
+            ]
+          },
+          "markdownDescription": "Languages you dictate in (English by default; an empty list = any language). Codex's voice mode has no language option, so the voice model is told these, and a phrase written in a script none of them uses (Chinese while you speak Russian) is left out instead of typed. Also in the panel: gear > *Dictation languages*."
+        },
+        "codexPanel.autoChatNames": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "first",
+            "off"
+          ],
+          "enumDescriptions": [
+            "After the first answer, then again every 5 answers (the name follows the topic)",
+            "Once, after the first answer",
+            "Never: the name is the first message until you rename the chat"
+          ],
+          "markdownDescription": "Chat names written by AI (the model of `#codexPanel.commitMessageModel#`, a small request on your Codex usage). A chat you renamed by hand keeps its name. The sparkle in the rename box asks for a name at any time."
         },
         "codexPanel.systemNotifications": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "When a reply ends (or a chat asks for an approval) while VS Code is in the background, show a notification of the system (Windows, macOS, Linux) instead of VS Code's own. A click opens the chat."
+        },
+        "codexPanel.openOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Open the Codexter panel when VS Code starts, in place of the view that was open last in that side bar (for example Copilot Chat)."
         },
         "codexPanel.instructionsSource": {
           "type": "string",

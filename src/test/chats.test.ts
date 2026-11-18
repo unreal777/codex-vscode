@@ -5,6 +5,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { AppServerClient } from '../core/appServer';
 import { addToday, dayKey, pruneUnread, removeToday, tabsOf, todayOf, UNREAD_MAX_AGE_MS } from '../core/chatList';
+import { imageFileUrl } from '../core/imageFile';
 import { CodexSession, SessionHost } from '../session';
 import { tmpDir } from './helpers';
 
@@ -131,11 +132,21 @@ test('page: tabs, unread dots, last answer, running reply of a loaded chat', () 
 
 test('0.7.2: kept chats for a fast tab switch, references drawn by the overlay', () => {
   const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
-  assert.ok(app.includes('function stashChat()') && app.includes('function restoreChat(id)') && app.includes('function openChat(id)'));
+  assert.ok(app.includes('function stashChat()') && app.includes('function restoreChat(id)') && app.includes('function openChat(id, title)'));
   assert.ok(app.includes("if (p && p.threadId && state.threadId && p.threadId !== state.threadId) return;"), 'events of the chat just left are not drawn');
   assert.ok(app.includes("id: 'sym-tip'"), 'own tooltip for references');
   const css = fs.readFileSync(path.join(root, 'web', 'app.css'), 'utf8');
   assert.ok(css.includes('#input.with-refs { color: transparent;'), 'the overlay draws the text when there are references');
+});
+
+test('0.9.0: opening a chat that is not kept shows a spinner until it arrives (or fails)', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes('if (!restoreChat(id) && id !== state.threadId) showChatLoading(id, title);'));
+  assert.ok(app.includes('if (!ev.created) hideChatLoading();'), 'the loaded chat ends it');
+  assert.ok(app.includes("case 'error': hideChatLoading();"), 'an error ends it');
+  assert.ok(app.includes('stop: setTimeout(hideChatLoading, 90000)'), 'never stays forever');
+  const css = fs.readFileSync(path.join(root, 'web', 'app.css'), 'utf8');
+  assert.ok(css.includes('#feed.dim {') && css.includes('#chatload {'));
 });
 
 test('0.7.3: Diff of a changed file opens the git change view first', () => {
@@ -165,6 +176,25 @@ test('0.7.5: pictures open in an editor tab of their own, the input gets its car
   assert.ok(fs.existsSync(path.join(root, 'web', 'imageEditor.js')));
 });
 
+test('0.9.0: an attached image file opens in the drawing editor; the saved picture replaces the file chip', () => {
+  const dir = tmpDir('imgfile-');
+  const png = path.join(dir, 'Shot.PNG'), jpg = path.join(dir, 'a.jpeg'), txt = path.join(dir, 'a.txt');
+  fs.writeFileSync(png, Buffer.from([1, 2, 3])); fs.writeFileSync(jpg, Buffer.from([4])); fs.writeFileSync(txt, 'x');
+  assert.equal(imageFileUrl(png), 'data:image/png;base64,AQID');
+  assert.equal(imageFileUrl(jpg), 'data:image/jpeg;base64,BA==');
+  assert.equal(imageFileUrl(txt), null, 'not an image');
+  assert.equal(imageFileUrl(path.join(dir, 'gone.png')), null, 'missing');
+  assert.equal(imageFileUrl(png, 2), null, 'too big');
+  fs.mkdirSync(path.join(dir, 'dir.png'));
+  assert.equal(imageFileUrl(path.join(dir, 'dir.png')), null, 'a folder');
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes("{ type: 'imageFileOpen', path: c.path }"), 'an image file chip opens the editor');
+  assert.ok(app.includes("ev.key.indexOf('file:') === 0) { replaceFileWithImage("), 'the saved picture comes back by the file key');
+  assert.ok(app.includes('function replaceFileWithImage(file, url)'));
+  const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
+  assert.ok(panel.includes("case 'imageFileOpen':") && panel.includes("key: 'file:' + file"));
+});
+
 test('0.7.6: a loaded chat shows its plan mode, and an existing chat always says whether plan mode is on', () => {
   const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
   assert.ok(app.includes('function applyThreadPlan(ev)'));
@@ -176,4 +206,16 @@ test('0.7.7: the closed input shows up to 7 lines with the end in view, a click 
   assert.ok(app.includes('const CLOSED_LINES = 7;'));
   assert.ok(app.includes("autoGrow('bottom');") && app.includes("autoGrow('keep');"));
   assert.ok(app.includes("document.addEventListener('mouseup', () => { if (inputMouseDown) openInput(); });"));
+});
+
+test('open on startup: setting off by default, the panel shows it, activation opens the view and gives the keyboard back to the editor', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(pkg.contributes.configuration.properties['codexPanel.openOnStartup'].default, false);
+  assert.ok(pkg.activationEvents.includes('onStartupFinished'));
+  const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+  assert.match(ext, /if \(cfg\(\)\.get<boolean>\('openOnStartup', false\)\) \{[\s\S]*?await showView\(\);[\s\S]*?workbench\.action\.focusActiveEditorGroup/);
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  assert.ok(app.includes("saveSettings({ openOnStartup: cbS.checked })"));
+  const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
+  assert.ok(panel.includes("openOnStartup: o?.openOnStartup === true"));
 });

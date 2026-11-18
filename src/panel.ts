@@ -1,12 +1,15 @@
 // The Codex chat view: a webview showing media/web (the same page as the Eclipse plugin), wired to the shared CodexSession.
 // Port of CodexView.java. Host -> page: webview.postMessage(array of events) -> window.codexUi.receive (see media/vscode-bridge.js).
 // Page -> host: window.__codexPost(JSON string) -> onDidReceiveMessage.
+import { DEFAULT_LANGUAGES, LANGUAGES, parseLanguages } from './core/dictationLanguages';
 import { agentsFile, codexInstructionsOf, InstructionsSource, sanitizeContextSettings } from './core/instructions';
+import { createReviewFile, findReviewFile, REVIEW_FILE, reviewText } from './core/reviewFile';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { resolveDropped } from './core/droppedPaths';
+import { imageFileUrl } from './core/imageFile';
 import { WEB_SCRIPTS } from './core/webScripts';
 import { Json } from './core/jsonrpc';
 import { migratePermissions, normalizePermissions } from './core/permissions';
@@ -60,9 +63,16 @@ export interface PanelSettings {
   systemNotifications: boolean;
   /** core/instructions.ts: whose instructions new chats get, Codexter's own text, the auto-compact limit (0 = Codex's) */
   instructionsSource: InstructionsSource; instructions: string; autoCompactTokens: number;
+  /** the mic button (Windows); AI chat names: auto | first | off */
+  dictation: boolean; autoChatNames: string;
+  /** codes like ['en', 'ru'] of core/dictationLanguages: the voice model is told, phrases in another script are dropped ([] = any language) */
+  dictationLanguages: string[];
+  /** open the panel when VS Code starts */
+  openOnStartup: boolean;
 }
 const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort',
-  'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens'];
+  'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup'];
+const AUTO_NAMES = ['auto', 'first', 'off'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 /** '' = a new chat keeps the permissions used last */
 const PERMISSIONS = ['', 'ask', 'auto', 'full', 'custom'];
@@ -76,7 +86,10 @@ export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
   return { defaultModel: s(o?.defaultModel), defaultReasoningEffort: EFFORTS.includes(effort) ? effort : '',
     defaultPermissions: PERMISSIONS.includes(perms) ? perms : '', hiddenModels: [...new Set(hidden)], fontSize: fontSizeOf(o?.fontSize),
     commitMessageModel: s(o?.commitMessageModel), commitMessageEffort: EFFORTS.includes(s(o?.commitMessageEffort)) ? s(o?.commitMessageEffort) : '',
-    systemNotifications: o?.systemNotifications !== false, ...sanitizeContextSettings(o) };
+    systemNotifications: o?.systemNotifications !== false, ...sanitizeContextSettings(o),
+    dictation: o?.dictation !== false, autoChatNames: AUTO_NAMES.includes(s(o?.autoChatNames)) ? s(o?.autoChatNames) : 'auto',
+    dictationLanguages: Array.isArray(o?.dictationLanguages) ? parseLanguages(o?.dictationLanguages).codes : DEFAULT_LANGUAGES.slice(),
+    openOnStartup: o?.openOnStartup === true };
 }
 
 /** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
@@ -97,7 +110,8 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   private flushTimer?: NodeJS.Timeout;
   private pageReady = false;
   private cwd: string | null = null;
-  private readonly sink = (e: Json) => this.post(e);
+  // dictation events go only to the view whose mic button started it
+  private readonly sink = (e: Json) => { if (typeof e.owner === 'string' && e.owner !== this.viewId) return; this.post(e); };
   private readonly subs: vscode.Disposable[] = [];
   /** Set by the owner: told when this view became the one in use (resolved or visible). */
   onActive: (p: CodexViewProvider) => void = () => {};
@@ -277,6 +291,43 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
     this.post({ kind: 'showSettings' });
   }
 
+  /** "Codexter: Code review": the page asks for the project's instructions, sends the review in the open chat and shows the findings as cards. */
+  startReview(): void {
+    this.post({ kind: 'startReview' });
+  }
+
+  /** The settings' link to REVIEW_INSTRUCTIONS.md of the chat's project, or where a new one would go. */
+  private reviewFileEvent(): Json {
+    const cwd = this.currentCwd(), f = findReviewFile(cwd);
+    return { kind: 'reviewFile', name: REVIEW_FILE, path: f.path, exists: f.exists, project: this.ws.projectName(cwd) };
+  }
+
+  /** The text for a review: an open editor counts, also with unsaved changes. text '' = no file or an empty one (the page uses its default). */
+  private reviewPrompt(): void {
+    const f = findReviewFile(this.currentCwd());
+    const ev: Json = { kind: 'reviewPrompt', name: REVIEW_FILE, exists: f.exists, text: '' };
+    if (f.exists) {
+      try {
+        const open = vscode.workspace.textDocuments.find((d) => d.uri.scheme === 'file' && path.relative(d.uri.fsPath, f.path) === '');
+        ev.text = reviewText(open ? open.getText() : fs.readFileSync(f.path, 'utf8'));
+      } catch (e) {
+        ev.error = e instanceof Error ? e.message : String(e);
+      }
+    }
+    this.post(ev);
+  }
+
+  private async openReviewFile(create: string | null): Promise<void> {
+    const f = findReviewFile(this.currentCwd());
+    try {
+      if (!f.exists && create !== null) createReviewFile(f.path, create);
+      this.post(this.reviewFileEvent());
+      await vscode.window.showTextDocument(vscode.Uri.file(f.path));
+    } catch (e) {
+      this.toast(REVIEW_FILE + ': ' + (e instanceof Error ? e.message : String(e)));
+    }
+  }
+
   private postActiveFile(ed: vscode.TextEditor | undefined): void {
     const p = this.ws.filePath(ed);
     const ev: Json = { kind: 'context', action: 'activeFile', item: null };
@@ -314,6 +365,8 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       historyCwds: this.session.historyCwds,
       historyManual: this.session.historyManual,
       settings: this.settingsEvent().settings,
+      dictation: this.session.dictationAvailable,
+      dictationLangs: LANGUAGES.map((l) => ({ code: l.code, name: l.name })),   // on / off comes with the settings
     };
     this.post(init);
     this.session.replayStateTo(this.sink);
@@ -355,6 +408,14 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         const key = orEmpty(str(m, 'key'));
         this.images?.open({ url: orEmpty(str(m, 'url')), name: orEmpty(str(m, 'name')), editable: m.editable === true, blank: m.blank === true },
           (url) => this.post({ kind: 'imageEdited', key, url }));
+        break;
+      }
+      case 'imageFileOpen': { // an image file attached as a chip: opened in the editor tab; the saved picture replaces the chip (the file stays as it is)
+        const file = orEmpty(str(m, 'path'));
+        const url = imageFileUrl(file);
+        if (!url) { this.toast('This image can not be opened for drawing (unknown type, missing or bigger than 25 MB).'); break; }
+        this.images?.open({ url, name: path.basename(file), editable: true, blank: false },
+          (edited) => this.post({ kind: 'imageEdited', key: 'file:' + file, url: edited }));
         break;
       }
       case 'pasteRef': {
@@ -455,14 +516,49 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       case 'openAgents':
         void this.openAgentsFile();
         break;
+      case 'reviewPrompt':
+        this.reviewPrompt();
+        break;
+      case 'reviewFile':
+        this.post(this.reviewFileEvent());
+        break;
+      case 'reviewFileOpen':
+        void this.openReviewFile(null);
+        break;
+      case 'reviewFileCreate':
+        void this.openReviewFile(orEmpty(str(m, 'text')));
+        break;
       case 'threadAction': {
         const a = str(m, 'action'), id = str(m, 'threadId');
-        if ((a === 'archive' || a === 'unarchive' || a === 'delete') && id) this.session.threadAction(a, id);
-        else if (a === 'rename' && id) {
-          void this.session.renameThread(id, orEmpty(str(m, 'name'))).then((ok) => {
-            if (ok) this.activity?.title(id, this.session.titleOf(id) ?? '');   // its tab
-          });
+        if ((a === 'archive' || a === 'unarchive' || a === 'delete' || a === 'deleteWithForks') && id) this.session.threadAction(a, id);
+        else if (a === 'rename' && id) void this.session.renameThread(id, orEmpty(str(m, 'name')), m.auto === true);   // the tab: host.renamed
+        break;
+      }
+      case 'fork': {   // "Fork" of an answer: a new chat up to that answer
+        const turn = str(m, 'turnId');
+        if (turn) this.session.forkFrom(turn, str(m, 'permissions') ?? this.prefs.permissions());
+        break;
+      }
+      case 'sideAsk': {   // Clarify: a question about one answer, asked in a read-only fork of the chat
+        const thread = str(m, 'threadId'), turn = str(m, 'turnId'), text = str(m, 'text');
+        if (thread && turn && text) {
+          this.session.sideAsk({ threadId: thread, turnId: turn, sideId: str(m, 'sideId') || null, excerpt: orEmpty(str(m, 'excerpt')), text,
+            model: orEmpty(str(m, 'model')), effort: orEmpty(str(m, 'effort')) });
         }
+        break;
+      }
+      case 'sideShow':
+        if (str(m, 'sideId')) this.session.sideShow(str(m, 'sideId') as string);
+        break;
+      case 'sideInterrupt':
+        if (str(m, 'sideId')) this.session.sideInterrupt(str(m, 'sideId') as string);
+        break;
+      case 'dictation':   // the mic button: start / stop
+        if (m.action === 'start') this.session.startDictation(this.viewId); else this.session.stopDictation();
+        break;
+      case 'suggestTitle': {   // the sparkle of the rename input
+        const id = str(m, 'threadId');
+        if (id) this.session.suggestTitle(id);
         break;
       }
       case 'retry':
@@ -488,7 +584,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
   }
 
   openSettings(): void {
-    void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:codexpanel.codex-panel');
+    void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:UnrealDeveloper.codex-panel');
   }
 
   /** New chat: the thread forgets its cwd, so the next one starts in the project of the active editor. */
@@ -657,6 +753,8 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
       text: prompt, cwd, model: orEmpty(str(m, 'model')), defaultModel: orEmpty(str(m, 'defaultModel')), effort: orEmpty(str(m, 'effort')),
       permissions: str(m, 'permissions') ?? this.prefs.permissions(), images, mentions, plan: typeof m.plan === 'boolean' ? m.plan : undefined,
     };
+    const replace = str(m, 'replaceTurnId');   // "Edit" of the last message
+    if (replace) { req.replaceTurnId = replace; req.editText = orEmpty(str(m, 'text')); }
     this.session.send(req);
     this.post(this.cwdEvent());
   }

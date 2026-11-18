@@ -1,13 +1,14 @@
 // Keeps a private copy of the Codex CLI up to date, straight from the official npm registry
 // (port of CodexInstaller.java). The folder layout, file names, current.json format and the temp/atomic-rename behaviour are
-// IDENTICAL to the Eclipse plugin, because both IDEs use %LOCALAPPDATA%\CodexPanel at the same time.
+// IDENTICAL to the Eclipse plugin, because on Windows both IDEs use %LOCALAPPDATA%\CodexPanel at the same time.
 //
-//   <base>/codex/<version>/vendor/<triple>/bin/codex.exe   (+ helper executables next to it)
+//   <base>/codex/<version>/vendor/<triple>/bin/codex.exe   (+ helper executables next to it; "codex" on macOS and Linux)
 //   <base>/codex/current.json                              {version, exePath, previous, installedAt, lastCheck}
 //
-// Only the per-platform npm dist-tag ("win32-x64") is used, so alpha/beta builds are never installed.
+// Only the per-platform npm dist-tag ("win32-x64", "linux-arm64", "darwin-arm64", ...) is used, so alpha/beta builds are never
+// installed. Windows, macOS and Linux on x64 and arm64 have one; the packages have the same layout (checked for 0.167.2).
 // Security: https and host registry.npmjs.org only (also after redirects), sha512 integrity from the registry is verified before
-// extraction, archive paths are validated, and the only thing ever executed is `codex.exe --version`.
+// extraction, archive paths are validated, and the only thing ever executed is `codex --version`.
 import { spawn } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
@@ -16,7 +17,7 @@ import { GetOptions, httpsGet, ProxyConfig } from './http';
 import { extractTarGz } from './tar';
 
 export const REGISTRY_HOST = 'registry.npmjs.org';
-const STABLE = /^(\d+)\.(\d+)\.(\d+)-(win32-(?:x64|arm64))$/;
+const STABLE = /^(\d+)\.(\d+)\.(\d+)-((?:win32|linux|darwin)-(?:x64|arm64))$/;
 
 export interface Remote {
   version: string;
@@ -88,8 +89,17 @@ export function checkDue(base: string, days: number): boolean {
   return !s.lastCheck || s.lastCheck.getTime() + days * 86400000 < Date.now();
 }
 
-export function platformTag(): string {
-  return process.arch === 'arm64' ? 'win32-arm64' : 'win32-x64';
+/** The npm dist-tag of this machine's build: win32 | linux | darwin, x64 | arm64. Anything else has no managed install. */
+export function platformTag(platform: string = process.platform, arch: string = process.arch): string {
+  if ((platform !== 'win32' && platform !== 'linux' && platform !== 'darwin') || (arch !== 'x64' && arch !== 'arm64')) {
+    throw new Error('there is no managed Codex install for ' + platform + ' ' + arch + ': install Codex yourself and set its path in the Codexter settings');
+  }
+  return platform + '-' + arch;
+}
+
+/** File name of the Codex executable in the npm package. */
+export function exeName(platform: string = process.platform): string {
+  return platform === 'win32' ? 'codex.exe' : 'codex';
 }
 
 /** https and exactly registry.npmjs.org, no credentials in the URL. */
@@ -153,18 +163,18 @@ export function deleteTree(p: string): void {
   }
 }
 
-/** Relative path of vendor/<triple>/bin/codex.exe below dir, or null. */
-export function findExe(dir: string): string | null {
+/** Relative path of vendor/<triple>/bin/codex.exe (codex on macOS and Linux) below dir, or null. */
+export function findExe(dir: string, platform: string = process.platform): string | null {
   const vendor = path.join(dir, 'vendor');
   if (!isDirectory(vendor)) return null;
   for (const t of fs.readdirSync(vendor)) {
-    const exe = path.join(vendor, t, 'bin', 'codex.exe');
+    const exe = path.join(vendor, t, 'bin', exeName(platform));
     if (isRegularFile(exe)) return path.relative(dir, exe);
   }
   return null;
 }
 
-/** Runs `codex.exe --version`, the only thing we ever execute from a download. */
+/** Runs `codex --version`, the only thing we ever execute from a download. */
 function validate(exe: string, version: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const p = spawn(exe, ['--version'], { cwd: path.dirname(exe), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
@@ -174,13 +184,13 @@ function validate(exe: string, version: string): Promise<void> {
     p.stderr.on('data', add);
     const timer = setTimeout(() => {
       p.kill();
-      reject(new Error('codex.exe --version did not finish'));
+      reject(new Error('codex --version did not finish'));
     }, 30000);
-    p.once('error', (e) => { clearTimeout(timer); reject(new Error('downloaded codex.exe failed validation: ' + e.message)); });
+    p.once('error', (e) => { clearTimeout(timer); reject(new Error('downloaded codex failed validation: ' + e.message)); });
     p.once('close', (code) => {
       clearTimeout(timer);
       const text = out.trim().substring(0, 4096);
-      if (code !== 0 || !text.includes(version)) reject(new Error('downloaded codex.exe failed validation: ' + text));
+      if (code !== 0 || !text.includes(version)) reject(new Error('downloaded codex failed validation: ' + text));
       else resolve();
     });
   });
@@ -257,7 +267,6 @@ export class CodexInstaller {
 
   /** One small request: the registry resolves the dist-tag to that version's manifest. */
   async fetchLatest(): Promise<Remote> {
-    if (process.platform !== 'win32') throw new Error('the managed Codex install supports Windows only');
     const tag = platformTag();
     const r = await this.get(new URL('https://' + REGISTRY_HOST + '/@openai/codex/' + tag), 'application/json');
     const chunks: Buffer[] = [];
@@ -325,7 +334,7 @@ export class CodexInstaller {
       p('extracting', version, 0, -1);
       if ((await extractTarGz(tgz, tmp, 'package/vendor/')) === 0) throw new Error('archive contains no package/vendor files');
       const rel = findExe(tmp);
-      if (rel === null) throw new Error('codex.exe not found in archive');
+      if (rel === null) throw new Error(exeName() + ' not found in archive');
       p('validating', version, 0, -1);
       await validate(path.join(tmp, rel), version);
       const dest = path.join(this.root, version);

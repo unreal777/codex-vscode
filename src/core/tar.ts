@@ -1,7 +1,8 @@
 // Minimal streaming tar.gz reader (ustar + pax/GNU long names) for npm tarballs (port of TarExtractor.java).
 // Every entry name is validated, whether or not it is extracted: absolute paths, drive letters, backslashes and ".."
 // segments make the whole archive invalid (zip-slip). Only regular files and folders below keepPrefix are written;
-// symlinks, hard links and everything else are skipped, never created.
+// symlinks, hard links and everything else are skipped, never created. On macOS and Linux a file that is executable in the
+// archive is executable on disk (the Codex binaries and their helpers); no other mode bit is taken over.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as zlib from 'node:zlib';
@@ -79,6 +80,18 @@ function headerName(h: Buffer): string {
   return name;
 }
 
+/** Permission bits of an entry (octal field at 100..107); 0 when it is not a number. */
+export function headerMode(h: Buffer): number {
+  const s = cString(h, 100, 8).trim();
+  const m = s === '' ? 0 : parseInt(s, 8);
+  return Number.isFinite(m) ? m & 0o7777 : 0;
+}
+
+/** Mode of an extracted file: 755 when anyone may execute it in the archive, else 644 (setuid and the like are never kept). */
+export function fileModeFor(archiveMode: number): number {
+  return (archiveMode & 0o111) !== 0 ? 0o755 : 0o644;
+}
+
 const pad = (size: number): number => (512 - (size % 512)) % 512;
 
 /** Returns the name without a leading "./" or trailing "/"; throws for anything that could escape. */
@@ -153,7 +166,7 @@ export async function extractTarGz(tgz: string, dest: string, keepPrefix: string
         continue;
       }
       await fs.promises.mkdir(path.dirname(target), { recursive: true });
-      const fh = await fs.promises.open(target, 'w');
+      const fh = await fs.promises.open(target, 'w', fileModeFor(headerMode(h)));
       try {
         for (let left = size; left > 0;) {
           const chunk = await rd.readSome(Math.min(1 << 20, left));
@@ -163,6 +176,8 @@ export async function extractTarGz(tgz: string, dest: string, keepPrefix: string
       } finally {
         await fh.close();
       }
+      // open() honours the umask and keeps the mode of a file that was there already: set it for sure (Windows has no such bits)
+      if (process.platform !== 'win32') await fs.promises.chmod(target, fileModeFor(headerMode(h)));
       await rd.skip(pad(size));
       written++;
     }

@@ -71,6 +71,9 @@
     approveCommandNet: 'Codex wants network access for a command',
     approveFiles: 'Codex wants to change files',
     approvePerms: 'Codex requests additional permissions',
+    approveMcpTool: (server, tool) => 'Codex wants to use the MCP tool ' + tool + (server ? ' (' + server + ')' : ''),
+    approveMcpAsk: (server) => 'The MCP server ' + (server || '') + ' asks',
+    mcpOpenUrl: 'Open the link, then press Allow when you are done there',
     changedFiles: (n) => 'Changed ' + n + (n === 1 ? ' file' : ' files'),
     openAllDiff: 'Open combined diff',
     workedFor: 'Worked for',
@@ -80,8 +83,27 @@
     hiddenMark: ' (hidden)',
     // history actions
     archive: 'Archive chat', unarchive: 'Unarchive chat', deleteChat: 'Delete chat', deleteAsk: 'Delete chat?', deleteYes: 'Delete', deleteNo: 'Cancel',
+    deleteForksAsk: (n) => (n === 1 ? 'A fork uses this chat. Delete the fork too?' : n + ' forks use this chat. Delete them too?'), deleteForksYes: 'Delete all',
     showArchived: 'Show archived', noArchived: 'No archived chats', chatArchived: 'Chat archived', chatUnarchived: 'Chat restored', chatDeleted: 'Chat deleted',
     renameChat: 'Rename chat', renameHint: 'Double-click or F2 to rename',
+    dictate: 'Dictate (speak, the text goes into the input; click again or Esc to stop)', dictateStarting: 'Opening the microphone…',
+    dictateListening: 'Listening — click or Esc to stop', dictateStopping: 'Writing the last words…',
+    dictationFailed: (e) => 'Dictation stopped: ' + e,
+    dictationDropped: (t) => 'Not in your dictation languages, left out: “' + t + '”. Say it again, or add the language under gear > Dictation languages.',
+    setDictLangs: 'Dictation languages', setDictLangsAny: 'Any language (no filter)',
+    setDictLangsHint: 'The voice model is told your languages, and a phrase in another script (Chinese while you speak Russian) is left out.',
+    openingChat: 'Opening chat…',
+    editLast: 'Edit and send again (replaces this message and its answer)', editWait: 'Wait a moment: the reply has not started yet',
+    editing: 'Editing the last message', editingTip: 'Sending replaces your last message and its answer (Esc cancels)', editCancel: 'Cancel',
+    fork: 'Fork', forkHere: 'Fork: a new chat with the conversation up to this answer',
+    clarify: 'Clarify', clarifyHere: 'Clarify: ask about this answer in a side chat (the main chat stays as it is)',
+    clarifyCount: (n) => n + (n === 1 ? ' clarification' : ' clarifications'), clarifyOpen: 'open the side chat',
+    sideHead: 'Clarifying', sideClose: 'Close the side chat', sideNew: 'New', sideNewTip: 'Start another clarification of this answer',
+    sideNote: 'Side chat, read-only: it knows this chat up to the answer above. Questions and answers stay here, the main chat gets nothing. A question costs about as much as a turn in a long chat.',
+    sideEmpty: 'Ask anything about the answer you came from.', sidePlaceholder: 'Ask about this answer…', sideThinking: 'Thinking…', sideLoading: 'Opening…',
+    sideDenied: 'Codex tried to change something. A side chat is read-only, so that was declined.', sideFailed: 'Could not ask: ', sideSend: 'Ask', sideStop: 'Stop',
+    sideTab: (i, title) => 'Clarification ' + i + (title ? ': ' + title : ''),
+    suggestName: 'Suggest a name (AI)', suggestFailed: (e) => 'No name suggested' + (e ? ': ' + e : ''),
     actionFailed: (what, err) => 'Could not ' + what + ' the chat' + (err ? ': ' + err : ''),
     // in-panel settings
     settings: 'Settings', settingsBack: 'Back', setDefaultModel: 'Default model', setDefaultEffort: 'Default reasoning effort',
@@ -90,8 +112,12 @@
     setModelsHint: 'Models shown in the picker below the input. At least one stays visible.', setNoModels: 'The model list is not loaded yet.',
     setAllModels: 'All models', setDefaultPerms: 'Default permissions', setDefaultPermsHint: 'New chats start with these permissions.',
     keepLastPerms: 'Keep the last used',
-    setCommitModel: 'Model for commit messages and AI search', setCommitModelHint: '"Generate commit message" in Source Control and the AI search of the History. A fast model is enough.',
-    setCommitEffort: 'Reasoning effort for commit messages and AI search', setCommitEffortHint: 'Low is fast and enough for both.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
+    setCommitModel: 'Model for commit messages, AI search and chat names', setCommitModelHint: '"Generate commit message" in Source Control, the AI search of the History and the AI chat names. A fast model is enough.',
+    setAutoNames: 'AI chat names', setAutoNamesHint: 'Names a chat by what it is about, with the model above. A name you set yourself is kept.',
+    autoNameLabels: { auto: 'After the first answer, then every 5', first: 'Once, after the first answer', off: 'Off (the first message)' },
+    setDictation: 'Dictation (microphone button), experimental',
+    setDictationHint: "Your words come back as text in the input. Dictation runs OpenAI's voice model (the Codex voice mode), not the model above, and spends tokens of your ChatGPT plan the whole time the microphone is on. A Codex update may break it.",
+    setCommitEffort: 'Reasoning effort for commit messages, AI search and chat names', setCommitEffortHint: 'Low is fast and enough.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
     instrTitle: 'Instructions', instrHint: 'How Codex should answer in every new chat, e.g. briefly, in plain language. AGENTS.md files always apply too.',
     instrCodex: 'Codex\u2019s own', instrCodexter: 'Only in Codexter',
@@ -106,6 +132,7 @@
     ctxTitle: 'Context', ctxCompactAt: 'Compact a chat at', ctxCodex: 'Codex default (about 90 % of the window)',
     ctxHint: 'Codex summarizes a chat when its context gets this big. Smaller keeps replies faster and uses less of your limits; bigger keeps more details. For chats opened or started afterwards. Compact in the footer does it now.',
     compact: 'Compact', compactTitle: 'Compact the context now: Codex summarizes the chat so far, the chat goes on with the summary', compacting: 'Compacting\u2026',
+    setStartup: 'Open Codexter when VS Code starts', setStartupHint: 'Shows this panel at every start, in place of the view used last in this side bar (for example Copilot Chat).',
     setNotify: 'System notifications', setNotifyHint: 'When a reply ends while VS Code is in the background, Windows (macOS, Linux) shows it over any program. A click opens the chat.',
     // MCP servers (settings, VS Code host)
     mcpTitle: 'MCP servers', mcpHint: 'Servers of the Codex config (~/.codex/config.toml, shared with the Codex CLI and Eclipse). Switching one off keeps it for later.',
@@ -139,6 +166,29 @@
     plusPlanOn: 'Plan mode is on. Click to turn it off',
     plusSketch: 'Sketch',
     plusSketchHint: 'Draw a sketch',
+    // code review triage (web/review.js)
+    plusReview: 'Code review',
+    plusReviewHint: 'Codex reviews the changes by this project’s REVIEW_INSTRUCTIONS.md; text in the input is added to it (e.g. "against develop")',
+    reviewTitle: 'Code review', reviewTag: 'Code review', reviewBusy: 'Wait until Codex has finished the reply.',
+    reviewNoBlock: 'Codex ended the review without a findings block: its answer is shown as usual.',
+    reviewBadBlock: 'The findings block could not be read, so its answer is shown as usual. ',
+    reviewWait: 'Preparing the findings…',
+    reviewFindings: (n) => n === 1 ? '1 finding' : n + ' findings', reviewNone: 'No findings: Codex found nothing to change.',
+    reviewOf: (i, n) => i + ' of ' + n, reviewSev: { critical: 'Critical', medium: 'Medium', suggestion: 'Suggestion' },
+    reviewFix: 'Suggested fix', reviewDoFix: 'Fix', reviewSkip: 'Skip', reviewOwn: 'Own answer', reviewBack: 'Back', reviewOverview: 'Overview',
+    reviewDoFixTitle: 'Codex fixes it as suggested', reviewSkipTitle: 'Leave it as it is', reviewOwnTitle: 'Tell Codex what to do instead',
+    reviewOwnPh: 'What should Codex do with this finding? (Ctrl+Enter saves)', reviewOwnSave: 'Save answer', reviewCancel: 'Cancel',
+    reviewAnswer: { fix: 'Fix', skip: 'Skip', own: 'Own answer' }, reviewWas: 'Your answer: ',
+    reviewDoneHint: 'All findings answered. Click one to change its answer, then send the answers to Codex.',
+    reviewOpenHint: (n) => n === 1 ? '1 finding still has no answer.' : n + ' findings still have no answer.',
+    reviewSend: 'Send answers to Codex', reviewSent: 'Answers sent to Codex.', reviewNoLoc: 'no file',
+    setReview: 'Code review', setReviewHint: (f) => 'Each project keeps its own instructions in ' + f + '. Code review (the + menu or the command "Codexter: Code review") sends them to Codex; Codexter adds the format for the finding cards itself.',
+    setReviewLoading: 'Looking for the file…', setReviewOpenTitle: (p) => 'Open ' + p,
+    setReviewNone: (project) => (project ? project + ' has' : 'This project has') + ' no such file yet: reviews use the default instructions.',
+    setReviewCreate: (f) => 'Create ' + f,
+    reviewNoFile: (f) => 'No ' + f + ' in this project: the default instructions were used. Create it in the settings.',
+    reviewEmptyFile: (f) => f + ' is empty: the default instructions were used.',
+    reviewFileError: (f, e) => f + ' can not be read: ' + e,
     plusPlugins: 'Plugins',
     pluginsLoading: 'Loading plugins…',
     pluginsNone: 'No installed plugins',
@@ -161,6 +211,7 @@
     sketchText: 'Text', sketchTextHint: 'Click where the text goes, type, Enter', sketchUndo: 'Undo (Ctrl+Z)', sketchSave: 'Save changes',
     sketchEditTitle: 'Draw and write on the image', imageView: 'Image', imageEdit: 'Draw / write', imageClose: 'Close',
     imageAdded: 'Image attached', imageSaved: 'Image updated',
+    imageFileHint: 'Click to draw on it; saving attaches the drawn-on picture instead (the file stays as it is)',
     imageTooMany: 'At most 8 images per message',
     imageFailed: 'Could not read the image',
     removeImage: 'Remove image',
@@ -343,7 +394,7 @@
     contexts: [], dismissedFile: null,
     // History panel: the query and the project selection are kept while the page lives (and by the host for the whole IDE session).
     // cwds = selected projects (empty = all); manual = the user changed it by hand, so the IDE's open projects no longer preselect it.
-    hist: { query: '', cwds: [], manual: false, openProjects: [], rows: [], next: null, loading: false, archived: false, confirm: null, busy: new Set(), reqId: 0, projects: [], error: null, sel: 0, autoLoads: 0,
+    hist: { query: '', cwds: [], manual: false, openProjects: [], rows: [], next: null, loading: false, archived: false, confirm: null, forkAsk: null, busy: new Set(), reqId: 0, projects: [], error: null, sel: 0, autoLoads: 0,
       ai: false, aiCache: null /* {key, rows} of the last AI answer */, aiKey: null /* key of the AI request in flight */ },
     // MCP servers of the settings (VS Code host): servers null = not loaded; notes by server name ('' = the whole section)
     mcp: { servers: null, vscode: [], error: null, loading: false, notes: {}, finding: false, findError: null, query: '' },
@@ -361,6 +412,9 @@
   // ---------- skeleton ----------
   const ICON = {
     plus: '<svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>',
+    fork: '<svg viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="5.5" r="1.5"/><path d="M4.5 5v6M11.5 7c0 2.5-2 3-4 3.2-1.5.2-3 .6-3 1.8"/></svg>',
+    ask: '<svg viewBox="0 0 16 16"><path d="M2.500 3.500h11v7h-6L4.500 13.500v-3h-2z"/><path d="M6.500 6.200a1.500 1.500 0 1 1 2.100 1.400c-.4.200-.6.500-.6.900M8 9.700v.1"/></svg>',
+    mic: '<svg viewBox="0 0 16 16"><rect x="5.5" y="1.5" width="5" height="8" rx="2.5"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.5M5.5 14.5h5"/></svg>',
     history: '<svg viewBox="0 0 16 16"><path d="M2.5 8a5.5 5.5 0 1 0 1.8-4.1M2.5 2.5v3h3M8 5v3.2l2 1.3"/></svg>',
     send: '<svg viewBox="0 0 16 16"><path d="M2 8.5 14 2 9.5 14 7.5 9z"/></svg>',
     stop: '<svg viewBox="0 0 16 16"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>',
@@ -384,6 +438,7 @@
     pencil: '<svg viewBox="0 0 16 16"><path d="M10.800 2.700l2.500 2.500L5.500 13H3v-2.500zM9.300 4.200l2.500 2.500"/></svg>',
     trash: '<svg viewBox="0 0 16 16"><path d="M2.500 4h11M6 4V2.500h4V4M4 4l.6 9.500h6.800L12 4M6.800 6.500v4.500M9.200 6.500v4.500"/></svg>',
     back: '<svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg>',
+    review: '<svg viewBox="0 0 16 16"><path d="M2.500 3.500h7M2.500 6.500h5M2.500 9.500h3"/><circle cx="10.500" cy="9.500" r="2.800"/><path d="M12.500 11.500 14.500 13.500"/></svg>',
     gear: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/></svg>'
   };
   const app = $('#app');
@@ -414,14 +469,25 @@
     '<div class="row"><button id="plus" type="button" class="tool" aria-haspopup="menu" aria-expanded="false" title="' + esc(STR.plusTitle) + '" aria-label="' + esc(STR.plusTitle) + '">' + ICON.plus + '</button>' +
     '<button id="perm" type="button" class="tool perm" aria-haspopup="menu" aria-expanded="false" title="' + esc(STR.permButton) + '"><span class="pi"></span><span class="pl"></span></button>' +
     '<select id="sel-model" title="Model"></select><select id="sel-effort" title="Reasoning effort"></select><span class="spacer"></span>' +
-    '<button id="send" type="button" title="' + esc(STR.send) + '">' + ICON.send + '</button></div></div>' +
+    '<span id="sendgrp"><span id="micwave" class="hidden" aria-hidden="true">' + '<i></i>'.repeat(21) + '</span><button id="mic" type="button" class="tool hidden" aria-pressed="false" title="' + esc(STR.dictate) + '" aria-label="' + esc(STR.dictate) + '">' + ICON.mic + '</button>' +
+    '<button id="send" type="button" title="' + esc(STR.send) + '">' + ICON.send + '</button></span></div></div>' +
     '<div id="footer"><span id="f-ctx"><span id="f-tokens"></span><button id="f-compact" class="hidden" type="button"></button></span><span id="f-limits"></span></div></div>' +
     '<div id="proj-menu" class="hidden" role="group" aria-label="' + esc(STR.projectFilter) + '"></div>' +
     '<div id="sketch" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.sketchTitle) + '"></div>' +
     '<div id="imgview" class="hidden" role="dialog" aria-modal="true" aria-label="' + esc(STR.imageView) + '"></div>' +
-    '<div id="dropzone" class="hidden"><div>' + esc(STR.dropHint) + '</div></div>';
+    '<div id="dropzone" class="hidden"><div>' + esc(STR.dropHint) + '</div></div>' +
+    '<div id="side-backdrop" class="hidden"></div>' +
+    '<div id="side" class="hidden" role="dialog" aria-label="' + esc(STR.sideHead) + '">' +
+    '<div class="side-head"><button class="icon-btn" id="side-close" type="button" title="' + esc(STR.sideClose) + '" aria-label="' + esc(STR.sideClose) + '">' + ICON.back + '</button>' +
+    '<div class="side-title"><span class="st-l">↳ ' + esc(STR.sideHead) + '</span><span class="st-ex" id="side-ex"></span></div></div>' +
+    '<div id="side-tabs" class="hidden"></div>' +
+    '<div id="side-note">' + esc(STR.sideNote) + '</div>' +
+    '<div id="side-feed"></div><div id="side-status" class="hidden"></div>' +
+    '<div id="side-dock"><textarea id="side-input" rows="1" placeholder="' + esc(STR.sidePlaceholder) + '"></textarea>' +
+    '<button id="side-send" type="button" title="' + esc(STR.sideSend) + '">' + ICON.send + '</button></div></div>';
 
   const feed = $('#feed'), input = $('#input'), sendBtn = $('#send');
+  const sideEl = $('#side'), sideFeed = $('#side-feed'), sideInput = $('#side-input'), sideSendBtn = $('#side-send'), sideStatus = $('#side-status');
   const selModel = $('#sel-model'), selEffort = $('#sel-effort');
 
   // ---------- feed ----------
@@ -468,6 +534,12 @@
       const k = kids[i];
       if (k.classList.contains('msg') && k.classList.contains('agent') && k.dataset.phase !== 'commentary') { finalMsg = k; break; }
     }
+    if (finalMsg) addForkButton(finalMsg, t.el);
+    if (finalMsg) addSideButton(finalMsg, t.el);
+    // a plan is an answer too (a card of its own, often with no message after it): Clarify under the turn's last plan
+    const planCards = kids.filter((k) => k.classList.contains('plan-card'));
+    if (planCards.length) addSideButton(planCards[planCards.length - 1], t.el);
+    if (finalMsg) attachReview(t, finalMsg);
     const work = kids.filter((k) => k.classList.contains('wk') && k !== finalMsg);
     if (!work.length) return;
     const ms = durationMs != null ? durationMs : Date.now() - t.startMs;
@@ -494,9 +566,11 @@
   function clearEmpty() { const e = $('#empty'); if (e) e.remove(); }
 
   function resetConversation() {
+    closeSide(false);
     state.items.clear(); state.approvals.clear(); state.reviews.clear();
     state.turn = null; state.goal = null; state.planUsed = false; renderGoal();
     state.turnId = null; state.running = false; state.pending = false;
+    if (state.edit) { state.edit = null; renderEditBar(); }   // an edit belongs to the chat it was started in
     state.turnFiles = new Set(); state.turnDiff = null; state.tokenUsage = null;
     stick = true;
     showEmpty(); renderPlan(null); updateRunning(); renderFooter();
@@ -511,6 +585,7 @@
   const turnSig = (count, id, status) => count + '|' + (id || '') + '|' + (status || '');
   function liveSig() { return turnSig(state.turnCount, state.lastTurnId, state.lastTurnStatus); }
   function stashChat() {
+    closeSide(false);   // the side chat belongs to an answer of the chat being left
     const id = state.threadId;
     if (!id) return;
     chatCache.delete(id);
@@ -540,23 +615,425 @@
     renderGoal(); renderPlan(null); renderFooter(); updateRunning();
     stick = c.stick;
     feed.scrollTop = c.scroll;
+    refreshSideButtons();
     return true;
   }
   // Opens a chat from a tab or the History: the kept copy first (if any), then the host resumes it.
-  function openChat(id) {
-    restoreChat(id);
+  function openChat(id, title) {
+    if (!restoreChat(id) && id !== state.threadId) showChatLoading(id, title);
     bridge.post({ type: 'resumeThread', threadId: id });
+  }
+  // Loading a chat that is not kept here can take seconds (thread/resume): a spinner over the dimmed feed until it arrives.
+  let chatLoading = null;
+  function showChatLoading(id, title) {
+    hideChatLoading();
+    const el = h('div', { id: 'chatload', role: 'status', 'aria-live': 'polite' }, h('span', { class: 'spinner' }),
+      h('span', { class: 'cl-t' }, h('span', { text: STR.openingChat }), title ? h('span', { class: 'cl-n', text: title }) : null));
+    chatLoading = { id, el,
+      show: setTimeout(() => { if (chatLoading && chatLoading.el === el) { document.body.append(el); feed.classList.add('dim'); } }, 150),
+      stop: setTimeout(hideChatLoading, 90000) };
+  }
+  function hideChatLoading() {
+    if (!chatLoading) return;
+    clearTimeout(chatLoading.show); clearTimeout(chatLoading.stop);
+    chatLoading.el.remove(); feed.classList.remove('dim');
+    chatLoading = null;
   }
 
   function addUser(text, contexts, images, whenSec, reuse) {
     if (!reuse) beginTurn(whenSec);
+    const rv = window.CodexReview;
+    const review = !!(rv && rv.isRequest(text));   // a review request: the user's prompt is shown, the format part is not
+    if (review) { text = rv.displayText(text); if (state.turn) state.turn.el.dataset.review = '1'; }
+    else if (rv && rv.isSummary(text)) settleReview(rv.parseSummary(text));
     const syms = (contexts || []).filter((c) => c.kind === 'symbol');
     const chips = (contexts || []).filter((c) => c.kind !== 'symbol').map((c) => chipEl(c, false));
     const pics = (images || []).map((im) => h('img', { class: 'pic clickable', src: im.url, alt: im.name || STR.pastedImage, onclick: () => openImageView(im, false) }));
-    append(h('div', { class: 'msg user' }, h('div', { class: 'bubble' },
+    const el = h('div', { class: 'msg user' + (review ? ' rv-req' : '') }, h('div', { class: 'bubble' },
+      review ? h('div', { class: 'rv-tag' }, h('span', { class: 'gl', html: ICON.review }), h('span', { text: STR.reviewTag })) : null,
       chips.length ? h('div', { class: 'chips' }, chips) : null, pics.length ? h('div', { class: 'pics' }, pics) : null,
-      text ? h('div', { class: 'tx' }, symParts(text, syms)) : null)));
+      text ? h('div', { class: 'tx' }, symParts(text, syms)) : null));
+    // "Edit" (shown on the last message only): the text and pictures go back into the input, sending replaces the message
+    el._edit = { text: text || '', images: (images || []).filter((im) => /^data:image\//.test(im.url || '')).map((im) => ({ url: im.url, name: im.name || STR.pastedImage })) };
+    if (host === 'vscode' && !review) el.append(h('button', { class: 'uedit', type: 'button', title: STR.editLast, 'aria-label': STR.editLast, html: ICON.pencil, onclick: () => editLast(el) }));
+    append(el);
   }
+
+  // ---------- edit the last message, fork from an answer ----------
+  const lastTurnEl = () => { const all = feed.querySelectorAll(':scope > .turn'); return all.length ? all[all.length - 1] : null; };
+  function editLast(msgEl) {
+    const turnEl = msgEl.closest('.turn'), id = turnEl && turnEl.dataset.turn;
+    if (!turnEl || turnEl !== lastTurnEl() || !state.threadId) return;
+    if (!id) { toast(STR.editWait); return; }
+    if (state.running) bridge.post({ type: 'interrupt' });
+    if (!state.edit) state.edit = { draft: input.value, draftImages: state.images.slice() };
+    state.edit.turnId = id;
+    input.value = msgEl._edit.text;
+    state.images = [];
+    msgEl._edit.images.forEach((im) => addImageUrl(im.url, im.name));
+    renderChips(); renderEditBar(); autoGrow(); updateRunning();
+    input.focus(); input.setSelectionRange(input.value.length, input.value.length);
+  }
+  function cancelEdit() {
+    const e = state.edit;
+    if (!e) return;
+    state.edit = null;
+    input.value = e.draft; state.images = e.draftImages;
+    renderChips(); renderEditBar(); autoGrow(); updateRunning();
+  }
+  function renderEditBar() {
+    let bar = $('#editbar');
+    if (!state.edit) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = h('div', { id: 'editbar', title: STR.editingTip }, h('span', { class: 'gl', html: ICON.pencil }), h('span', { class: 'et', text: STR.editing }),
+        h('button', { type: 'button', class: 'btn', text: STR.editCancel, onclick: () => { cancelEdit(); input.focus(); } }));
+      $('#composer').prepend(bar);
+    }
+  }
+  // the message being replaced goes from the feed with its whole turn (the server drops it the same way, thread/revert)
+  const droppedTurns = new Set();
+  function dropEditedTurn(turnId) {
+    droppedTurns.add(turnId);
+    const el = feed.querySelector(':scope > .turn[data-turn="' + CSS.escape(turnId) + '"]');
+    if (!el) return;
+    state.items.forEach((rec, k) => { if (rec.el && el.contains(rec.el)) state.items.delete(k); });
+    if (state.turn && state.turn.el === el) state.turn = null;
+    el.remove();
+    const prev = lastTurnEl();
+    state.turnCount = Math.max(0, (state.turnCount || 1) - 1);
+    state.lastTurnId = prev ? prev.dataset.turn || null : null;
+    state.lastTurnStatus = prev ? 'completed' : null;
+  }
+  function addForkButton(msgEl, turnEl) {
+    if (host !== 'vscode' || msgEl.querySelector('.afork')) return;
+    msgEl.append(h('button', { class: 'afork', type: 'button', title: STR.forkHere, 'aria-label': STR.forkHere, html: ICON.fork + '<span>' + esc(STR.fork) + '</span>',
+      onclick: () => {
+        const id = turnEl.dataset.turn;
+        if (!id || !state.threadId) { toast(STR.editWait); return; }
+        bridge.post({ type: 'fork', turnId: id, permissions: normPerm(state.prefs.permissions) });
+      } }));
+  }
+  // ---------- Clarify: side chats about one answer ----------
+  // The "Clarify" button under an answer opens a pane from the right with a read-only side chat that has the main chat's context up to
+  // that answer. Questions and answers appear only there (renderers below are small, own ones: text answers, markdown, a status line);
+  // the host (session.sideAsk) makes the fork with the first question, links it to the answer and keeps the link, so the button turns
+  // into "N clarifications" and reopens the side chat. The links per chat come as `sideLinks` events (sideMap: thread -> turn -> links).
+  const sideMap = new Map();
+  const side = { open: false, parent: null, turnId: null, id: null, excerpt: '', links: [], msgs: [], nodes: new Map(), running: false, loading: false, src: null, status: '' };
+  const sideLinksOf = (turnId) => { const m = sideMap.get(state.threadId); return (m && m[turnId]) || []; };
+  function plainExcerpt(text) {
+    return String(text || '').replace(/```[\s\S]*?```/g, ' ').replace(/[#>*_`|\[\]()-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || '…';
+  }
+  function addSideButton(msgEl, turnEl) {
+    if (host !== 'vscode' || msgEl.querySelector(':scope > .aside')) return;
+    const b = h('button', { class: 'aside', type: 'button', onclick: () => openSide(msgEl, turnEl) });
+    msgEl.append(b);
+    refreshSideButton(b, turnEl);
+  }
+  function refreshSideButton(b, turnEl) {
+    const n = sideLinksOf(turnEl.dataset.turn || '').length;
+    b.classList.toggle('has', n > 0);
+    b.title = n ? STR.clarifyCount(n) + ': ' + STR.clarifyOpen : STR.clarifyHere;
+    b.setAttribute('aria-label', b.title);
+    b.innerHTML = ICON.ask + '<span>' + esc(n ? STR.clarifyCount(n) : STR.clarify) + '</span>';
+  }
+  function refreshSideButtons() {
+    feed.querySelectorAll(':scope > .turn').forEach((t) => t.querySelectorAll('.aside').forEach((b) => refreshSideButton(b, t)));   // links are per turn: answer and plan show the same count
+  }
+  function openSide(msgEl, turnEl) {
+    const turnId = turnEl.dataset.turn;
+    if (!turnId || !state.threadId) { toast(STR.editWait); return; }
+    if (side.src) side.src.classList.remove('side-src');
+    const rec = msgEl._rec, links = sideLinksOf(turnId);
+    Object.assign(side, { open: true, parent: state.threadId, turnId, id: null, excerpt: plainExcerpt(rec ? rec.data.text : msgEl.textContent), links,
+      msgs: [], running: false, loading: false, src: msgEl, status: '' });
+    msgEl.classList.add('side-src');
+    sideEl.classList.remove('hidden'); $('#side-backdrop').classList.remove('hidden');
+    if (links.length) showSideChat(links[links.length - 1].id); else renderSide();
+    sideInput.focus();
+  }
+  function showSideChat(id) {   // an existing one: the host reads it (and loads it read-only in Codex)
+    Object.assign(side, { id, msgs: [], running: false, loading: true, status: '' });
+    renderSide();
+    bridge.post({ type: 'sideShow', sideId: id });
+  }
+  function newSideChat() {
+    Object.assign(side, { id: null, msgs: [], running: false, loading: false, status: '' });
+    renderSide(); sideInput.focus();
+  }
+  function closeSide(refocus) {
+    if (!side.open) return;
+    side.open = false;
+    if (side.src) { side.src.classList.remove('side-src'); }
+    Object.assign(side, { src: null, id: null, msgs: [], running: false, loading: false });
+    sideEl.classList.add('hidden'); $('#side-backdrop').classList.add('hidden');
+    if (refocus) input.focus();
+  }
+  function setSideStatus(text) {
+    side.status = text || '';
+    sideStatus.classList.toggle('hidden', !side.status);
+    sideStatus.textContent = '';
+    if (side.status) sideStatus.append(h('span', { class: 'spinner' }), h('span', { text: ' ' + side.status }));
+    updateSideSend();
+  }
+  function updateSideSend() {
+    sideSendBtn.innerHTML = side.running ? ICON.stop : ICON.send;
+    sideSendBtn.title = side.running ? STR.sideStop : STR.sideSend;
+    sideSendBtn.disabled = !side.running && (side.loading || !sideInput.value.trim());
+  }
+  function sideMsgEl(m) {
+    if (m.role === 'user') return h('div', { class: 'sm user' }, h('div', { class: 'bubble', text: m.text }));
+    const el = h('div', { class: 'sm agent' }, h('div', { class: 'md' }));
+    renderMd($('.md', el), m.text);
+    side.nodes.set(m.id, { el, m });
+    return el;
+  }
+  function renderSide() {
+    $('#side-ex').textContent = side.excerpt;
+    const tabs = $('#side-tabs');
+    tabs.textContent = '';
+    tabs.classList.toggle('hidden', side.links.length === 0);
+    side.links.forEach((l, i) => tabs.append(h('button', { class: 'stab' + (l.id === side.id ? ' on' : ''), type: 'button', text: String(i + 1), title: STR.sideTab(i + 1, String(l.title || '').replace(/^↳\s*/, '')),
+      onclick: () => { if (l.id !== side.id) showSideChat(l.id); } })));
+    if (side.links.length) tabs.append(h('button', { class: 'stab new' + (side.id === null ? ' on' : ''), type: 'button', text: '+ ' + STR.sideNew, title: STR.sideNewTip, onclick: newSideChat }));
+    sideFeed.textContent = '';
+    side.nodes.clear();
+    if (side.loading) sideFeed.append(h('div', { class: 'side-empty' }, h('span', { class: 'spinner' }), h('span', { text: ' ' + STR.sideLoading })));
+    else if (!side.msgs.length) sideFeed.append(h('div', { class: 'side-empty', text: STR.sideEmpty }));
+    else side.msgs.forEach((m) => sideFeed.append(sideMsgEl(m)));
+    setSideStatus(side.running ? (side.status || STR.sideThinking) : '');
+    sideFeed.scrollTop = sideFeed.scrollHeight;
+  }
+  function sideAppend(m) {
+    side.msgs.push(m);
+    const e = sideFeed.querySelector('.side-empty'); if (e) e.remove();
+    sideFeed.append(sideMsgEl(m));
+    sideFeed.scrollTop = sideFeed.scrollHeight;
+  }
+  function sideNotice(text, cls) {
+    sideFeed.append(h('div', { class: 'side-notice ' + (cls || ''), text }));
+    sideFeed.scrollTop = sideFeed.scrollHeight;
+  }
+  function sideSubmit() {
+    const text = sideInput.value.trim();
+    if (!text || side.running || side.loading || !side.open) return;
+    sideAppend({ role: 'user', text });
+    side.running = true; setSideStatus(STR.sideThinking);
+    bridge.post({ type: 'sideAsk', threadId: side.parent, turnId: side.turnId, sideId: side.id, excerpt: side.excerpt, text, model: state.prefs.model, effort: state.prefs.effort });
+    sideInput.value = ''; sideGrow();
+  }
+  function sideGrow() { sideInput.style.height = 'auto'; sideInput.style.height = Math.min(sideInput.scrollHeight, 120) + 'px'; updateSideSend(); }
+  sideInput.addEventListener('input', sideGrow);
+  sideInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sideSubmit(); }
+    else if (e.key === 'Escape') { e.stopPropagation(); closeSide(true); }
+  });
+  sideSendBtn.addEventListener('click', () => { if (side.running) bridge.post({ type: 'sideInterrupt', sideId: side.id }); else sideSubmit(); });
+  sideEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSide(true); });
+  $('#side-close').addEventListener('click', () => closeSide(true));
+  $('#side-backdrop').addEventListener('click', () => closeSide(true));
+  function onSideLinks(ev) {
+    if (!ev.threadId) return;
+    if (ev.links && Object.keys(ev.links).length) sideMap.set(ev.threadId, ev.links); else sideMap.delete(ev.threadId);
+    if (ev.threadId !== state.threadId) return;
+    refreshSideButtons();
+    if (side.open && side.parent === ev.threadId) { side.links = sideLinksOf(side.turnId); renderSide(); }
+  }
+  function onSideOpen(ev) {
+    if (ev.parent !== state.threadId || !side.open) return;
+    if (ev.error) { if (side.loading) { side.loading = false; renderSide(); } toast(STR.sideFailed + ev.error); return; }
+    if (ev.turnId !== side.turnId) return;
+    if (ev.created) { if (side.id === null) side.id = ev.side.id; return; }   // the first question made the fork; the pane keeps what it shows
+    if (ev.side.id !== side.id) return;
+    side.loading = false; side.msgs = [];
+    (ev.turns || []).forEach((t) => {
+      if (t.user) side.msgs.push({ role: 'user', text: t.user });
+      if (t.answer) side.msgs.push({ role: 'agent', id: t.id || ('a' + side.msgs.length), text: t.answer });
+    });
+    side.running = !!ev.running; side.status = '';
+    renderSide();
+  }
+  function onSideEvent(ev) {
+    if (!side.open) return;
+    const p = ev.params || {};
+    if (ev.method === 'sideFailed') {
+      if (p.parent !== side.parent || p.turnId !== side.turnId || (ev.id ? ev.id !== side.id : side.id !== null)) return;
+      side.running = false; setSideStatus('');
+      sideNotice(STR.sideFailed + (p.message || ''), 'err');
+      return;
+    }
+    if (!ev.id || ev.id !== side.id) return;
+    const agentNode = (id, text) => {
+      let n = side.nodes.get(id);
+      if (!n) { sideAppend({ role: 'agent', id, text: text || '' }); n = side.nodes.get(id); }
+      return n;
+    };
+    switch (ev.method) {
+      case 'turn/started': side.running = true; setSideStatus(STR.sideThinking); break;
+      case 'item/started':
+        if (p.item && p.item.type === 'commandExecution') setSideStatus(innerCommand(p.item.command || '').split('\n')[0].slice(0, 80));
+        else if (p.item && p.item.type === 'agentMessage') agentNode(p.item.id, '');
+        break;
+      case 'item/agentMessage/delta': {
+        const n = agentNode(p.itemId, ''); n.m.text += p.delta;
+        if (!n.timer) n.timer = setTimeout(() => { n.timer = null; renderMd($('.md', n.el), n.m.text); sideFeed.scrollTop = sideFeed.scrollHeight; }, 70);
+        break;
+      }
+      case 'item/completed':
+        if (p.item && p.item.type === 'agentMessage') {
+          const n = agentNode(p.item.id, p.item.text || ''); n.m.text = p.item.text || n.m.text;
+          if (n.timer) { clearTimeout(n.timer); n.timer = null; }
+          renderMd($('.md', n.el), n.m.text);
+        }
+        break;
+      case 'turn/completed': {
+        side.running = false; setSideStatus('');
+        const t = p.turn || {};
+        if (t.status === 'failed' && t.error) sideNotice([t.error.message, t.error.additionalDetails].filter(Boolean).join('\n'), 'err');
+        else if (t.status === 'interrupted') sideNotice(STR.interrupted);
+        break;
+      }
+      case 'error': {
+        const e = p.error || {};
+        if (!p.willRetry) sideNotice([e.message, e.additionalDetails].filter(Boolean).join('\n'), 'err');
+        break;
+      }
+      case 'sideDenied': sideNotice(STR.sideDenied); break;
+      default: break;
+    }
+    sideFeed.scrollTop = sideFeed.scrollHeight;
+  }
+
+  // ---------- code review triage: the cards under a review answer ----------
+  // The answer's findings block (web/review.js) becomes one card per finding: severity colour, problem, file:line links, suggested fix,
+  // Fix / Skip / Own answer, Back. After the last answer an overview (click a row to change it) and "Send answers to Codex", which sends
+  // the answers as the next message of the chat. The state of each review lives in reviewMem (by turn id) for the page's life, so a
+  // rebuilt feed (tab switch, reload of the chat) keeps the answers; a later "Codexter review answers" message marks it as sent.
+  const reviewMem = new Map();
+  function attachReview(t, msgEl) {
+    const rv = window.CodexReview, rec = msgEl && msgEl._rec;
+    if (!rv || !rec || msgEl.querySelector(':scope > .review')) return;
+    const asked = t.el.dataset.review === '1', live = !state.loadingThread;
+    const r = rv.parse(rec.data.text);
+    if (!r) { if (asked && live && t.status === 'completed') toast(STR.reviewNoBlock); return; }
+    if (r.error) {   // show the raw answer so nothing is lost
+      rec.rawBlock = true; renderMd(rec.md, rec.data.text);
+      if (live) toast(STR.reviewBadBlock + r.error);
+      return;
+    }
+    const key = t.el.dataset.turn || rec.id;
+    const box = h('div', { class: 'review', role: 'group', 'aria-label': STR.reviewTitle });
+    box._rv = { key, findings: r.findings, st: reviewMem.get(key) || rv.start(r.findings), own: null };
+    msgEl.insertBefore(box, msgEl.querySelector(':scope > .afork'));
+    renderTriage(box);
+    scrollDown();
+  }
+  // the answers message of a review (sent now, or found in a loaded chat): the last review above it is done
+  function settleReview(decisions) {
+    const all = feed.querySelectorAll('.review'), box = all.length ? all[all.length - 1] : null;
+    if (!box || !box._rv || box._rv.st.sent) return;
+    const st = box._rv.st;
+    box._rv.st = Object.assign({}, st, { sent: true, index: st.total, decisions: decisions && Object.keys(decisions).length ? Object.assign({}, decisions) : st.decisions });
+    renderTriage(box);
+  }
+  function rvMd(text, cls) { const el = h('div', { class: 'md ' + cls }); renderMd(el, text); return el; }
+  function rvLocs(f) {
+    const el = h('div', { class: 'rv-locs' });
+    if (!f.locations.length) { el.append(h('span', { class: 'rv-noloc', text: STR.reviewNoLoc })); return el; }
+    f.locations.forEach((l) => {
+      const holder = h('span');
+      const ref = { path: l.file };
+      if (l.line) ref.line = l.line;
+      holder.innerHTML = CodexLinks.anchor(ref, esc(l.file + (l.line ? ':' + l.line : '')), state.cwd);
+      el.append(holder.firstChild);
+    });
+    return el;
+  }
+  function renderTriage(box) {
+    const rv = CodexReview, R = box._rv, f0 = R.findings, st = R.st;
+    reviewMem.set(R.key, st);
+    const hadFocus = box.contains(document.activeElement);
+    box.innerHTML = '';
+    if (!f0.length) { box.append(h('div', { class: 'rv-none', text: STR.reviewNone })); return; }
+    const set = (nx) => { if (nx !== R.st) { R.st = nx; R.own = null; renderTriage(box); } };
+    // head: the count and one dot per finding (colour = severity, filled = answered); a dot opens its card
+    const dots = h('div', { class: 'rv-dots' });
+    f0.forEach((f, i) => {
+      const d = st.decisions[f.n];
+      dots.append(h('button', { type: 'button', class: 'rv-dot sev-' + f.severity + (d ? ' done a-' + d.action : '') + (i === st.index ? ' cur' : ''),
+        title: '#' + f.n + ' ' + (f.title || f.problem).slice(0, 80) + (d ? ' — ' + STR.reviewAnswer[d.action] : ''), 'aria-label': '#' + f.n,
+        disabled: st.sent, onclick: () => set(rv.goTo(st, i)) }));
+    });
+    if (rv.complete(st) && !st.sent) dots.append(h('button', { type: 'button', class: 'rv-dot ov' + (st.index === st.total ? ' cur' : ''), title: STR.reviewOverview,
+      'aria-label': STR.reviewOverview, html: ICON.check, onclick: () => set(rv.goTo(st, st.total)) }));
+    box.append(h('div', { class: 'rv-head' }, h('span', { class: 'gl', html: ICON.review }), h('span', { class: 'rv-ttl', text: STR.reviewTitle + ' · ' + STR.reviewFindings(f0.length) }), dots));
+    if (st.sent || st.index >= st.total) box.append(rvOverview(box)); else box.append(rvCard(box, f0[st.index], st.index));
+    if (hadFocus) { const b = box.querySelector('.rv-own textarea') || box.querySelector('.rv-acts .primary') || box.querySelector('.rv-send'); if (b) b.focus(); }
+  }
+  function rvCard(box, f, i) {
+    const rv = CodexReview, R = box._rv, st = R.st, d = st.decisions[f.n];
+    const set = (nx) => { if (nx !== R.st) { R.st = nx; R.own = null; renderTriage(box); box.scrollIntoView({ block: 'nearest' }); } };
+    const card = h('div', { class: 'rv-card sev-' + f.severity },
+      h('div', { class: 'rv-top' }, h('span', { class: 'rv-sev', text: STR.reviewSev[f.severity] }), h('span', { class: 'rv-count', text: STR.reviewOf(i + 1, st.total) }),
+        d ? h('span', { class: 'rv-was a-' + d.action, text: STR.reviewWas + STR.reviewAnswer[d.action] }) : null),
+      f.title ? h('div', { class: 'rv-title', text: f.title }) : null,
+      f.problem && f.problem !== f.title ? rvMd(f.problem, 'rv-problem') : null,
+      rvLocs(f),
+      f.fix ? h('div', { class: 'rv-fix' }, h('div', { class: 'rv-lbl', text: STR.reviewFix }), rvMd(f.fix, 'rv-fixtext')) : null);
+    if (R.own != null) {   // the own answer's text field
+      const ta = h('textarea', { class: 'rv-own-ta', rows: '3', placeholder: STR.reviewOwnPh, 'aria-label': STR.reviewOwn });
+      ta.value = R.own;
+      const save = h('button', { type: 'button', class: 'btn primary', text: STR.reviewOwnSave, disabled: !ta.value.trim(), onclick: () => set(rv.decide(st, f.n, 'own', ta.value)) });
+      ta.addEventListener('input', () => { R.own = ta.value; save.disabled = !ta.value.trim(); });
+      ta.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && ta.value.trim()) { e.preventDefault(); set(rv.decide(st, f.n, 'own', ta.value)); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); R.own = null; renderTriage(box); }
+      });
+      card.append(h('div', { class: 'rv-own' }, ta, h('div', { class: 'rv-acts' }, save,
+        h('button', { type: 'button', class: 'btn', text: STR.reviewCancel, onclick: () => { R.own = null; renderTriage(box); } }))));
+      setTimeout(() => { if (ta.isConnected) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, 0);
+      return card;
+    }
+    const btn = (action, text, title, cls) => h('button', { type: 'button', class: 'btn' + (cls ? ' ' + cls : '') + (d && d.action === action ? ' chosen' : ''), text, title,
+      onclick: () => {
+        if (action === 'own') { R.own = d && d.action === 'own' ? d.note : ''; renderTriage(box); return; }
+        set(rv.decide(st, f.n, action));
+      } });
+    card.append(h('div', { class: 'rv-acts' },
+      btn('fix', STR.reviewDoFix, STR.reviewDoFixTitle, 'primary'), btn('skip', STR.reviewSkip, STR.reviewSkipTitle), btn('own', STR.reviewOwn, STR.reviewOwnTitle),
+      h('span', { class: 'spacer' }),
+      h('button', { type: 'button', class: 'btn rv-back', text: '‹ ' + STR.reviewBack, disabled: i === 0, onclick: () => set(rv.back(st)) })));
+    if (d && d.action === 'own') card.append(h('div', { class: 'rv-note', text: d.note }));
+    return card;
+  }
+  function rvOverview(box) {
+    const rv = CodexReview, R = box._rv, st = R.st, open = st.total - rv.answered(st);
+    const list = h('div', { class: 'rv-list' });
+    R.findings.forEach((f, i) => {
+      const d = st.decisions[f.n];
+      const loc = f.locations[0];
+      list.append(h('button', { type: 'button', class: 'rv-row sev-' + f.severity, disabled: st.sent,
+        onclick: () => { R.st = rv.goTo(st, i); R.own = null; renderTriage(box); } },
+        h('span', { class: 'rv-bar' }), h('span', { class: 'rv-n', text: '#' + f.n }),
+        h('span', { class: 'rv-rt' }, h('span', { class: 'rv-rtt', text: f.title || f.problem }),
+          loc ? h('span', { class: 'rv-rl', text: basename(loc.file) + (loc.line ? ':' + loc.line : '') }) : null,
+          d && d.action === 'own' ? h('span', { class: 'rv-rn', text: d.note }) : null),
+        h('span', { class: 'rv-ans' + (d ? ' a-' + d.action : ' none'), text: d ? STR.reviewAnswer[d.action] : '—' })));
+    });
+    const foot = h('div', { class: 'rv-foot' });
+    if (st.sent) foot.append(h('span', { class: 'rv-sent', html: ICON.check + '<span>' + esc(STR.reviewSent) + '</span>' }));
+    else {
+      foot.append(h('span', { class: 'hint', text: open ? STR.reviewOpenHint(open) : STR.reviewDoneHint }),
+        h('button', { type: 'button', class: 'btn primary rv-send', text: STR.reviewSend, disabled: open > 0, onclick: () => {
+          if (state.running || state.pending || state.edit) { toast(STR.reviewBusy); return; }
+          const text = rv.summary(R.findings, R.st.decisions);
+          R.st = Object.assign({}, R.st, { sent: true }); renderTriage(box);
+          if (!sendText(text)) { R.st = Object.assign({}, R.st, { sent: false }); renderTriage(box); }
+        } }));
+    }
+    return h('div', { class: 'rv-over' }, list, foot);
+  }
+
   // "#sym:name" of a message as a link to its file and line
   const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   function symParts(text, syms) {
@@ -634,7 +1111,15 @@
       append(rec.el, 'work');
     }
     rec.el.dataset.phase = d.phase || '';
-    const draw = () => { rec.timer = null; renderMd(rec.md, d.text); scrollDown(); };
+    rec.el._rec = rec;
+    const draw = () => {
+      rec.timer = null;
+      // a review's findings block is never shown as text: the cards come when the turn ends (attachReview)
+      const shown = window.CodexReview && !rec.rawBlock ? CodexReview.hideBlock(d.text) : { text: d.text, hidden: false };
+      renderMd(rec.md, shown.text);
+      if (shown.hidden && !rec.final) rec.md.append(h('div', { class: 'rv-wait' }, h('span', { class: 'spinner' }), h('span', { text: STR.reviewWait })));
+      scrollDown();
+    };
     if (rec.final) { if (rec.timer) clearTimeout(rec.timer); draw(); }
     else if (!rec.timer) rec.timer = setTimeout(draw, 70);
   }
@@ -800,6 +1285,7 @@
   function renderPlanItem(rec) {
     if (!rec.el) {
       rec.el = h('div', { class: 'card plan-card' }, h('div', { class: 'ttl' }, h('span', { class: 'gl', html: ICON.bulb }), h('span', { text: STR.plan })), h('div', { class: 'md' }));
+      rec.el._rec = rec;   // Clarify takes its excerpt from here
       append(rec.el);
     }
     renderMd($('.md', rec.el), rec.data.text);
@@ -869,13 +1355,20 @@
       const rec = state.items.get(p.itemId);
       if (rec && rec.data.changes) detail = rec.data.changes.map((c) => ((c.kind && c.kind.type) || 'update') + '  ' + relPath(c.path)).join('\n');
       if (p.grantRoot) detail += (detail ? '\n' : '') + 'write access to: ' + p.grantRoot;
+    } else if (method === 'mcpServer/elicitation/request') {
+      return elicitationCard(id, method, p);
     } else {
       title = STR.approvePerms;
       detail = JSON.stringify(p.permissions || {}, null, 2);
     }
+    return decisionCard(id, method, title, reason, detail, true);
+  }
+
+  /** Card with Allow / Allow for session / Deny; the answer goes to the host as {type: 'approval', decision}. */
+  function decisionCard(id, method, title, reason, detail, forSession, extra) {
     const card = h('div', { class: 'card approval' }, h('div', { class: 'ttl', text: title }),
       reason ? h('div', { class: 'reason', text: reason }) : null,
-      detail ? h('div', { class: 'detail', text: detail }) : null);
+      detail ? h('div', { class: 'detail', text: detail }) : null, extra || null);
     const btns = h('div', { class: 'btns' });
     const decide = (decision, label) => {
       bridge.post({ type: 'approval', requestId: id, method, decision });
@@ -883,13 +1376,41 @@
       card.classList.add('done');
       state.approvals.delete(String(id));
     };
-    btns.append(
-      h('button', { class: 'btn primary', type: 'button', text: STR.allow, onclick: () => decide('accept', STR.allowed) }),
-      h('button', { class: 'btn', type: 'button', text: STR.allowSession, onclick: () => decide('acceptForSession', STR.allowedSession) }),
-      h('button', { class: 'btn danger', type: 'button', text: STR.deny, onclick: () => decide('decline', STR.denied) }));
+    btns.append(h('button', { class: 'btn primary', type: 'button', text: STR.allow, onclick: () => decide('accept', STR.allowed) }));
+    if (forSession) btns.append(h('button', { class: 'btn', type: 'button', text: STR.allowSession, onclick: () => decide('acceptForSession', STR.allowedSession) }));
+    btns.append(h('button', { class: 'btn danger', type: 'button', text: STR.deny, onclick: () => decide('decline', STR.denied) }));
     card.append(btns);
     state.approvals.set(String(id), { card, btns });
     return card;
+  }
+
+  /**
+   * mcpServer/elicitation/request: Codex's approval of an MCP tool call (_meta.codex_approval_kind "mcp_tool_call",
+   * an empty form) or an MCP server's own question (form or URL). The host answers {action, content, _meta}.
+   */
+  function elicitationCard(id, method, p) {
+    const meta = p._meta || {};
+    const persist = Array.isArray(meta.persist) ? meta.persist : [meta.persist];
+    if (meta.codex_approval_kind === 'mcp_tool_call') {
+      const tool = meta.tool_title || meta.tool_name || 'tool';
+      return decisionCard(id, method, STR.approveMcpTool(p.serverName, tool), p.message || '', mcpToolParams(meta), persist.includes('session'));
+    }
+    const link = p.mode === 'url' && /^https?:\/\//i.test(p.url || '')
+      ? h('div', { class: 'reason' }, h('a', { href: '#', 'data-url': p.url, title: STR.mcpOpenUrl, text: p.url })) : null;
+    return decisionCard(id, method, STR.approveMcpAsk(p.serverName), p.message || '', '', false, link);
+  }
+
+  /** The tool call's arguments as lines (tool_params_display when Codex sends it, else tool_params). */
+  function mcpToolParams(meta) {
+    const d = meta.tool_params_display;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) {
+      return d.map((x) => (x && typeof x === 'object') ? (x.display_name || x.name || '') + ': ' + (typeof x.value === 'string' ? x.value : JSON.stringify(x.value)) : String(x)).join('\n');
+    }
+    const t = meta.tool_params;
+    if (t === undefined || t === null) return '';
+    const text = typeof t === 'string' ? t : JSON.stringify(t, null, 2);
+    return text.length > 4000 ? text.slice(0, 4000) + '\n...' : text;
   }
 
   // ---------- errors / notices ----------
@@ -982,6 +1503,7 @@
   // ---------- chips / contexts ----------
   // Is the path below the folder of the open chat? (files outside it show their project or folder, muted)
   function insideCwd(p) { const c = normPath(state.cwd); return !c || normPath(p).startsWith(c + '/'); }
+  const IMAGE_FILE_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;   // image files the drawing editor opens
   function chipEl(c, removable) {
     const isMention = c.kind === 'mention';
     if (c.kind === 'plugin') {   // a plugin mention: no file behind it
@@ -998,7 +1520,10 @@
     const glyph = isMention ? h('span', { class: 'gl', html: c.folder ? ICON.folder : ICON.file }) : h('span', { text: c.kind === 'selection' ? '\u2702' : '\u25a4' });
     const el = h('span', { class: 'chip clickable' + (isMention ? ' mention' : ''), title: c.path }, glyph, h('span', { class: 'n', text: label }));
     if (isMention && !insideCwd(c.path)) el.append(h('span', { class: 'sub', text: c.project || basename(dirname(c.path)) }));
-    el.addEventListener('click', () => bridge.post({ type: 'openFile', path: c.path, line: c.startLine }));
+    // an attached image file opens in the drawing editor (VS Code); the saved picture replaces the chip, the file stays as it is
+    const drawable = host === 'vscode' && c.kind !== 'selection' && !c.folder && IMAGE_FILE_RE.test(c.path || '');
+    if (drawable) el.title = c.path + '\n' + STR.imageFileHint;
+    el.addEventListener('click', () => bridge.post(drawable ? { type: 'imageFileOpen', path: c.path } : { type: 'openFile', path: c.path, line: c.startLine }));
     if (removable) {
       const x = h('button', { type: 'button', text: '\u00d7', title: STR.removeChip });
       x.addEventListener('click', (e) => {
@@ -1065,14 +1590,30 @@
     if (!id || !el || renaming) return;
     const inp = h('input', { class: 'rename', type: 'text', 'aria-label': STR.renameChat, maxlength: '160', spellcheck: 'false' });
     inp.value = current || '';
-    let done = false;
+    let done = false, suggested = null;
     const finish = (save) => {
       if (done) return;
-      done = true; renaming = null;
+      done = true; renaming = null; suggestFor = null;
       const name = inp.value.replace(/\s+/g, ' ').trim(), changed = save && name !== '' && name !== current;
-      if (changed) renameChat(id, name, current);
+      if (changed) renameChat(id, name, current, name === suggested);   // the AI's name as it came: it may be renewed later
       after(changed ? name : null);
     };
+    // the sparkle: the AI suggests a name into the input (Enter keeps it); mousedown keeps the focus, so the input is not saved by blur
+    const ai = h('button', { class: 'rename-ai', type: 'button', title: STR.suggestName, 'aria-label': STR.suggestName, html: ICON.sparkle });
+    ai.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); });
+    for (const t of ['dblclick', 'auxclick']) ai.addEventListener(t, (e) => e.stopPropagation());
+    ai.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ai.disabled) return;
+      ai.disabled = true; ai.classList.add('busy');
+      suggestFor = { id, take: (ev) => {
+        ai.disabled = false; ai.classList.remove('busy');
+        if (!ev.name) { toast(STR.suggestFailed(ev.error)); return; }
+        suggested = ev.name; inp.value = ev.name; inp.focus(); inp.select();
+      } };
+      bridge.post({ type: 'suggestTitle', threadId: id });
+      inp.focus();
+    });
     inp.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
@@ -1080,7 +1621,7 @@
     for (const t of ['click', 'mousedown', 'dblclick', 'auxclick']) inp.addEventListener(t, (e) => e.stopPropagation());
     inp.addEventListener('blur', () => finish(true));
     renaming = { where, id };
-    el.replaceChildren(inp);
+    el.replaceChildren(h('span', { class: 'rename-box' }, inp, host === 'vscode' ? ai : null));
     inp.focus(); inp.select();
     if (document.activeElement !== inp) finish(false);   // not on screen (drawn anew meanwhile): never leave the renders waiting
   }
@@ -1094,10 +1635,14 @@
     if (state.historyOpen) renderHistory();
   }
   const renameOld = new Map();
-  function renameChat(id, name, old) {
+  let suggestFor = null;   // the open rename input waiting for the AI's name: {id, take(ev)}
+  function renameChat(id, name, old, auto) {
     if (!renameOld.has(id)) renameOld.set(id, old);
     showName(id, name);
-    bridge.post({ type: 'threadAction', action: 'rename', threadId: id, name });
+    bridge.post({ type: 'threadAction', action: 'rename', threadId: id, name, auto: !!auto });
+  }
+  function onTitleSuggested(ev) {
+    if (suggestFor && suggestFor.id === ev.threadId) suggestFor.take(ev);
   }
   function onRenamed(ev) {
     const old = renameOld.get(ev.threadId);
@@ -1347,7 +1892,18 @@
         h('span', { class: 't' }, state.chats.unread.has(t.id) && t.id !== state.threadId ? h('span', { class: 'udot', title: STR.tabUnread }) : null,
           highlight(t.title || STR.untitled, words)),
         h('span', { class: 'when', text: relTimeAgo(t.updatedAt) }));
-      if (asking) {
+      const forkAsk = hist.forkAsk && hist.forkAsk.id === t.id ? hist.forkAsk : null;
+      if (forkAsk && !busy) {
+        // Codex refused: forks of this chat still use it. Delete them too?
+        const names = forkAsk.forks.map((f) => f.title || STR.untitled);
+        const q = STR.deleteForksAsk(names.length);
+        const no = h('button', { class: 'btn', type: 'button', 'data-act': 'cancel', text: STR.deleteNo, onclick: (e) => { e.stopPropagation(); hist.forkAsk = null; renderHistory(); refocusHistory(t.id); } });
+        const yes = h('button', { class: 'btn danger', type: 'button', 'data-act': 'confirm', text: STR.deleteForksYes, onclick: (e) => { e.stopPropagation(); hist.forkAsk = null; threadAction('deleteWithForks', t); } });
+        row.classList.add('asking');
+        row.title = q + '\n' + names.map((n) => '• ' + n).join('\n');
+        row.append(h('span', { class: 'confirm', role: 'alertdialog', 'aria-label': row.title }, h('span', { class: 'q', text: q }), yes, no));
+        row.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hist.forkAsk = null; renderHistory(); refocusHistory(t.id); } });
+      } else if (asking) {
         // inline confirmation: deleting cannot be undone
         const no = h('button', { class: 'btn', type: 'button', 'data-act': 'cancel', text: STR.deleteNo, onclick: (e) => { e.stopPropagation(); askDelete(null, t.id); } });
         const yes = h('button', { class: 'btn danger', type: 'button', 'data-act': 'confirm', text: STR.deleteYes, onclick: (e) => { e.stopPropagation(); threadAction('delete', t); } });
@@ -1360,7 +1916,7 @@
           hist.archived ? act('unarchive', ICON.unarchive, STR.unarchive, () => threadAction('unarchive', t)) : act('archive', ICON.archive, STR.archive, () => threadAction('archive', t)),
           act('delete', ICON.trash, STR.deleteChat, () => askDelete(t.id))));
       }
-      row.addEventListener('click', () => { if (!asking && !busy) openHistoryRow(t); });
+      row.addEventListener('click', () => { if (!asking && !forkAsk && !busy) openHistoryRow(t); });
       row.addEventListener('mousemove', () => { if (hist.sel !== i) selectHistoryRow(i, false); });
       histList.append(row);
     });
@@ -1375,7 +1931,7 @@
   // id = row to ask about (null: cancel; back = the row whose delete button gets the focus back)
   function askDelete(id, back) {
     if (id && hist.busy.has(id)) return;
-    hist.confirm = id;
+    hist.confirm = id; hist.forkAsk = null;
     renderHistory();
     if (id) { const b = histList.querySelector('.row.asking [data-act="cancel"]'); if (b) b.focus(); }
     else refocusHistory(back);
@@ -1404,6 +1960,12 @@
   function onThreadAction(ev) {
     if (ev.action === 'rename') { onRenamed(ev); return; }
     hist.busy.delete(ev.threadId);
+    if (!ev.ok && ev.forks && ev.forks.length) {   // forks still use it: the row asks whether to delete them too
+      hist.forkAsk = { id: ev.threadId, forks: ev.forks };
+      renderHistory();
+      const b = histList.querySelector('.row.asking [data-act="cancel"]'); if (b) b.focus();
+      return;
+    }
     if (!ev.ok) { toast(STR.actionFailed(ACTION_VERB[ev.action] || ev.action, ev.error)); renderHistory(); return; }
     const gone = hist.rows.find((t) => t.id === ev.threadId);
     hist.rows = hist.rows.filter((t) => t.id !== ev.threadId);
@@ -1411,7 +1973,7 @@
       const k = normPath(gone.cwd), p = hist.projects.find((x) => normPath(x.cwd) === k);
       if (p) p.count = Math.max(0, (p.count || 0) + (ev.action === 'unarchive' ? 1 : -1));
     }
-    toast(ev.action === 'delete' ? STR.chatDeleted : ev.action === 'archive' ? STR.chatArchived : STR.chatUnarchived);
+    if (!ev.quiet) toast(ev.action === 'delete' ? STR.chatDeleted : ev.action === 'archive' ? STR.chatArchived : STR.chatUnarchived);
     refreshProjectUi(); renderHistory();
     // the open chat is gone from the list of chats: start a fresh one
     if (ev.threadId === state.threadId && ev.action !== 'unarchive') bridge.post({ type: 'newChat' });
@@ -1424,7 +1986,7 @@
   }
   function openHistoryRow(t) {
     toggleHistory(false);
-    openChat(t.id);
+    openChat(t.id, t.title);
   }
 
   // The answer to the newest request replaces (or, for "Load more", extends) the list; answers to older keystrokes are dropped.
@@ -1603,7 +2165,9 @@
     commitMessageModel: String((o && o.commitMessageModel) || ''), commitMessageEffort: String((o && o.commitMessageEffort) || ''),
     systemNotifications: !(o && o.systemNotifications === false),
     instructionsSource: o && o.instructionsSource === 'codexter' ? 'codexter' : 'codex', instructions: String((o && o.instructions) || ''),
-    autoCompactTokens: Number.isFinite(o && o.autoCompactTokens) && o.autoCompactTokens > 0 ? Math.round(o.autoCompactTokens) : 0 });
+    autoCompactTokens: Number.isFinite(o && o.autoCompactTokens) && o.autoCompactTokens > 0 ? Math.round(o.autoCompactTokens) : 0,
+    openOnStartup: !!(o && o.openOnStartup === true),
+    dictation: !(o && o.dictation === false), dictationLanguages: Array.isArray(o && o.dictationLanguages) ? o.dictationLanguages.map(String) : ['en'], autoChatNames: ['auto', 'first', 'off'].includes(o && o.autoChatNames) ? o.autoChatNames : 'auto' });
   // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
   let pageZoom = 1;
   function baseFontSize() {
@@ -1650,7 +2214,8 @@
     bridge.post({ type: 'settingsSave', defaultModel: st.defaultModel, defaultReasoningEffort: st.defaultReasoningEffort,
       defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize,
       commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort, systemNotifications: st.systemNotifications,
-      instructionsSource: st.instructionsSource, instructions: st.instructions, autoCompactTokens: st.autoCompactTokens });
+      instructionsSource: st.instructionsSource, instructions: st.instructions, autoCompactTokens: st.autoCompactTokens,
+      openOnStartup: st.openOnStartup, dictation: st.dictation, dictationLanguages: st.dictationLanguages.slice(), autoChatNames: st.autoChatNames });
     applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
@@ -1731,12 +2296,54 @@
     if (host === 'vscode') {
       setBody.insertBefore(renderInstructions(), $('#set-more'));
       setBody.insertBefore(renderContextSettings(), $('#set-more'));
+      setBody.insertBefore(renderReviewSettings(), $('#set-more'));
       // system notifications (VS Code in the background) on / off
       const cbN = h('input', { type: 'checkbox', id: 'set-notify', 'aria-describedby': 'set-notify-hint' });
       cbN.checked = st.systemNotifications;
       cbN.addEventListener('change', () => saveSettings({ systemNotifications: cbN.checked }));
       setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-notify' }, cbN, h('span', { text: STR.setNotify })),
         h('div', { class: 'hint', id: 'set-notify-hint', text: STR.setNotifyHint })), $('#set-more'));
+      // open the panel when VS Code starts
+      const cbS = h('input', { type: 'checkbox', id: 'set-startup', 'aria-describedby': 'set-startup-hint' });
+      cbS.checked = st.openOnStartup;
+      cbS.addEventListener('change', () => saveSettings({ openOnStartup: cbS.checked }));
+      setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-startup' }, cbS, h('span', { text: STR.setStartup })),
+        h('div', { class: 'hint', id: 'set-startup-hint', text: STR.setStartupHint })), $('#set-more'));
+      // AI chat names (the quick model above) and dictation (a voice model of its own), right under the quick model
+      const selN = h('select', { id: 'set-names', 'aria-describedby': 'set-names-hint' });
+      ['auto', 'first', 'off'].forEach((k) => selN.append(h('option', { value: k, text: STR.autoNameLabels[k] })));
+      selN.value = st.autoChatNames;
+      selN.addEventListener('change', () => saveSettings({ autoChatNames: selN.value }));
+      const after = $('#set-ceffort-hint').parentElement.nextSibling;
+      setBody.insertBefore(field('set-names', STR.setAutoNames, STR.setAutoNamesHint, selN), after);
+      if (state.dictation) {
+        const cbD = h('input', { type: 'checkbox', id: 'set-dict', 'aria-describedby': 'set-dict-hint' });
+        cbD.checked = st.dictation;
+        cbD.addEventListener('change', () => saveSettings({ dictation: cbD.checked }));
+        setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-dict' }, cbD, h('span', { text: STR.setDictation })),
+          h('div', { class: 'hint warn', id: 'set-dict-hint', text: STR.setDictationHint })), after);
+        if (st.dictation && (state.dictLangs || []).length) {   // the languages: a compact multi-select like the models of the picker
+          const all = state.dictLangs, chosen = all.filter((l) => st.dictationLanguages.includes(l.code));
+          const btn = h('button', { type: 'button', id: 'set-dl', class: 'set-ms-btn', 'aria-haspopup': 'true', 'aria-expanded': String(!!state.dictLangsOpen),
+            'aria-controls': 'set-dl-list', 'aria-describedby': 'set-dl-hint', onclick: () => { state.dictLangsOpen = !state.dictLangsOpen; renderSettings(); } },
+            h('span', { class: 't', text: chosen.length ? chosen.map((l) => l.name).join(', ') : STR.setDictLangsAny }), h('span', { class: 'c', html: ICON.caret }));
+          const list = h('div', { id: 'set-dl-list', class: 'set-ms-list' + (state.dictLangsOpen ? '' : ' hidden'), role: 'group', 'aria-label': STR.setDictLangs });
+          const anyCb = h('input', { type: 'checkbox', id: 'set-dl-any' });
+          anyCb.checked = !chosen.length;
+          anyCb.addEventListener('change', () => saveSettings({ dictationLanguages: anyCb.checked ? [] : ['en'] }));
+          list.append(h('label', { class: 'set-model', for: 'set-dl-any' }, anyCb, h('span', { class: 'mt', text: STR.setDictLangsAny })));
+          all.forEach((l) => {
+            const cb = h('input', { type: 'checkbox', id: 'set-dl-' + l.code });
+            cb.checked = st.dictationLanguages.includes(l.code);
+            cb.addEventListener('change', () => {
+              const rest = st.dictationLanguages.filter((c) => c !== l.code);
+              saveSettings({ dictationLanguages: cb.checked ? rest.concat(l.code) : rest });
+            });
+            list.append(h('label', { class: 'set-model', for: 'set-dl-' + l.code }, cb, h('span', { class: 'mt', text: l.name + ' ' }), h('span', { class: 'dl-code', text: l.code })));
+          });
+          setBody.insertBefore(field('set-dl', STR.setDictLangs, STR.setDictLangsHint, h('div', { class: 'set-ms' }, btn, list)), after);
+        }
+      }
       setBody.insertBefore(renderMcp(), $('#set-more'));
     }
     const again = keep && document.getElementById(keep);
@@ -1788,6 +2395,23 @@
       h('div', { class: 'instr-src', role: 'radiogroup', 'aria-label': STR.instrTitle }, radio('codex', STR.instrCodex), radio('codexter', STR.instrCodexter)),
       h('div', { class: 'hint', text: src === 'codex' ? STR.instrCodexHint : STR.instrCodexterHint }),
       ta, presets, h('div', { class: 'mcp-findrow instr-actions' }, saveB, agents), status);
+  }
+  // the project's REVIEW_INSTRUCTIONS.md (core/reviewFile.ts): a link to it, or the offer to create it
+  const REVIEW_FILE_NAME = 'REVIEW_INSTRUCTIONS.md';
+  function renderReviewSettings() {
+    const f = state.rvFile, name = f ? f.name : REVIEW_FILE_NAME;
+    const body = !f ? [h('div', { class: 'mcp-note', role: 'status' }, h('span', { class: 'spinner' }), h('span', { text: STR.setReviewLoading }))]
+      : f.exists ? [h('button', { class: 'set-link', type: 'button', id: 'set-review-open', text: name, title: STR.setReviewOpenTitle(f.path), onclick: () => bridge.post({ type: 'reviewFileOpen' }) }),
+        h('div', { class: 'hint rv-path', text: f.path })]
+      : [h('div', { class: 'hint', text: STR.setReviewNone(f.project) }),
+        h('div', { class: 'mcp-findrow instr-actions' }, h('button', { class: 'mcp-btn primary', type: 'button', id: 'set-review-create', text: STR.setReviewCreate(name), title: f.path,
+          onclick: () => bridge.post({ type: 'reviewFileCreate', text: CodexReview.TEMPLATE }) }))];
+    return h('div', { class: 'set-field instr', id: 'set-review' }, h('div', { class: 'set-sec', text: STR.setReview }), h('div', { class: 'hint', text: STR.setReviewHint(name) }), ...body);
+  }
+  function onReviewFile(ev) {
+    state.rvFile = ev;
+    const old = document.getElementById('set-review');   // only this section: the other fields may be in use
+    if (old) old.replaceWith(renderReviewSettings());
   }
   function renderContextSettings() {
     const st = state.settings;
@@ -1876,6 +2500,7 @@
       if (host === 'vscode') {
         state.mcp.loading = true; bridge.post({ type: 'mcpList' });   // MCP servers of the Codex config
         state.instr.codex = null; state.instr.error = null; state.instr.draft = null; state.instr.note = null; bridge.post({ type: 'instrRead' });
+        state.rvFile = null; bridge.post({ type: 'reviewFile' });   // REVIEW_INSTRUCTIONS.md of the chat's project
       }
       renderSettings();
       $('#set-back').focus();
@@ -1979,6 +2604,7 @@
     add('plan', { name: STR.plusPlan, desc: state.planMode ? STR.plusPlanOn : STR.plusPlanHint, inline: true, iconHtml: ICON.bulb, role: 'menuitemcheckbox', checked: state.planMode,
       onclick: () => { setPlanMode(!state.planMode); closePops(true); } });
     add('sketch', { name: STR.plusSketch, desc: STR.plusSketchHint, inline: true, iconHtml: ICON.pen, onclick: () => { closePops(false); if (host === 'vscode') bridge.post({ type: 'imageOpen', key: '', url: '', name: STR.sketchName, editable: true, blank: true }); else openSketch(); } });
+    if (host === 'vscode') add('review', { name: STR.plusReview, desc: STR.plusReviewHint, inline: true, iconHtml: ICON.review, onclick: () => { closePops(false); startReview(); } });
     box.append(h('div', { class: 'pm-title', text: STR.plusPlugins }));
     const pl = state.plugins;
     if (pl.error) box.append(h('div', { class: 'pm-note', text: STR.pluginsError + pl.error }));
@@ -2075,21 +2701,37 @@
   function addImageFile(file, name) {
     const fr = new FileReader();
     fr.onerror = () => toast(STR.imageFailed);
-    fr.onload = () => {
-      const src = String(fr.result || '');
-      const img = new Image();
-      img.onerror = () => toast(STR.imageFailed);
-      img.onload = () => {
-        const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight, 1));
-        if (k === 1 && /^data:image\/png/.test(src)) { addImageUrl(src, name || file.name); return; }
+    fr.onload = () => addImageSrc(String(fr.result || ''), name || file.name);
+    fr.readAsDataURL(file);
+  }
+  // A picture as data URL, scaled down to MAX_SIDE, attached as PNG; done() runs once it is attached.
+  function addImageSrc(src, name, done) {
+    const img = new Image();
+    img.onerror = () => toast(STR.imageFailed);
+    img.onload = () => {
+      const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight, 1));
+      let url = src;
+      if (k !== 1 || !/^data:image\/png/.test(src)) {
         const c = document.createElement('canvas');
         c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        addImageUrl(c.toDataURL('image/png'), name || file.name);
-      };
-      img.src = src;
+        url = c.toDataURL('image/png');
+      }
+      addImageUrl(url, name);
+      if (done) done();
     };
-    fr.readAsDataURL(file);
+    img.src = src;
+  }
+  // An image file chip drawn on in the editor tab: the drawn-on picture takes the chip's place.
+  function replaceFileWithImage(file, url) {
+    if (state.images.length >= MAX_IMAGES) { toast(STR.imageTooMany); return; }
+    addImageSrc(url, basename(file), () => {
+      const same = (c) => c.kind !== 'selection' && !c.folder && normPath(c.path) === normPath(file);
+      if (state.contexts.some((c) => same(c) && c.kind === 'file')) state.dismissedFile = file;
+      state.contexts = state.contexts.filter((c) => !same(c));
+      syncActive();
+      toast(STR.imageSaved);
+    });
   }
   input.addEventListener('paste', (e) => {
     const items = Array.from((e.clipboardData && e.clipboardData.items) || []).filter((i) => i.kind === 'file' && /^image\//.test(i.type));
@@ -2310,7 +2952,7 @@
         if (e) e.stopPropagation();
         if (cur) {   // closing the open tab opens its neighbour (or a new chat), like a browser
           const next = list[i + 1] || list[i - 1];
-          if (next && next.id) openChat(next.id); else bridge.post({ type: 'newChat' });
+          if (next && next.id) openChat(next.id, next.title); else bridge.post({ type: 'newChat' });
         }
         if (t.id) bridge.post({ type: 'tabClose', threadId: t.id });
       };
@@ -2318,7 +2960,7 @@
         title: t.title + (running ? '\n' + STR.tabRunning : unread ? '\n' + STR.tabUnread : '') + (t.id ? '\n' + STR.renameHint : '') },
         mark, h('span', { class: 'tab-t', text: t.title }),
         t.id ? h('span', { class: 'tab-x', role: 'button', title: STR.tabClose, 'aria-label': STR.tabClose + ': ' + t.title, text: '×', onclick: close }) : null);
-      const open = () => { if (!cur && t.id) { toggleHistory(false); openChat(t.id); } };
+      const open = () => { if (!cur && t.id) { toggleHistory(false); openChat(t.id, t.title); } };
       const rename = () => {
         if (!t.id) return;
         // a double click on another tab opened that chat first, which may have drawn the strip anew: take the tab that is there now
@@ -2359,6 +3001,55 @@
   }
 
   // ---------- composer ----------
+  // ---------- dictation (mic button, VS Code on Windows) ----------
+  // The extension records the microphone and Codex's voice mode turns it into text; each finished phrase is put in at the caret.
+  const micBtn = $('#mic');
+  let dictState = 'off';   // off | starting | listening | stopping
+  // the level bars: the newest loudness on the right, older ones move left (like a recorder's meter)
+  const micWave = $('#micwave'), waveBars = Array.from(micWave.children), waveLevels = waveBars.map(() => 0);
+  function drawWave() {
+    waveBars.forEach((b, i) => { b.style.height = Math.round(3 + waveLevels[i] * 17) + 'px'; b.style.opacity = String(0.45 + waveLevels[i] * 0.55); });
+  }
+  function onDictationLevel(ev) {
+    if (dictState !== 'listening') return;
+    waveLevels.shift(); waveLevels.push(Math.max(0, Math.min(1, Number(ev.level) || 0)));
+    drawWave();
+  }
+  function renderMic() {
+    const listening = dictState === 'listening';
+    if (!listening) { waveLevels.fill(0); drawWave(); }
+    micWave.classList.toggle('hidden', !listening);
+    micBtn.classList.toggle('hidden', !(state.dictation && state.settings.dictation));
+    micBtn.classList.toggle('on', dictState === 'listening');
+    micBtn.classList.toggle('busy', dictState === 'starting' || dictState === 'stopping');
+    micBtn.setAttribute('aria-pressed', String(dictState !== 'off'));
+    const tip = dictState === 'starting' ? STR.dictateStarting : dictState === 'listening' ? STR.dictateListening : dictState === 'stopping' ? STR.dictateStopping : STR.dictate;
+    micBtn.title = tip; micBtn.setAttribute('aria-label', tip);
+  }
+  function toggleDictation() {
+    if (dictState === 'off') { dictState = 'starting'; bridge.post({ type: 'dictation', action: 'start' }); }
+    else if (dictState !== 'stopping') { dictState = 'stopping'; bridge.post({ type: 'dictation', action: 'stop' }); }
+    renderMic();
+  }
+  micBtn.addEventListener('mousedown', (e) => e.preventDefault());   // the input keeps the caret
+  micBtn.addEventListener('click', () => { toggleDictation(); input.focus(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && (dictState === 'starting' || dictState === 'listening')) { e.preventDefault(); e.stopImmediatePropagation(); toggleDictation(); }
+    else if (e.key === 'Escape' && state.edit) { e.preventDefault(); e.stopImmediatePropagation(); cancelEdit(); }
+  }, true);
+  function onDictation(ev) {
+    dictState = ev.state === 'starting' || ev.state === 'listening' || ev.state === 'stopping' ? ev.state : 'off';
+    if (ev.error) toast(STR.dictationFailed(ev.error));
+    renderMic();
+  }
+  function onDictationText(ev) {
+    const text = String(ev.text || '').trim();
+    if (!text) return;
+    const s = input.selectionStart, e = input.selectionEnd, before = input.value.slice(0, s);
+    input.setRangeText((before && !/\s$/.test(before) ? ' ' : '') + text, s, e, 'end');
+    autoGrow(); updateRunning();
+  }
+
   function updateRunning() {
     const busy = state.running || state.pending;
     sendBtn.classList.toggle('stop', busy);
@@ -2580,7 +3271,9 @@
   sendBtn.addEventListener('click', () => { if (state.running || state.pending) bridge.post({ type: 'interrupt' }); else submit(); });
   function submit() {
     const text = input.value.trim();
-    if ((!text && !state.images.length) || state.running || state.pending) return;
+    const edit = state.edit;   // replaces the last message (the host waits for a stopped reply to end)
+    if ((!text && !state.images.length) || ((state.running || state.pending) && !edit)) return;
+    if (edit) { state.edit = null; renderEditBar(); dropEditedTurn(edit.turnId); state.running = false; }
     const ctx = state.contexts.map((c) => Object.assign({}, c));
     liveRefs().forEach((r) => ctx.push({ kind: 'symbol', token: r.token, name: r.name, path: r.path, rel: r.rel, startLine: r.startLine, endLine: r.endLine }));
     state.refs = [];
@@ -2590,16 +3283,46 @@
     if (text && state.title === STR.newChat) setTitle(text.split('\n')[0].slice(0, 60));
     // true / false for an existing chat (its mode is kept by the server, and the page may not know it: reload, History, tab);
     // a new chat only says it when plan mode is on
-    const plan = state.planMode ? true : state.threadId || state.planUsed ? false : undefined;
-    if (state.planMode) state.planUsed = true; else if (plan === false) state.planUsed = false;
-    bridge.post({ type: 'send', text, contexts: ctx, images: images.map((i) => ({ url: i.url, name: i.name })), plan,
-      model: state.prefs.model, defaultModel: effectiveModel(), effort: state.prefs.effort, permissions: normPerm(state.prefs.permissions) });
+    postSend(text, ctx, images, { replaceTurnId: edit ? edit.turnId : undefined });
     input.value = ''; autoGrow();
     state.contexts = state.contexts.filter((c) => c.kind === 'file');
     state.images = [];
     renderChips();
     state.pending = true;
     updateRunning();
+  }
+  function postSend(text, ctx, images, opts) {
+    const plan = state.planMode ? true : state.threadId || state.planUsed ? false : undefined;
+    if (state.planMode) state.planUsed = true; else if (plan === false) state.planUsed = false;
+    bridge.post({ type: 'send', text, contexts: ctx, images: images.map((i) => ({ url: i.url, name: i.name })), plan,
+      model: state.prefs.model, defaultModel: effectiveModel(), effort: state.prefs.effort, permissions: normPerm(state.prefs.permissions),
+      replaceTurnId: opts && opts.replaceTurnId });
+  }
+  // A message the page writes itself (a review request, the review answers): no context chips, the input stays as it is.
+  function sendText(text, title) {
+    if (state.running || state.pending || state.edit) { toast(STR.reviewBusy); return false; }
+    addUser(text, [], []);
+    stick = true; scrollDown();
+    if (state.title === STR.newChat) setTitle(title || text.split('\n')[0].slice(0, 60));
+    postSend(text, [], []);
+    state.pending = true;
+    updateRunning();
+    return true;
+  }
+  // ---------- code review: the request, then one card per finding (CodexReview in web/review.js) ----------
+  function startReview() {
+    if (!window.CodexReview || state.rvAsked) return;
+    if (state.running || state.pending || state.edit) { toast(STR.reviewBusy); return; }
+    state.rvAsked = true;
+    bridge.post({ type: 'reviewPrompt' });   // the host reads the project's file -> onReviewPrompt
+  }
+  function onReviewPrompt(ev) {
+    state.rvAsked = false;
+    if (ev.error) { toast(STR.reviewFileError(ev.name, ev.error)); return; }
+    const extra = input.value.trim();
+    if (!sendText(CodexReview.request(ev.text, extra, ev.name), STR.reviewTitle)) return;
+    if (extra) { input.value = ''; autoGrow(); updateRunning(); }
+    if (!ev.text) toast(ev.exists ? STR.reviewEmptyFile(ev.name) : STR.reviewNoFile(ev.name));
   }
 
   // ---------- "@" file mentions ----------
@@ -2758,8 +3481,8 @@
     else if (projMenuOpen() && !path.includes(histProj)) closeProjMenu(false);
   });
 
-  // delegated clicks inside the feed: copy buttons, links, inline paths
-  feed.addEventListener('click', (e) => {
+  // delegated clicks inside the feed (and the side chat's feed): copy buttons, links, inline paths
+  function onFeedClick(e) {
     const t = e.target;
     const copy = t.closest && t.closest('button.copy');
     if (copy) {
@@ -2778,7 +3501,9 @@
       const ref = CodexLinks.parse(p.getAttribute('data-path'));
       if (ref) bridge.post(Object.assign({ type: 'openFile' }, ref));
     }
-  });
+  }
+  feed.addEventListener('click', onFeedClick);
+  sideFeed.addEventListener('click', onFeedClick);
   function copyText(s) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(s).catch(() => legacyCopy(s)); return; }
@@ -2793,6 +3518,9 @@
   // ---------- notifications ----------
   function onNotification(method, p) {
     if (p && p.threadId && state.threadId && p.threadId !== state.threadId) return;
+    // the late end of a reply whose message was just replaced (Edit): its turn is gone from the feed
+    const tid = p && (p.turnId || (p.turn && p.turn.id));
+    if (tid && droppedTurns.has(tid)) return;
     switch (method) {
       case 'turn/started':
         if (p.turn && p.turn.id && p.turn.id !== state.lastTurnId) { state.turnCount = (state.turnCount || 0) + 1; state.lastTurnId = p.turn.id; }
@@ -2801,6 +3529,7 @@
         state.turnFiles = new Set(); state.turnDiff = null; state.turnStartMs = Date.now();
         if (!state.turn || state.turn.done) beginTurn();
         state.turn.started = true; state.turn.startMs = Date.now();
+        if (p.turn && p.turn.id) state.turn.el.dataset.turn = p.turn.id;
         updateRunning(); break;
       case 'turn/completed': state.lastTurnStatus = (p.turn && p.turn.status) || 'completed'; state.compacting = false; finishTurn(p.turn || {}); break;
       case 'item/started': upsertItem(p.item, 'started'); break;
@@ -2908,6 +3637,7 @@
       }
       append(bar);
     }
+    if (state.turn && !state.turn.done) state.turn.status = turn.status || 'completed';
     if (state.turn && !state.turn.done) endTurn(state.turn, turn.durationMs != null ? turn.durationMs : (state.turn.started ? Date.now() - state.turn.startMs : null));
     updateRunning();
   }
@@ -2938,6 +3668,7 @@
   function loadThread(ev) {
     state.compacting = false;
     const th = ev.thread || {};
+    if (!ev.created) hideChatLoading();
     if (ev.created) { // thread was just created for the message in the feed: keep what is shown
       state.threadId = th.id || null;
       setProject(ev.project, ev.cwd);
@@ -2967,8 +3698,10 @@
     setTitle(cleanTitle(th.name || th.preview) || STR.newChat);
     if (ev.turns && ev.turns.length) {
       stick = true;
-      ev.turns.forEach((turn, idx) => {
+      state.loadingThread = true;   // no review toasts for old turns
+      try { ev.turns.forEach((turn, idx) => {
         beginTurn(turn.startedAt);
+        if (turn.id) state.turn.el.dataset.turn = turn.id;
         (turn.items || []).forEach((it) => upsertItem(it, 'completed', true));
         if (turn.status === 'inProgress' && idx === ev.turns.length - 1) {   // its reply is still running: the next events go on here
           state.running = true; state.turnId = turn.id || null; state.turn.started = true;
@@ -2976,7 +3709,7 @@
           return;
         }
         endTurn(state.turn, turn.durationMs != null ? turn.durationMs : turn.startedAt && turn.completedAt ? (turn.completedAt - turn.startedAt) * 1000 : null);
-      });
+      }); } finally { state.loadingThread = false; }
       if (ev.goal) { state.goal = ev.goal; renderGoal(); }
       stick = true; feed.scrollTop = feed.scrollHeight;
     }
@@ -2996,6 +3729,7 @@
         if (ev.historyManual) { hist.manual = true; hist.cwds = ev.historyCwds || []; }   // the user's own selection survives a re-created view
         refreshProjectUi();
         if (ev.settings) state.settings = normSettings(ev.settings);
+        state.dictation = !!ev.dictation; state.dictLangs = Array.isArray(ev.dictationLangs) ? ev.dictationLangs : []; renderMic();
         applyFontSize();
         fillModels(); fillPerm();
         if (!state.hasContent) showEmpty();
@@ -3005,8 +3739,11 @@
       case 'windowFocus': onWindowFocus(ev.focused); break;
       case 'mcp': case 'mcpNote': case 'mcpFind': onMcp(ev); break;
       case 'codexInstructions': onCodexInstructions(ev); break;
+      case 'reviewFile': onReviewFile(ev); break;
+      case 'reviewPrompt': onReviewPrompt(ev); break;
       case 'pasteRef': onPasteRef(ev); break;
       case 'imageEdited': {   // back from the editor tab: replaces the attached picture, or attaches a new sketch
+        if (ev.key && ev.key.indexOf('file:') === 0) { replaceFileWithImage(ev.key.slice(5), ev.url); break; }
         const im = ev.key && state.images.find((x) => x.key === ev.key);
         if (im) { im.url = ev.url; renderChips(); toast(STR.imageSaved); } else if (!ev.key) addImageUrl(ev.url, STR.sketchName);
         break;
@@ -3024,17 +3761,25 @@
       case 'settings': {
         const before = JSON.stringify(state.settings);
         state.settings = normSettings(ev.settings);
+        if (!state.settings.dictation && (dictState === 'listening' || dictState === 'starting')) toggleDictation();   // turned off while dictating
+        renderMic();
         applyFontSize();
         if (JSON.stringify(state.settings) !== before && chatIsEmpty()) applyDefaults(); else fillModels();
         renderSettings();
         break;
       }
       case 'showSettings': toggleSettings(); break;
+      case 'startReview': if (state.settingsOpen) toggleSettings(false, true); if (state.historyOpen) toggleHistory(false); startReview(); break;
       case 'prefs': Object.assign(state.prefs, ev.prefs); fillModels(); fillPerm(); break;
       case 'plugins': onPlugins(ev); break;
       case 'goal': state.goal = ev.goal || null; renderGoal(); break;
       case 'threads': onThreads(ev); break;
       case 'threadAction': onThreadAction(ev); break;
+      case 'titleSuggested': onTitleSuggested(ev); break;
+      case 'dictation': onDictation(ev); break;
+      case 'dictationText': onDictationText(ev); break;
+      case 'dictationLevel': onDictationLevel(ev); break;
+      case 'dictationDropped': toast(STR.dictationDropped(String(ev.text || '').slice(0, 60))); break;
       case 'historyProjects': {
         hist.projects = ev.data || [];
         const changed = state.historyOpen && autoSelect();   // chats of the open projects are now known: select exactly those
@@ -3050,8 +3795,11 @@
         break;
       }
       case 'mentions': onMentions(ev); break;
+      case 'sideLinks': onSideLinks(ev); break;
+      case 'sideOpen': onSideOpen(ev); break;
+      case 'sideEvent': onSideEvent(ev); break;
       case 'thread': loadThread(ev); break;
-      case 'newChat': stashChat(); state.compacting = false; state.restored = null; state.turnCount = 0; state.lastTurnId = null; state.lastTurnStatus = null; resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
+      case 'newChat': hideChatLoading(); stashChat(); state.compacting = false; state.restored = null; state.turnCount = 0; state.lastTurnId = null; state.lastTurnStatus = null; resetConversation(); state.planUsed = false; state.threadId = null; setTitle(STR.newChat); setProject(ev.project, ev.cwd); showEmpty(); applyDefaults(); renderTabs(); break;
       case 'cwd': setProject(ev.project, ev.cwd || ''); { const e = $('#empty'); if (e) showEmpty(); } break;
       case 'notification': onNotification(ev.method, ev.params || {}); break;
       case 'serverRequest': {
@@ -3073,7 +3821,7 @@
         } else if (ev.action === 'clear') state.contexts = [];
         syncActive(); break;
       }
-      case 'error': errorCard(ev.title, ev.message, ev.actions); state.pending = false; updateRunning(); break;
+      case 'error': hideChatLoading(); errorCard(ev.title, ev.message, ev.actions); state.pending = false; updateRunning(); break;
       case 'idle': state.pending = false; state.running = false; state.compacting = false; updateRunning(); break;
       case 'install': state.install = ev.phase === 'idle' ? null : ev; renderCx(); break;
       case 'codexUpdated': state.updatedVersion = ev.version || null; renderCx(); break;

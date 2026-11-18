@@ -1,5 +1,6 @@
 /* Dev mock of the Java side: replays a recorded fixture through window.codexUi.receive.
- * Query: ?fixture=recorded-edit|recorded-hello|recorded-think|synthetic-approval|synthetic-autoreview
+ * Query: ?fixture=recorded-edit|recorded-hello|recorded-think|synthetic-approval|synthetic-autoreview|synthetic-review
+ *        (synthetic-review: the answer ends with a findings block of 5 findings; "Send answers to Codex" gets a short reply)
  *        &other=1 (after the first message the active editor moves to another project: banner)
  *        &speed=2 (faster)  &autoplay=0 (wait for you to press Send)  &theme=dark|light
  *        &state=signin|signinerror|waiting|downloading|installing|failed|updated|sandbox  (no autoplay; &autologin=1 completes the sign-in)
@@ -11,6 +12,7 @@
  *        &plan=1 (plan mode chip on at start; fixture=synthetic-plan shows a plan item)  &plugins=none|slow|error  &resume=1 (loads a finished history chat)
  *        &settings=1 (opens the in-panel settings after init, like the title-bar gear)  &fail=1 (archive/unarchive/delete answer an error)
  *        &nosettings=1 (init without settings: Codex defaults, nothing hidden)
+ *        &host=vscode: the Clarify button under an answer; sideAsk makes a mock side chat (&sidefail=1: the first question fails)
  * Settings: init.settings has a default model, an effort and one hidden model; "settingsSave" is echoed as a "settings" event.
  * Archive/delete: threadAction moves a chat to the archived list (unarchive back, delete removes), answers ok and re-sends historyProjects; rename sets the title.
  * "+" menu: plugins come from PLUGINS below; "Files" answers pickFiles with two chips; "Goal" answers goalSet with a goal event (tokens grow);
@@ -151,6 +153,13 @@
 
   let fixture = null;
   let threadCounter = 0;
+  const sideChats = {};   // thread -> turn -> [{id, at, title, qa}] (Clarify side chats of the dev page)
+  let sideCounter = 0;
+  function pushSideLinks(thread) {
+    const links = {};
+    Object.keys(sideChats[thread] || {}).forEach((t) => { links[t] = sideChats[thread][t].map((e) => ({ id: e.id, at: e.at, title: e.title })); });
+    push({ kind: 'sideLinks', threadId: thread, links });
+  }
 
   function push(ev) { setTimeout(() => window.codexUi && window.codexUi.receive([ev]), 0); }
   function pushAll(arr) { window.codexUi.receive(arr); }
@@ -201,6 +210,8 @@
 
   let playing = null;
   let devInstructions = 'Answer briefly.';
+  let devReviewFile = q.get('reviewfile') ? '# Review\n\nCheck the order totals first.\n' : null;
+  const pushReviewFile = () => setTimeout(() => push({ kind: 'reviewFile', name: 'REVIEW_INSTRUCTIONS.md', path: 'C:\\dev\\project\\REVIEW_INSTRUCTIONS.md', exists: devReviewFile !== null, project: 'project' }), 200);
   let openThread = 'dev-thread';   // the chat on screen (a resumed history chat or the dev thread)
   const waiting = {}; // requestId -> resume fn
 
@@ -233,6 +244,19 @@
       }, gap);
     }
     step();
+  }
+
+  // the turn after "Send answers to Codex" of a review: a short reply that names the answers
+  function reviewAnswered(text) {
+    const id = 'turn-ack-' + Date.now(), P = (o) => Object.assign({ threadId: 'dev-thread' }, o);
+    const fixes = (text.match(/^\d+\. \[(?:Fix|Own answer)\]/gm) || []).map((l) => '#' + l.split('.')[0]);
+    const reply = fixes.length ? 'Done: changed ' + fixes.join(', ') + ' as answered; the skipped findings are unchanged.' : 'Nothing changed: all findings were skipped.';
+    const seq = [
+      ['turn/started', { turn: { id, items: [], status: 'inProgress', startedAt: Math.floor(Date.now() / 1000) } }],
+      ['item/completed', { turnId: id, item: { type: 'agentMessage', id: id + '-a', text: reply, phase: 'final_answer' } }],
+      ['turn/completed', { turn: { id, items: [], status: 'completed', durationMs: 1200 } }]
+    ];
+    seq.forEach(([method, params], i) => setTimeout(() => push({ kind: 'notification', method, params: P(params) }), (300 + i * 400) / speed));
   }
 
   function sendProjects() {
@@ -275,8 +299,41 @@
       if (!threadCounter++) push({ kind: 'thread', created: true, thread: { id: 'dev-thread', name: null, preview: m.text }, cwd: CWD, project: 'shop', turns: [] });
       if (q.get('other')) setTimeout(() => push({ kind: 'context', action: 'activeFile', item: Object.assign({ path: OTHER.projectPath + '\\src\\Invoice.java', startLine: 1 }, OTHER) }), 600);
       push({ kind: 'notification', method: 'thread/status/changed', params: { status: { type: 'active' } } });
+      if (/^Codexter review answers/.test(m.text || '')) { reviewAnswered(m.text); return; }   // fixture=synthetic-review: the answers come back
       setTimeout(replay, 300 / speed);
     },
+    // Clarify side chats: the first question makes a "fork" (sideOpen created + sideLinks), the answer streams as sideEvent; &sidefail=1 answers an error
+    sideAsk(m) {
+      let id = m.sideId;
+      const turns = (sideChats[m.threadId] = sideChats[m.threadId] || {});
+      if (!id) {
+        id = 'dev-side-' + (++sideCounter);
+        if (q.get('sidefail')) { push({ kind: 'sideEvent', id: '', method: 'sideFailed', params: { message: 'this answer is not saved in the chat yet', parent: m.threadId, turnId: m.turnId } }); return; }
+        (turns[m.turnId] = turns[m.turnId] || []).push({ id, at: Date.now(), title: '↳ Clarify: ' + m.excerpt, qa: [] });
+        push({ kind: 'sideOpen', parent: m.threadId, turnId: m.turnId, side: { id, at: Date.now(), title: '↳ Clarify: ' + m.excerpt }, turns: [], running: false, created: true });
+        pushSideLinks(m.threadId);
+      }
+      const entry = turns[m.turnId].find((e) => e.id === id);
+      const answer = 'Short answer to "' + m.text + '": this is what the line above means.\n\n- It reads the **main chat** up to that answer.\n- Nothing is written back; see `src/OrderService.java:42` for the code.';
+      entry.qa.push({ user: m.text, answer });
+      const turnId = 'dev-side-turn-' + entry.qa.length;
+      const ev = (method, params) => push({ kind: 'sideEvent', id, method, params: Object.assign({ threadId: id }, params) });
+      setTimeout(() => ev('turn/started', { turn: { id: turnId } }), 150);
+      setTimeout(() => ev('item/started', { item: { type: 'commandExecution', id: 'c' + turnId, command: 'rg -n "paging" src' } }), 400);
+      const words = answer.split(/(?<= )/);
+      let at = 700;
+      words.forEach((w) => { at += 35; setTimeout(() => ev('item/agentMessage/delta', { itemId: 'm' + turnId, delta: w }), at / speed); });
+      setTimeout(() => { ev('item/completed', { item: { type: 'agentMessage', id: 'm' + turnId, text: answer } }); ev('turn/completed', { turn: { id: turnId, status: 'completed' } }); }, (at + 100) / speed);
+    },
+    sideShow(m) {
+      for (const parent of Object.keys(sideChats)) {
+        for (const turnId of Object.keys(sideChats[parent])) {
+          const e = sideChats[parent][turnId].find((x) => x.id === m.sideId);
+          if (e) { push({ kind: 'sideOpen', parent, turnId, side: { id: e.id, at: e.at, title: e.title }, turns: e.qa.map((x, i) => ({ id: 't' + i, user: x.user, answer: x.answer, status: 'completed' })), running: false }); return; }
+        }
+      }
+    },
+    sideInterrupt() { /* the mock answers in a moment anyway */ },
     interrupt() {
       playing = null;
       push({ kind: 'notification', method: 'turn/completed', params: { turn: { id: 'x', status: 'interrupted', items: [] } } });
@@ -389,6 +446,11 @@
     instrRead() { setTimeout(() => push({ kind: 'codexInstructions', text: devInstructions, agents: 'C:\\Users\\dev\\.codex\\AGENTS.md' }), 300); },
     instrWriteCodex(m) { devInstructions = m.text || ''; setTimeout(() => push({ kind: 'codexInstructions', text: devInstructions, agents: 'C:\\Users\\dev\\.codex\\AGENTS.md', saved: true }), 300); },
     openAgents() { console.log('[dev] openAgents: VS Code would open ~/.codex/AGENTS.md'); },
+    // REVIEW_INSTRUCTIONS.md of the project, kept in memory here (&reviewfile=1: it exists from the start)
+    reviewFile() { pushReviewFile(); },
+    reviewFileOpen() { console.log('[dev] reviewFileOpen: VS Code would open REVIEW_INSTRUCTIONS.md'); },
+    reviewFileCreate(m) { if (devReviewFile === null) devReviewFile = m.text || ''; pushReviewFile(); },
+    reviewPrompt() { setTimeout(() => push({ kind: 'reviewPrompt', name: 'REVIEW_INSTRUCTIONS.md', exists: devReviewFile !== null, text: (devReviewFile || '').trim() }), 100); },
     // "Compact" in the footer: a turn with a contextCompaction item, the context usage drops
     compact() {
       const n = (method, params) => push({ kind: 'notification', method, params: Object.assign({ threadId: openThread }, params) });

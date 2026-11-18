@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const REPO = 'unreal777/codex-vscode', BRANCH = 'main';
 mkdirSync('dist', { recursive: true });
-const r = spawnSync('npx', ['vsce', 'package', '--no-dependencies', '--skip-license',
+const r = spawnSync('npx', ['vsce', 'package', '--no-dependencies',
   '--baseImagesUrl', `https://raw.githubusercontent.com/${REPO}/${BRANCH}/`, '--baseContentUrl', `https://github.com/${REPO}/blob/${BRANCH}/`,
   '--out', `dist/codex-panel-${version}.vsix`],
   { stdio: 'inherit', shell: true });

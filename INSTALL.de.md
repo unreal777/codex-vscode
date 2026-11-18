@@ -1,7 +1,7 @@
 # Codex in VS Code
 
 Ein Chat-Panel für den OpenAI-Codex-Agenten direkt in VS Code, dasselbe Panel wie im Eclipse-Plugin.
-Du brauchst nur **VS Code 1.90 oder neuer** unter Windows. Kein Node.js, kein npm, kein `codex login`:
+Du brauchst nur **VS Code 1.90 oder neuer** unter Windows, macOS oder Linux (x64 oder arm64; getestet unter Windows). Kein Node.js, kein npm, kein `codex login`:
 Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 
 ## Installation
@@ -48,8 +48,8 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 - **Lange Antworten lesen sich von oben nach unten.** Deine Nachricht ist ein breiter Block, die Antwort nutzt die volle Breite. Ist Codex fertig, klappen seine
   Schritte (Nachdenken, Befehle, Dateien lesen) zu einer Zeile **Worked for 1m 17s** zusammen; ein Klick zeigt sie. Geänderte Dateien und Rückfragen bleiben sichtbar.
 - **`AGENTS.md`** im Repository liest Codex automatisch (nur in neuen Chats).
-- Codex liegt einmal pro Windows-Benutzer in `%LOCALAPPDATA%\CodexPanel` (ca. 500 MB). Das Eclipse-Plugin nutzt denselben Ordner,
-  ein von einem der beiden geladenes Codex gilt also für beide.
+- Codex liegt einmal pro Benutzer auf der Platte (ca. 500 MB). Unter Windows in `%LOCALAPPDATA%\CodexPanel`: Das Eclipse-Plugin nutzt denselben Ordner,
+  ein von einem der beiden geladenes Codex gilt also für beide. Unter macOS und Linux im eigenen Speicher der Erweiterung.
 - Firmen-Proxy: Der Download nutzt die VS-Code-Einstellung `http.proxy` (oder `HTTPS_PROXY`), und Codex bekommt sie ebenfalls.
 - Protokoll: Ansicht > Ausgabe > **Codexter**.
 
@@ -57,7 +57,7 @@ Die Erweiterung lädt Codex selbst herunter und lässt dich anmelden.
 
 | Problem | Lösung |
 |---|---|
-| Download von Codex schlägt fehl | `http.proxy` in den Einstellungen prüfen (`https://registry.npmjs.org` muss erreichbar sein). Oder Codex selbst installieren, unter Codexter > Codex Source „own“ wählen und den Pfad zu `codex.exe` eintragen. |
+| Download von Codex schlägt fehl | `http.proxy` in den Einstellungen prüfen (`https://registry.npmjs.org` muss erreichbar sein). Oder Codex selbst installieren, unter Codexter > Codex Source „own“ wählen und den Pfad zu deinem Codex eintragen (`codex.exe`, unter macOS und Linux `codex`). |
 | Abgelegte Datei bewirkt nichts | Auf **Attach files** unter dem Chat ziehen, den Pfad einfügen, oder **Add to Codexter chat** / `@` benutzen. |
 | Anmeldung wird nicht fertig | Auf Cancel klicken und neu anmelden. Port 1455 auf localhost muss frei sein. |
 | Panel ist leer | **Developer: Reload Window** ausführen; den Ausgabekanal **Codexter** ansehen. |

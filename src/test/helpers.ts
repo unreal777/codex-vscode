@@ -23,6 +23,8 @@ export interface TarEntry {
   /** tar type flag: '0' file (default), '5' folder, '2' symlink, 'x' pax header, 'L' GNU long name */
   type?: string;
   linkName?: string;
+  /** permission bits (default 0o644) */
+  mode?: number;
 }
 
 function put(h: Buffer, off: number, s: string, max: number): void {
@@ -36,7 +38,7 @@ export function tgz(entries: TarEntry[]): Buffer {
     const data = e.content === undefined ? Buffer.alloc(0) : Buffer.isBuffer(e.content) ? e.content : Buffer.from(e.content, 'utf8');
     const h = Buffer.alloc(512);
     put(h, 0, e.name, 100);
-    put(h, 100, '0000644', 8);
+    put(h, 100, (e.mode ?? 0o644).toString(8).padStart(7, '0'), 8);
     put(h, 108, '0000000', 8);
     put(h, 116, '0000000', 8);
     put(h, 124, data.length.toString(8).padStart(11, '0'), 12);
