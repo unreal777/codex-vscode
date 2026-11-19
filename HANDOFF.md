@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.13.1)
+## Status (0.14.0)
+
+- 0.14.0: a turn's steps fold while it runs (last 3 in view) and answered approvals / auto-review checks fold too. See "0.14.0".
 
 - 0.13.1: a chat that moved to another folder or branch tells the model so with its next message. See "0.13.0".
 
@@ -86,6 +88,19 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.14.0
+
+- Long turns (30 tool calls in a row) stayed in the way. The `Worked for` fold (`endTurn`) took only `wk` items, and approval cards
+  (MCP tool approvals of 0.10.0 every call) and auto-review lines were never `wk`, so they stayed in the feed after the turn.
+  Now both are appended as `work`; `foldable(k)` keeps out an approval still waiting (`.approval:not(.done)`) and a refused check
+  (`.autoreview.denied` / `.timedOut`).
+- While a turn runs, `append(el, 'work')` -> `liveFold`: only the last `LIVE_KEEP` (3) foldable steps stay, older ones go into the turn's
+  fold at once (`workGroup`, one per turn, `t.group`; label `Working · N steps`). Not during a chat load (`state.loadingThread`).
+  `endTurn` reuses the group, moves the rest in, finds the answer in the fold too (it comes back out after the fold) and labels it
+  `Worked for 1m 5s · 13 steps`. File changes, the plan, errors, notices and the answer stay in view.
+- Checked on the dev page (synthetic-autoreview; 12 commands + an approval injected through `codexUi.receive`). Not yet with a real
+  long turn. Tests: `src/test/fold.test.ts`.
 
 ## 0.13.0
 

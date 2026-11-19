@@ -77,6 +77,8 @@
     changedFiles: (n) => 'Changed ' + n + (n === 1 ? ' file' : ' files'),
     openAllDiff: 'Open combined diff',
     workedFor: 'Worked for',
+    workingNow: 'Working',
+    steps: (n) => n + (n === 1 ? ' step' : ' steps'),
     plan: 'Plan',
     modelDefault: 'Default model',
     effortDefault: 'Default effort',
@@ -530,8 +532,43 @@
     if (role === 'work') el.classList.add('wk');
     t.el.append(el);
     state.hasContent = true;
+    if (role === 'work' && !state.loadingThread) liveFold(t);
     scrollDown();
     return el;
+  }
+  // Steps that may fold: 'wk' items, but never an approval still waiting for an answer, nor an action the auto-review refused.
+  const foldable = (k) => k.classList.contains('wk') && !(k.classList.contains('approval') && !k.classList.contains('done')) &&
+    !(k.classList.contains('autoreview') && (k.classList.contains('denied') || k.classList.contains('timedOut')));
+  // 0.14.0: while a turn runs only its last LIVE_KEEP steps stay in view; older ones go into the turn's fold at once ("Working · N steps").
+  const LIVE_KEEP = 3;
+  function liveFold(t) {
+    const loose = Array.from(t.el.children).filter(foldable);
+    if (loose.length <= LIVE_KEEP) return;
+    const g = workGroup(t, loose[0]);
+    loose.slice(0, loose.length - LIVE_KEEP).forEach((k) => g.body.append(k));
+    workLabel(t);
+  }
+  // The turn's fold: one per turn, made at the place of its first folded step.
+  function workGroup(t, before) {
+    if (t.group) return t.group;
+    const body = h('div', { class: 'work-body hidden' });
+    const lbl = h('span', { class: 'wl' });
+    const head = h('button', { class: 'work-head', type: 'button', 'aria-expanded': 'false', title: STR.expandWork }, lbl, h('span', { class: 'chev' }));
+    const el = h('div', { class: 'work' }, head, body);
+    head.addEventListener('click', () => {
+      const open = body.classList.toggle('hidden') === false;
+      el.classList.toggle('open', open);
+      head.setAttribute('aria-expanded', String(open));
+      head.title = open ? STR.collapseWork : STR.expandWork;
+    });
+    t.el.insertBefore(el, before);
+    t.group = { el, body, lbl };
+    return t.group;
+  }
+  function workLabel(t, ms) {
+    const n = t.group.body.children.length;
+    const what = t.done ? (ms != null && ms >= 1000 ? STR.workedFor + ' ' + fmtDur(ms) : STR.workedFor.replace(/ for$/, '')) : STR.workingNow;
+    t.group.lbl.textContent = what + ' · ' + STR.steps(n);
   }
   function fmtStamp(d) {
     const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -547,8 +584,9 @@
     t.done = true;
     const kids = Array.from(t.el.children);
     let finalMsg = null;
-    for (let i = kids.length - 1; i >= 0; i--) {
-      const k = kids[i];
+    const all = (t.group ? Array.from(t.group.body.children) : []).concat(kids);   // the fold of a running turn holds its earlier steps
+    for (let i = all.length - 1; i >= 0; i--) {
+      const k = all[i];
       if (k.classList.contains('msg') && k.classList.contains('agent') && k.dataset.phase !== 'commentary') { finalMsg = k; break; }
     }
     if (finalMsg) addForkButton(finalMsg, t.el);
@@ -557,22 +595,16 @@
     const planCards = kids.filter((k) => k.classList.contains('plan-card'));
     if (planCards.length) addSideButton(planCards[planCards.length - 1], t.el);
     if (finalMsg) attachReview(t, finalMsg);
-    const work = kids.filter((k) => k.classList.contains('wk') && k !== finalMsg);
-    if (!work.length) return;
+    // everything between the question and the answer folds: steps, commentary, answered approvals, auto-review checks (0.14.0: the
+    // approvals and checks too; a refused check, file changes, the plan, errors and the answer stay)
+    const work = kids.filter((k) => foldable(k) && k !== finalMsg);
+    if (!work.length && !t.group) return;
     const ms = durationMs != null ? durationMs : Date.now() - t.startMs;
-    const label = ms >= 1000 ? STR.workedFor + ' ' + fmtDur(ms) : STR.workedFor.replace(/ for$/, '') ;
-    const body = h('div', { class: 'work-body hidden' });
-    const head = h('button', { class: 'work-head', type: 'button', 'aria-expanded': 'false', title: STR.expandWork },
-      h('span', { class: 'wl', text: label }), h('span', { class: 'chev' }));
-    const group = h('div', { class: 'work' }, head, body);
-    head.addEventListener('click', () => {
-      const open = body.classList.toggle('hidden') === false;
-      group.classList.toggle('open', open);
-      head.setAttribute('aria-expanded', String(open));
-      head.title = open ? STR.collapseWork : STR.expandWork;
-    });
-    t.el.insertBefore(group, work[0]);
-    work.forEach((k) => body.append(k));
+    const g = workGroup(t, work[0]);
+    work.forEach((k) => g.body.append(k));
+    // a step folded while the turn ran that turned out to be the answer comes back out, right after the fold
+    if (finalMsg && finalMsg.parentNode === g.body) g.el.after(finalMsg);
+    workLabel(t, ms);
     t.folded = true;
   }
   function showEmpty() {
@@ -3693,8 +3725,8 @@
     const r = p.review || {};
     const status = r.status || 'inProgress';
     let el = state.reviews.get(p.reviewId);
-    if (!el) { el = append(h('div', { class: 'autoreview' })); state.reviews.set(p.reviewId, el); }
-    el.className = 'autoreview ' + status;
+    if (!el) { el = append(h('div', { class: 'autoreview' }), 'work'); state.reviews.set(p.reviewId, el); }
+    el.className = 'autoreview wk ' + status;
     el.textContent = '\u{1F6E1} ' + STR.autoReview + ' ' + (STR.reviewVerdict[status] || status) + ': ' + reviewTarget(p.action);
     el.title = [r.riskLevel ? 'Risk: ' + r.riskLevel : '', r.userAuthorization ? 'User authorization: ' + r.userAuthorization : '', r.rationale || ''].filter(Boolean).join('\n');
   }
@@ -3893,7 +3925,7 @@
       case 'serverRequest': {
         const p = ev.params || {};
         if (p.threadId && state.threadId && p.threadId !== state.threadId) break;   // the chat just left: shown again when it is opened
-        append(approvalCard(ev.id, ev.method, p));
+        append(approvalCard(ev.id, ev.method, p), 'work');   // folds once answered
         break;
       }
       case 'rateLimits': state.rateLimits = ev.data && (ev.data.rateLimits || ev.data); renderFooter(); break;
