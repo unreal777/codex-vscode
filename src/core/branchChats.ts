@@ -1,4 +1,5 @@
-// Last used chat per git branch (0.5.6): the decisions only, no VS Code imports (unit tested). Kept in workspaceState by src/branchChats.ts.
+// Last used chat per git branch (0.5.6): the decisions only, no VS Code imports (unit tested). Kept by src/branchChats.ts.
+// The "root" of these functions is the repository's identity since 0.13.0 (core/repoIdentity.ts: its remote address, else its folder).
 // A chat belongs to a branch once a message was sent in it while that branch was checked out. Entries unused for 30 days are dropped.
 
 export interface BranchEntry { thread: string; at: number }
@@ -6,7 +7,7 @@ export type BranchMap = Record<string, BranchEntry>;
 
 export const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Map key of a branch in a repository (the root is compared case-insensitively with / separators, as Windows paths are). */
+/** Map key of a branch in a repository (the root or id is compared case-insensitively with / separators, as Windows paths are). */
 export function branchKey(root: string, branch: string): string {
   return root.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase() + '|' + branch;
 }
@@ -27,6 +28,25 @@ export function forget(map: BranchMap, root: string, branch: string): BranchMap 
   const out = { ...map };
   delete out[branchKey(root, branch)];
   return out;
+}
+
+/**
+ * 0.13.0: the per-folder store of before (keys "<root>|<branch>") -> the shared one (keys "<repository id>|<branch>"), for one root.
+ * A newer entry already in the shared store wins. null when the old store has nothing of this root; rest = what stays in the old store.
+ */
+export function migrateLegacy(map: BranchMap, legacy: BranchMap, root: string, repo: string): { map: BranchMap; rest: BranchMap } | null {
+  const prefix = branchKey(root, '');
+  const out = { ...map };
+  const rest: BranchMap = {};
+  let moved = false;
+  for (const [k, e] of Object.entries(legacy)) {
+    if (!k.startsWith(prefix)) { rest[k] = e; continue; }
+    moved = true;
+    if (!e || typeof e.thread !== 'string' || typeof e.at !== 'number') continue;
+    const nk = branchKey(repo, k.slice(prefix.length));
+    if (!out[nk] || out[nk].at < e.at) out[nk] = e;
+  }
+  return moved ? { map: out, rest } : null;
 }
 
 export interface SwitchDecision {

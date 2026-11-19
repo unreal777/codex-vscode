@@ -5,7 +5,10 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.12.1)
+## Status (0.13.0)
+
+- 0.13.0: branch chats work across copies of one repository (copied folder, second clone, worktree). See "0.13.0".
+
 
 - 0.12.1: Generate commit message with nothing staged: new untracked files go into the diff with their text (`newFilesDiff`,
   text files up to 512 KB, 8000 characters each, at most 50), the prompt no longer says "nothing is staged" (the model echoed it
@@ -81,6 +84,22 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.13.0
+
+- Branch chats (`branchChats.ts`) moved from workspaceState (per folder) to globalState (all windows), keyed by the repository instead
+  of its folder: `core/repoIdentity.ts repoIdOf` reads `.git/config` (a worktree's `.git` file -> its git dir -> `commondir`) and gives
+  `remote:<address>` (origin, else the first remote; `normalizeRemote` drops protocol, user, port, `.git`, case) or `path:<root>`
+  without a remote. So a copied folder of the project finds the chats of its branches used in the other copy. The old entries of a
+  root move over once (`migrateLegacy`, a newer shared entry wins) when the repository is first seen.
+- A chat whose folder is in another copy of a repository open here would have run its turns in that other folder (the thread keeps its
+  cwd). `SessionHost.adjustCwd` -> `cwdForWorkspace`: on resume (any way: branch, restore, History) a chat outside this window's
+  folders whose repository has the same remote as one of them gets the same sub folder of this copy (or its root) as `_threadCwd`;
+  `turn/start` passes it (`cwd`: "Override the working directory for this turn and subsequent turns", codex 0.167.2 schema), the page
+  shows it for links. Logged as `[cwd] chat of another copy ...`.
+- Not handled: copies without a remote (each folder is its own repository), the same branch checked out in two copies at once (both
+  windows open the same chat), the History's project filter still lists such a chat under the folder it was started in.
+  Not yet checked in two real VS Code windows. Tests: `src/test/repo.test.ts`.
 
 ## 0.12.0
 

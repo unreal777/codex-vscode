@@ -31,6 +31,9 @@ is new in 0.9.0 and has not been tried on real machines yet, so please report wh
   - A branch that has no chat yet keeps the open one; it joins the branch with your next message.
 - **A new branch takes your chat along.** Started on `main` and created the feature branch only at the end? The chat you were
   working in moves to the new branch.
+- **Works across copies of a project.** Two folders of the same repository (a copied folder, a second clone, a git worktree; matched by
+  the `origin` address) share their branch chats. Open a branch in one copy and the chat you used on it in another copy opens, and it
+  now works in this folder.
 
 ### Several chats at once, as tabs
 

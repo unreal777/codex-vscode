@@ -1,7 +1,8 @@
 // Last used chat per git branch (0.5.6): watches HEAD of every repository through VS Code's git extension and opens the branch's chat on a
-// switch; the decisions are in core/branchChats.ts. Kept in workspaceState (per folder / workspace), so other projects never see it.
+// switch; the decisions are in core/branchChats.ts. 0.13.0: kept in globalState (all windows) and keyed by the repository (its remote, see
+// core/repoIdentity.ts), not by the folder: a copy of the project in another folder finds the same branch chats.
 import * as vscode from 'vscode';
-import { BranchMap, branchKey, forget, onSwitch, prune, record } from './core/branchChats';
+import { BranchMap, branchKey, forget, migrateLegacy, onSwitch, prune, record } from './core/branchChats';
 
 const STATE_KEY = 'codexPanel.branchChats';
 
@@ -31,7 +32,10 @@ export class BranchChats implements vscode.Disposable {
   private readonly subs: vscode.Disposable[] = [];
   private readonly repoSubs = new Map<string, vscode.Disposable>();
 
-  constructor(private readonly state: vscode.Memento, private readonly deps: BranchChatDeps) {}
+  /** state: globalState; legacy: the workspaceState of 0.5.6-0.12 (entries keyed by folder), moved over once per repository.
+   *  repoId: identity of the repository at a root (remote address, else the root itself). */
+  constructor(private readonly state: vscode.Memento, private readonly legacy: vscode.Memento, private readonly deps: BranchChatDeps,
+    private readonly repoId: (root: string) => string) {}
 
   /** Starts watching; safe to call more than once. Without the git extension nothing happens. */
   start(): Promise<void> {
@@ -63,6 +67,7 @@ export class BranchChats implements vscode.Disposable {
     if (this.repoSubs.has(root)) return;
     const h = r.state.HEAD;
     if (h?.name) this.heads.set(root, { name: h.name, commit: h.commit });
+    this.migrate(root);
     this.repoSubs.set(root, r.state.onDidChange(() => this.changed(r)));
   }
 
@@ -86,9 +91,10 @@ export class BranchChats implements vscode.Disposable {
 
   private async switched(root: string, prev: { name: string; commit?: string }, now: { name: string; commit?: string }): Promise<void> {
     const sameCommit = !!prev.commit && prev.commit === now.commit;
-    const d = onSwitch(this.load(), root, prev.name, now.name, this.deps.openThread(), sameCommit, Date.now());
+    const repo = this.repoId(root);
+    const d = onSwitch(this.load(), repo, prev.name, now.name, this.deps.openThread(), sameCommit, Date.now());
     this.save(d.map);
-    this.deps.log('[branch] ' + prev.name + ' -> ' + now.name + (d.open ? ', opening its chat ' + d.open : d.map[branchKey(root, now.name)] ? ', the open chat moves along' : ''));
+    this.deps.log('[branch] ' + prev.name + ' -> ' + now.name + (d.open ? ', opening its chat ' + d.open : d.map[branchKey(repo, now.name)] ? ', the open chat moves along' : ''));
     if (!d.open) return;
     if (this.deps.isRunning()) {
       void vscode.window.showInformationMessage('Codexter: a reply is still running, so the chat of branch "' + now.name + '" was not opened. Find it in the history.');
@@ -96,7 +102,7 @@ export class BranchChats implements vscode.Disposable {
     }
     if (!(await this.deps.open(d.open))) {
       this.deps.log('[branch] the chat of ' + now.name + ' could not be opened, forgetting it');
-      this.save(forget(this.load(), root, now.name));
+      this.save(forget(this.load(), repo, now.name));
     }
   }
 
@@ -107,7 +113,7 @@ export class BranchChats implements vscode.Disposable {
       const repo = this.api?.getRepository(vscode.Uri.file(cwd));
       const branch = repo?.state.HEAD?.name;
       if (!repo || !branch) return;
-      this.save(record(this.load(), repo.rootUri.fsPath, branch, threadId, Date.now()));
+      this.save(record(this.load(), this.repoId(repo.rootUri.fsPath), branch, threadId, Date.now()));
     });
   }
 
@@ -119,10 +125,20 @@ export class BranchChats implements vscode.Disposable {
     for (;;) {
       const repo = this.api.getRepository(vscode.Uri.file(cwd));
       const branch = repo?.state.HEAD?.name;
-      if (repo && branch) return this.load()[branchKey(repo.rootUri.fsPath, branch)]?.thread ?? null;
+      if (repo && branch) { this.migrate(repo.rootUri.fsPath); return this.load()[branchKey(this.repoId(repo.rootUri.fsPath), branch)]?.thread ?? null; }
       if (Date.now() >= end) return null;
       await new Promise((r) => setTimeout(r, 200));
     }
+  }
+
+  /** Entries of this root in the old per-folder store go to the shared one (a newer entry there wins), then leave the old store. */
+  private migrate(root: string): void {
+    const old = this.legacy.get<BranchMap>(STATE_KEY);
+    if (!old) return;
+    const moved = migrateLegacy(this.load(), old, root, this.repoId(root));
+    if (!moved) return;
+    this.save(moved.map);
+    void this.legacy.update(STATE_KEY, Object.keys(moved.rest).length ? moved.rest : undefined);
   }
 
   dispose(): void {

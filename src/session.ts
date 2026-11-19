@@ -66,6 +66,8 @@ export interface SessionHost {
   rememberAutoName?(threadId: string, name: string | null): void;
   /** A chat got a new name (its tab). */
   renamed?(threadId: string, name: string): void;
+  /** 0.13.0: the folder an opened chat runs in (a chat of another copy of the same repository runs in this window's copy) */
+  adjustCwd?(cwd: string): string;
   /** Starts the microphone for dictation (missing where it can not record). */
   startRecorder?(ev: RecorderEvents): Recorder;
   /** setting codexPanel.dictationLanguages: codes like ['en', 'ru'] ([] = any language) */
@@ -1302,7 +1304,8 @@ export class CodexSession {
         const bg = this.background.get(id);
         this.background.delete(id);
         this._threadId = id;
-        this._threadCwd = typeof r.cwd === 'string' ? r.cwd : bg?.cwd ?? null;
+        const cwd: string | null = typeof r.cwd === 'string' ? r.cwd : bg?.cwd ?? null;
+        this._threadCwd = cwd && this.host.adjustCwd ? this.host.adjustCwd(cwd) : cwd;   // turn/start passes it, so turns run there
         this.needsResume = false;
         this.turnId = bg?.turnId ?? null;
         this.dropStaleApprovals();

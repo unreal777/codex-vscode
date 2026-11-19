@@ -19,12 +19,19 @@ import { MentionSearch } from './mentions';
 import { supportsSecondarySidebar } from './core/vscodeVersion';
 import { CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
 import { processProxyEnv, proxyConfig } from './proxy';
+import { cwdForWorkspace, FsOps, repoIdOf } from './core/repoIdentity';
 import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
 
 let session: CodexSession | undefined;
 /** workspaceState key: id of the chat that was open in this project. */
 const LAST_THREAD_KEY = 'codexPanel.lastThread';
+/** The real file system for core/repoIdentity.ts */
+const NODE_FS: FsOps = {
+  isDir: (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } },
+  isFile: (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } },
+  read: (p) => { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } },
+};
 /** thread id -> the name the AI gave it (globalState, the newest AUTO_NAMES_MAX) */
 const AUTO_NAMES_KEY = 'codexPanel.autoNames';
 const AUTO_NAMES_MAX = 2000;
@@ -119,6 +126,13 @@ export function activate(ctx: vscode.ExtensionContext): void {
       void ctx.globalState.update(AUTO_NAMES_KEY, all);
     },
     renamed: (id, name) => activity?.title(id, name),
+    // 0.13.0: a chat of another copy of an open repository (same remote) runs in this window's copy
+    adjustCwd: (cwd) => {
+      const folders = (vscode.workspace.workspaceFolders ?? []).filter((f) => f.uri.scheme === 'file').map((f) => f.uri.fsPath);
+      const to = cwdForWorkspace(cwd, folders, NODE_FS);
+      if (to !== cwd) log('[cwd] chat of another copy of this repository: ' + cwd + ' -> ' + to);
+      return to;
+    },
     // Clarify side chats: which answers have which side chats (never written into the chats themselves)
     sideLinks: () => ctx.globalState.get<unknown>(SIDE_LINKS_KEY),
     saveSideLinks: (store) => { void ctx.globalState.update(SIDE_LINKS_KEY, store); },
@@ -144,12 +158,12 @@ export function activate(ctx: vscode.ExtensionContext): void {
   };
   session = new CodexSession(host);
   const s = session;
-  branches = new BranchChats(ctx.workspaceState, {
+  branches = new BranchChats(ctx.globalState, ctx.workspaceState, {
     openThread: () => s.threadId,
     isRunning: () => s.isRunning,
     open: (id) => s.resume(id, 'switch'),
     log,
-  });
+  }, (root) => repoIdOf(root, NODE_FS)?.id ?? root);
   void branches.start();
   ctx.subscriptions.push(branches);
   const mentions = new MentionSearch(ws, log);
