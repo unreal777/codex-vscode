@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.14.1)
+## Status (0.15.0)
+
+- 0.15.0: MCP settings > Your browser: Codex uses the open Chrome (DevTools MCP --autoConnect) or picked tabs (Playwright MCP --extension). See "0.15.0".
 
 - 0.14.1: a message at 80% and at 90% of a Codex limit window (once per level, again after a reset). See "0.14.1".
 
@@ -90,6 +92,23 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.15.0
+
+- MCP settings > **Your browser** (`core/browserMcp.ts`, `McpSettings.browser`, page `renderBrowserMcp`): two official servers that use the
+  browser the user has open instead of a fresh one. Checked against the docs 2026-11-19:
+  - Chrome DevTools MCP `npx -y chrome-devtools-mcp@latest --autoConnect` (developer.chrome.com/docs/devtools/agents/use-cases/auto-connect):
+    Chrome 144+ (sources differ: 144-146), remote debugging switched on once at `chrome://inspect/#remote-debugging`, Chrome asks to allow
+    each connection. Fallback not offered: `--remote-debugging-port` + `--browserUrl`.
+  - Playwright MCP `npx -y @playwright/mcp@latest --extension` (playwright.dev/mcp/configuration/browser-extension) with the
+    Playwright MCP Bridge extension (Chrome Web Store id mmlmfjhmonkocbjadbfplnigmagldckm), Chrome or Edge; the user picks the tab.
+- `browserStates(mcp_servers)`: per kind missing | plain (a server of that package, any name or version, without the flag) | ready.
+  Missing: a modal confirmation (what Codex gets, the prompt-injection risk, the command) then `add` (name `chrome-devtools` /
+  `playwright`, `-browser` suffix when taken). Plain: the flag is added to that server's args (and it is switched on). Then the
+  browser step: the chrome:// address goes to the clipboard (openExternal can not open chrome://), the extension's store page opens.
+  Ready: the button only repeats that step.
+- Checked: the block on the dev page with an injected `mcp` event. NOT checked: a real connection (needs Chrome 144+ with remote
+  debugging on, or the extension), what Chrome's permission prompt looks like, npx on a machine without Node. Tests: `src/test/browser.test.ts`.
 
 ## 0.14.1
 

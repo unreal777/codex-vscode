@@ -156,11 +156,11 @@ test('config requests: config/read, config/batchWrite (replace, null removes, re
 
 test('page and host know the MCP messages', () => {
   const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
-  for (const t of ['mcpList', 'mcpToggle', 'mcpRemove', 'mcpTest', 'mcpImport', 'mcpFind']) {
+  for (const t of ['mcpList', 'mcpToggle', 'mcpRemove', 'mcpTest', 'mcpImport', 'mcpFind', 'mcpBrowser']) {
     assert.match(app, new RegExp("type: '" + t + "'"), 'page sends ' + t);
   }
   const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
-  assert.match(panel, /case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind':/);
+  assert.match(panel, /case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind': case 'mcpBrowser':/);
   assert.match(app, /case 'mcp': case 'mcpNote': case 'mcpFind': onMcp\(ev\)/);
 });
 

@@ -175,6 +175,7 @@ Find them under the gear > **MCP servers**. Codex uses the same servers in the C
 - Switch the servers of your Codex config on and off.
 - **Check** starts a server and lists its tools.
 - **Remove** deletes a server from the config.
+- **Your browser**: Codex can work in the browser you already have open, with your tabs and sign-ins, not only on localhost. **Chrome** uses Chrome DevTools MCP (`--autoConnect`, Chrome 144+; switch remote debugging on once at `chrome://inspect/#remote-debugging`, Chrome asks before each connection). **Chrome or Edge, with an extension** uses Playwright MCP (`--extension`) and the Playwright MCP Bridge extension; you pick the tab Codex gets. Pages can carry instructions aimed at Codex, so keep approvals on; a separate browser profile for development is safer.
 - **Copy from VS Code**: the servers of VS Code's `mcp.json` (the ones Copilot uses) move to Codex with one click.
 - **Add MCP by name with AI**: type a name such as `serena`, `github` or `postgres`. Codex searches the web for the official setup, and you confirm the command before anything is written.
 

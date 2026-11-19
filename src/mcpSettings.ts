@@ -7,6 +7,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { AppServerClient } from './core/appServer';
+import { argsWithFlag, BROWSER_PRESETS, BrowserKind, browserStates } from './core/browserMcp';
 import { Json } from './core/jsonrpc';
 import {
   buildFindPrompt, codexServerRows, FindProposal, isServerName, parseFindAnswer, parseJsonc, proposalTarget, proposalValue, resolveCommand,
@@ -40,6 +41,7 @@ export class McpSettings {
       case 'mcpTest': void this.test(name); break;
       case 'mcpImport': void this.importVscode(typeof m.key === 'string' ? m.key : ''); break;
       case 'mcpFind': void this.find(typeof m.query === 'string' ? m.query.trim() : ''); break;
+      case 'mcpBrowser': if (m.kind === 'chrome' || m.kind === 'playwright') void this.browser(m.kind); break;
     }
   }
 
@@ -50,7 +52,7 @@ export class McpSettings {
       const codex = ((await c.readConfig()).config ?? {}).mcp_servers ?? {};
       this.vscodeList = this.readVscode();
       this.d.post({
-        kind: 'mcp', servers: codexServerRows(codex),
+        kind: 'mcp', servers: codexServerRows(codex), browser: browserStates(codex),
         vscode: this.vscodeList.map((v) => ({
           key: v.key, name: v.name, target: v.url ?? [v.command ?? '', ...v.args].join(' '), source: v.source,
           inCodex: sameInCodex(v, codex), problem: v.problem,
@@ -162,6 +164,60 @@ export class McpSettings {
     }
     await this.list();
     await this.test(name);
+  }
+
+  /**
+   * "Your browser": adds the preset server (or adds the flag to the user's own server of that package), then the one-time step in the
+   * browser: the chrome://inspect address goes to the clipboard (VS Code can not open chrome:// pages), the extension's store page opens.
+   * Already set up: only the browser step again.
+   */
+  private async browser(kind: BrowserKind): Promise<void> {
+    const p = BROWSER_PRESETS[kind];
+    let servers: Json;
+    try {
+      servers = ((await (await this.d.appServer()).readConfig()).config ?? {}).mcp_servers ?? {};
+    } catch (e) {
+      return this.note('Could not read the Codex config: ' + errorText(e), false);
+    }
+    const st = browserStates(servers).find((s) => s.kind === kind)!;
+    if (st.state !== 'ready') {
+      const plain = st.state === 'plain';
+      if (plain && !isServerName(st.name)) return this.note('"' + st.name + '" can only be changed in config.toml itself.', false, st.name);
+      const name = plain ? st.name : servers[p.name] ? p.name + '-browser' : p.name;
+      const detail = [
+        kind === 'chrome'
+          ? 'Codex attaches to the Chrome you have open (Chrome 144 or newer) through Chrome DevTools MCP.'
+          : 'Codex uses the tabs you share through the "Playwright MCP Bridge" extension (Chrome or Edge).',
+        'It then sees and can act in those tabs, signed in as you. A web page can carry instructions aimed at Codex: keep approvals on, and a separate browser profile for development is safer.',
+        '',
+        plain ? 'Changes the server "' + name + '": adds ' + p.flag + ' to its arguments.' : 'Adds the server "' + name + '": ' + [p.command, ...p.args].join(' '),
+        kind === 'chrome'
+          ? 'Then, once in Chrome: open chrome://inspect/#remote-debugging (copied for you) and switch remote debugging on. Chrome asks you to allow each connection.'
+          : 'Then, once: install "Playwright MCP Bridge" (its store page opens). When Codex connects, you pick the tab to share.',
+        'Needs Node.js (npx). Written to ~/.codex/config.toml, also used by the Codex CLI and Eclipse.',
+      ].join('\n');
+      const ok = await vscode.window.showWarningMessage('Let Codex use your browser?', { modal: true, detail }, 'Connect');
+      if (ok !== 'Connect') return;
+      if (plain) {
+        try {
+          await this.write([{ keyPath: 'mcp_servers.' + name + '.args', value: argsWithFlag(servers[name], kind) }, { keyPath: 'mcp_servers.' + name + '.enabled', value: true }]);
+          this.d.log('[mcp] ' + name + ': uses the open browser now (' + p.flag + ')');
+        } catch (e) {
+          return this.note('Could not change ' + name + ': ' + errorText(e), false, name);
+        }
+        await this.list();
+        void this.test(name);
+      } else {
+        await this.add(name, { command: p.command, args: p.args });
+      }
+    }
+    if (kind === 'chrome') {
+      await vscode.env.clipboard.writeText(p.setupUrl);
+      void vscode.window.showInformationMessage('Codexter: in Chrome, paste ' + p.setupUrl + ' into the address bar (it is copied) and switch remote debugging on. Chrome asks before Codex connects.');
+    } else {
+      void vscode.env.openExternal(vscode.Uri.parse(p.setupUrl));
+      void vscode.window.showInformationMessage('Codexter: install "Playwright MCP Bridge" in Chrome or Edge. When Codex connects, pick the tab to share.');
+    }
   }
 
   private async find(query: string): Promise<void> {

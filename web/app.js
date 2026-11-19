@@ -149,6 +149,13 @@
     mcpFindTitle: 'Add MCP by name with AI', mcpFindPh: 'e.g. serena, github, postgres', mcpFind: 'Find',
     mcpFindHint: 'Codex searches the web for the official setup. You see the command and confirm it before anything is added.',
     mcpFinding: 'Searching the web for the setup… (up to a minute)',
+    mcpBrTitle: 'Your browser',
+    mcpBrHint: 'Codex works in the browser you have open: your tabs and sign-ins, not only localhost. Pages can carry instructions aimed at Codex, so keep approvals on; a separate browser profile for development is safer.',
+    mcpBrNames: { chrome: 'Chrome', playwright: 'Chrome or Edge, with an extension' },
+    mcpBrMissing: { chrome: 'Chrome DevTools MCP attaches to your running Chrome (144+)', playwright: 'Playwright MCP: you pick which tab Codex gets' },
+    mcpBrPlain: (n) => n + ' opens its own browser now', mcpBrReady: (n) => 'Ready: ' + n, mcpBrOff: (n) => n + ' is switched off',
+    mcpBrConnect: 'Connect', mcpBrUse: 'Use my browser', mcpBrSetup: 'Setup step',
+    mcpBrSetupTitle: { chrome: 'Copy chrome://inspect/#remote-debugging again (switch remote debugging on there)', playwright: 'Open the store page of the Playwright MCP Bridge extension' },
     permTitle: 'How should Codex actions be approved?',
     permLabels: { ask: 'Ask for approval', auto: 'Approve for me', full: 'Full access', custom: 'Custom (config.toml)' },
     permDescs: {
@@ -2384,7 +2391,7 @@
       add(gChat, STR.ctxTitle + ' ' + STR.ctxCompactAt + ' ' + STR.ctxHint, renderContextSettings());
       add(group('instr', STR.instrTitle), STR.instrTitle + ' ' + STR.instrHint + ' AGENTS.md developer_instructions config.toml', renderInstructions());
       add(group('review', STR.setReview), STR.setReview + ' ' + STR.setReviewHint(REVIEW_FILE_NAME), renderReviewSettings());
-      add(group('mcp', STR.mcpTitle), STR.mcpTitle + ' ' + STR.mcpHint + ' ' + STR.mcpVsTitle + ' ' + STR.mcpFindTitle + ' mcp.json', renderMcp());
+      add(group('mcp', STR.mcpTitle), STR.mcpTitle + ' ' + STR.mcpHint + ' ' + STR.mcpBrTitle + ' browser chrome edge playwright ' + STR.mcpVsTitle + ' ' + STR.mcpFindTitle + ' mcp.json', renderMcp());
       if (state.dictation) {   // dictation (a voice model of its own)
         const gDict = group('dictation', STR.setGDictation);
         const cbD = h('input', { type: 'checkbox', id: 'set-dict', 'aria-describedby': 'set-dict-hint' });
@@ -2585,13 +2592,29 @@
       : mc.findError ? h('div', { class: 'mcp-note bad', role: 'status', text: mc.findError }) : null;
     return h('div', { class: 'set-field mcp' },
       h('div', { class: 'hint', text: STR.mcpHint }), list, note(''),
+      h('div', { class: 'set-sub', text: STR.mcpBrTitle }), renderBrowserMcp(mc),
       h('div', { class: 'set-sub', text: STR.mcpVsTitle }), vs,
       h('div', { class: 'set-sub', text: STR.mcpFindTitle }), h('div', { class: 'mcp-findrow' }, q, findBtn),
       h('div', { class: 'hint', text: STR.mcpFindHint }), findState);
   }
+  // 0.15.0: let Codex use the browser the user has open (Chrome DevTools MCP --autoConnect, Playwright MCP --extension)
+  function renderBrowserMcp(mc) {
+    const box = h('div', { class: 'mcp-list', role: 'list' });
+    if (mc.servers === null) return box;
+    (mc.browser || []).forEach((b) => {
+      const status = b.state === 'ready' ? (b.enabled ? STR.mcpBrReady(b.name) : STR.mcpBrOff(b.name)) : b.state === 'plain' ? STR.mcpBrPlain(b.name) : STR.mcpBrMissing[b.kind];
+      const label = b.state === 'missing' ? STR.mcpBrConnect : b.state === 'plain' ? STR.mcpBrUse : STR.mcpBrSetup;
+      box.append(h('div', { class: 'mcp-row', role: 'listitem' },
+        h('span', { class: 'mcp-main', title: status }, h('span', { class: 'mcp-name', text: STR.mcpBrNames[b.kind] }), h('span', { class: 'mcp-target', text: status })),
+        h('button', { class: 'mcp-btn', type: 'button', id: 'mcp-br-' + b.kind, title: b.state === 'ready' ? STR.mcpBrSetupTitle[b.kind] : STR.mcpBrHint, text: label,
+          onclick: () => bridge.post({ type: 'mcpBrowser', kind: b.kind }) })));
+    });
+    box.append(h('div', { class: 'hint', text: STR.mcpBrHint }));
+    return box;
+  }
   function onMcp(ev) {
     const mc = state.mcp;
-    if (ev.kind === 'mcp') { mc.servers = ev.servers || []; mc.vscode = ev.vscode || []; mc.error = ev.error || null; mc.loading = false; }
+    if (ev.kind === 'mcp') { mc.servers = ev.servers || []; mc.vscode = ev.vscode || []; mc.browser = ev.browser || []; mc.error = ev.error || null; mc.loading = false; }
     else if (ev.kind === 'mcpNote') { mc.notes[ev.name || ''] = { text: ev.text, ok: ev.ok !== false, busy: !!ev.busy }; }
     else if (ev.kind === 'mcpFind') { mc.finding = !!ev.busy; mc.findError = ev.error || null; }
     renderSettings();

@@ -425,7 +425,7 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         this.post({ kind: 'pasteRef', requestId: intOf(m, 'requestId'), ref });
         break;
       }
-      case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind':
+      case 'mcpList': case 'mcpToggle': case 'mcpRemove': case 'mcpTest': case 'mcpImport': case 'mcpFind': case 'mcpBrowser':
         this.mcp ??= new McpSettings({
           appServer: () => this.session.appServer(), find: (p) => this.mcpFind(p),
           // globalStorage is <user folder>/globalStorage/<extension>: VS Code's mcp.json is in the user folder
