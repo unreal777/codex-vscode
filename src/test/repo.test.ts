@@ -4,7 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as path from 'node:path';
 import { branchKey, migrateLegacy } from '../core/branchChats';
-import { cwdForWorkspace, FsOps, normalizeRemote, remoteOfConfig, repoIdOf } from '../core/repoIdentity';
+import { cwdForWorkspace, FsOps, MOVE_NOTE_PREFIX, moveNote, normalizeRemote, remoteOfConfig, repoIdOf } from '../core/repoIdentity';
+import { stripPreamble } from '../core/threadRows';
 
 /** A file system of absolute paths: dirs and files (with text). */
 function fakeFs(dirs: string[], files: Record<string, string>): FsOps {
@@ -72,4 +73,18 @@ test('migrateLegacy: the per-folder entries of a root move to the repository key
   assert.deepEqual(m.map, { [branchKey(id, 'main')]: { thread: 'new-main', at: 9 }, [branchKey(id, 'feat')]: { thread: 'feat', at: 7 } });
   assert.deepEqual(m.rest, { [branchKey(B, 'main')]: { thread: 'b', at: 1 } });
   assert.equal(migrateLegacy(shared, {}, A, id), null);
+});
+
+test('0.13.1: a note for the model when the chat moved to another folder or branch, hidden from titles', () => {
+  assert.equal(moveNote(null, { cwd: B, branch: 'feat' }), null, 'nothing known: no note');
+  assert.equal(moveNote({ cwd: A, branch: 'feat' }, { cwd: A, branch: 'feat' }), null);
+  assert.equal(moveNote({ cwd: A, branch: null }, { cwd: A, branch: 'feat' }), null, 'branch unknown before: no note');
+  const folder = moveNote({ cwd: A, branch: 'feat' }, { cwd: B, branch: 'feat' }) ?? '';
+  assert.ok(folder.startsWith(MOVE_NOTE_PREFIX));
+  assert.ok(folder.includes(B) && folder.includes('(before: folder ' + A));
+  assert.match(folder, /paths of the old folder/);
+  assert.ok(!folder.includes('\n'), 'one line');
+  const branch = moveNote({ cwd: A, branch: 'main' }, { cwd: A, branch: 'feat' }) ?? '';
+  assert.match(branch, /on git branch feat \(before: .* on git branch main\)\. Earlier messages may name files or paths of the old branch/);
+  assert.equal(stripPreamble(folder + '\n\nActive file: x.ts\n\nfix the test'), 'fix the test');
 });

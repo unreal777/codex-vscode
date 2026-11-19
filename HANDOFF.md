@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.13.0)
+## Status (0.13.1)
+
+- 0.13.1: a chat that moved to another folder or branch tells the model so with its next message. See "0.13.0".
 
 - 0.13.0: branch chats work across copies of one repository (copied folder, second clone, worktree). See "0.13.0".
 
@@ -97,6 +99,12 @@ never edit that folder from here (its Java core is still a useful reference for 
   folders whose repository has the same remote as one of them gets the same sub folder of this copy (or its root) as `_threadCwd`;
   `turn/start` passes it (`cwd`: "Override the working directory for this turn and subsequent turns", codex 0.167.2 schema), the page
   shows it for links. Logged as `[cwd] chat of another copy ...`.
+- 0.13.1: the model was not told about the move (earlier messages name the old folder's paths; Codexter never sent the branch).
+  The places are remembered per chat (globalState `codexPanel.chatPlaces`: {cwd, branch} at the last message, newest 2000; host
+  `lastPlace` / `rememberPlace`, `branchAt` from the git extension). In `send`, when the chat's folder or branch differs from that
+  (no record: the folder Codex has for it, `threadOriginCwd`), `moveNote` puts one line `Chat moved: this chat now works in folder ...
+  on git branch ... (before: ...)` in front of the message. A branch is compared only when both are known. The page, the History
+  and the AI names hide it (`Chat moved: ` added to `PLUGIN_PREAMBLE` / `PREAMBLE_RE`).
 - Not handled: copies without a remote (each folder is its own repository), the same branch checked out in two copies at once (both
   windows open the same chat), the History's project filter still lists such a chat under the folder it was started in.
   Not yet checked in two real VS Code windows. Tests: `src/test/repo.test.ts`.

@@ -19,13 +19,16 @@ import { MentionSearch } from './mentions';
 import { supportsSecondarySidebar } from './core/vscodeVersion';
 import { CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
 import { processProxyEnv, proxyConfig } from './proxy';
-import { cwdForWorkspace, FsOps, repoIdOf } from './core/repoIdentity';
+import { ChatPlace, cwdForWorkspace, FsOps, repoIdOf } from './core/repoIdentity';
 import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
 
 let session: CodexSession | undefined;
 /** workspaceState key: id of the chat that was open in this project. */
 const LAST_THREAD_KEY = 'codexPanel.lastThread';
+/** globalState key: where each chat was (folder, branch) when its last message was sent; the newest PLACES_MAX (0.13.1). */
+const PLACES_KEY = 'codexPanel.chatPlaces';
+const PLACES_MAX = 2000;
 /** The real file system for core/repoIdentity.ts */
 const NODE_FS: FsOps = {
   isDir: (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } },
@@ -132,6 +135,18 @@ export function activate(ctx: vscode.ExtensionContext): void {
       const to = cwdForWorkspace(cwd, folders, NODE_FS);
       if (to !== cwd) log('[cwd] chat of another copy of this repository: ' + cwd + ' -> ' + to);
       return to;
+    },
+    branchAt: (cwd) => branches?.branchAt(cwd) ?? null,
+    lastPlace: (id) => ctx.globalState.get<Record<string, ChatPlace>>(PLACES_KEY, {})[id],
+    rememberPlace: (id, place) => {
+      const all = { ...ctx.globalState.get<Record<string, ChatPlace>>(PLACES_KEY, {}) };
+      const old = all[id];
+      if (old && old.cwd === place.cwd && old.branch === place.branch) return;
+      delete all[id];   // re-added last: the oldest go first when the list is full
+      all[id] = { cwd: place.cwd, branch: place.branch };
+      const ids = Object.keys(all);
+      for (const k of ids.slice(0, Math.max(0, ids.length - PLACES_MAX))) delete all[k];
+      void ctx.globalState.update(PLACES_KEY, all);
     },
     // Clarify side chats: which answers have which side chats (never written into the chats themselves)
     sideLinks: () => ctx.globalState.get<unknown>(SIDE_LINKS_KEY),

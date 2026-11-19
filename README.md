@@ -33,7 +33,7 @@ is new in 0.9.0 and has not been tried on real machines yet, so please report wh
   working in moves to the new branch.
 - **Works across copies of a project.** Two folders of the same repository (a copied folder, a second clone, a git worktree; matched by
   the `origin` address) share their branch chats. Open a branch in one copy and the chat you used on it in another copy opens, and it
-  now works in this folder.
+  now works in this folder. Codex is told once that the chat moved (new folder or branch), so it uses the files here.
 
 ### Several chats at once, as tabs
 

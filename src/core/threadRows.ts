@@ -3,8 +3,8 @@
 /** Longest title the panel receives; the first user message can be pages long. */
 const MAX_TITLE = 160;
 
-/** Context the extension itself prepends to a prompt ("Active file: ...", "Referenced files: ...", selections); not part of the title. */
-const PLUGIN_PREAMBLE = /^(?:(?:Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
+/** Context the extension itself prepends to a prompt ("Chat moved: ..." since 0.13.1, "Active file: ...", "Referenced files: ...", selections); not part of the title. */
+const PLUGIN_PREAMBLE = /^(?:(?:Chat moved: [^\n]*|Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
 
 /** A user message without the context lines the extension put in front of it. */
 export function stripPreamble(text: string): string {

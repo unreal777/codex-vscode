@@ -6,6 +6,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { AppServerClient } from './core/appServer';
+import { ChatPlace, moveNote } from './core/repoIdentity';
 import { ProxyConfig } from './core/http';
 import { Result } from './core/installer';
 import { Json, RpcError } from './core/jsonrpc';
@@ -68,6 +69,11 @@ export interface SessionHost {
   renamed?(threadId: string, name: string): void;
   /** 0.13.0: the folder an opened chat runs in (a chat of another copy of the same repository runs in this window's copy) */
   adjustCwd?(cwd: string): string;
+  /** 0.13.1: the git branch checked out at a folder (null: none or not known yet) */
+  branchAt?(cwd: string): string | null;
+  /** 0.13.1: where the chat was when its last message was sent, and remembering it */
+  lastPlace?(threadId: string): ChatPlace | undefined;
+  rememberPlace?(threadId: string, place: ChatPlace): void;
   /** Starts the microphone for dictation (missing where it can not record). */
   startRecorder?(ev: RecorderEvents): Recorder;
   /** setting codexPanel.dictationLanguages: codes like ['en', 'ru'] ([] = any language) */
@@ -215,6 +221,8 @@ export class CodexSession {
   private connecting: Promise<AppServerClient> | null = null;
   private _threadId: string | null = null;
   private _threadCwd: string | null = null;
+  /** the chat's folder as Codex has it (before adjustCwd): where it was when no place of its last message is remembered */
+  private threadOriginCwd: string | null = null;
   private turnId: string | null = null;
   private needsResume = false;
   /** Version of the managed copy the running app-server was started from; null for other sources. */
@@ -645,6 +653,7 @@ export class CodexSession {
     if (this._threadId === null) {
       const r = await withTimeout(c.startThread(cwd, model, ps.approvalPolicy, ps.sandbox, ps.reviewer, this.host.threadExtras?.(false) ?? {}), 60_000, 'thread/start');
       this._threadCwd = cwd;
+      this.threadOriginCwd = cwd;
       this._threadId = r.thread.id;
       this.host.threadChanged?.(this._threadId);
       this.emit(this.threadEvent(r.thread, null, true));
@@ -703,6 +712,12 @@ export class CodexSession {
           if (model) collaboration = AppServerClient.collaborationMode(req.plan ? 'plan' : 'default', model, req.effort);
           else if (req.plan) this.emit({ kind: 'toast', message: 'Plan mode needs a model: pick one in the model list.' });
         }
+        // 0.13.1: the chat works in another folder or on another branch than at its last message: one line tells the model (hidden in the page)
+        const here = this._threadCwd ?? cwd;
+        const place: ChatPlace = { cwd: here, branch: this.host.branchAt?.(here) ?? null };
+        const before = this.host.lastPlace?.(threadId) ?? (this.threadOriginCwd ? { cwd: this.threadOriginCwd, branch: null } : null);
+        const note = moveNote(before, place);
+        if (note) { this.log('[cwd] ' + note); req = { ...req, text: note + '\n\n' + req.text }; }
         const start = (input: Json[]) => withTimeout(
           c.startTurn(threadId, input, this._threadCwd, req.model, req.effort, ps.approvalPolicy, ps.sandboxPolicy, ps.reviewer, collaboration), 60_000, 'turn/start');
         let r: Json;
@@ -718,6 +733,7 @@ export class CodexSession {
           }
         }
         if (r.turn && r.turn.id) this.turnId = r.turn.id;
+        this.host.rememberPlace?.(threadId, place);
         this.host.chatUsed?.(threadId, this._threadCwd ?? cwd);
       } catch (e) {
         if (!(e instanceof NotFoundError) && !(e instanceof Reported) && this.connected) this.error('Could not send the message', describe(e), false);
@@ -912,6 +928,7 @@ export class CodexSession {
     this._threadId = null;
     this.turnId = null;
     this._threadCwd = null;
+    this.threadOriginCwd = null;
     this.needsResume = false;
     this.dropStaleApprovals();
     this.host.threadChanged?.(null);
@@ -1305,7 +1322,8 @@ export class CodexSession {
         this.background.delete(id);
         this._threadId = id;
         const cwd: string | null = typeof r.cwd === 'string' ? r.cwd : bg?.cwd ?? null;
-        this._threadCwd = cwd && this.host.adjustCwd ? this.host.adjustCwd(cwd) : cwd;   // turn/start passes it, so turns run there
+        this._threadCwd = cwd && this.host.adjustCwd ? this.host.adjustCwd(cwd) : cwd;
+        this.threadOriginCwd = cwd;   // turn/start passes it, so turns run there
         this.needsResume = false;
         this.turnId = bg?.turnId ?? null;
         this.dropStaleApprovals();

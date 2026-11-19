@@ -84,6 +84,26 @@ export function repoIdOf(dir: string, fs: FsOps, platform: NodeJS.Platform = pro
   return { root: r.root, id: remote ? 'remote:' + remote : 'path:' + samePathKey(r.root, platform) };
 }
 
+/** Where a chat worked when its last message was sent (0.13.1). branch null = unknown (no repository, detached HEAD). */
+export interface ChatPlace { cwd: string; branch: string | null }
+
+/** Start of the line put in front of a message when the chat moved; the page and the History hide it (stripPreamble). */
+export const MOVE_NOTE_PREFIX = 'Chat moved: ';
+
+/**
+ * The one-line note for the model when the chat now works in another folder or on another branch than at its last message: earlier
+ * messages name files of the old place, and Codex does not tell the model about a new folder or branch by itself. null = nothing moved.
+ */
+export function moveNote(prev: ChatPlace | null | undefined, now: ChatPlace, platform: NodeJS.Platform = process.platform): string | null {
+  if (!prev || !prev.cwd || !now.cwd) return null;
+  const folder = samePathKey(prev.cwd, platform) !== samePathKey(now.cwd, platform);
+  const branch = !!prev.branch && !!now.branch && prev.branch !== now.branch;
+  if (!folder && !branch) return null;
+  const at = (p: ChatPlace) => 'folder ' + p.cwd + (p.branch ? ' on git branch ' + p.branch : '');
+  return MOVE_NOTE_PREFIX + 'this chat now works in ' + at(now) + ' (before: ' + at(prev) + '). Earlier messages may name files or paths of the old ' +
+    (folder ? 'folder' : 'branch') + ': read and change the files here, using paths in this folder.';
+}
+
 function inside(child: string, parent: string, platform: NodeJS.Platform): boolean {
   const c = samePathKey(child, platform), p = samePathKey(parent, platform);
   return c === p || c.startsWith(p + '/');

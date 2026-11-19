@@ -131,6 +131,11 @@ export class BranchChats implements vscode.Disposable {
     }
   }
 
+  /** The branch checked out at a folder; null before the git extension is ready, outside a repository or on a detached HEAD. */
+  branchAt(cwd: string): string | null {
+    return this.api?.getRepository(vscode.Uri.file(cwd))?.state.HEAD?.name ?? null;
+  }
+
   /** Entries of this root in the old per-folder store go to the shared one (a newer entry there wins), then leave the old store. */
   private migrate(root: string): void {
     const old = this.legacy.get<BranchMap>(STATE_KEY);

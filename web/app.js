@@ -311,7 +311,7 @@
     return !short ? '' : short === 'now' || /\d{4}|\//.test(short) ? short : STR.ago(short);
   }
   // the plugin prepends "Active file: ..." / "Referenced files ..." / selections to prompts; they are not part of a chat title
-  const PREAMBLE_RE = /^(?:(?:Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
+  const PREAMBLE_RE = /^(?:(?:Chat moved: [^\n]*|Active file: [^\n]*|Referenced (?:files|symbols)[^\n]*:\n(?:- [^\n]*\n?)+|Selected code in [^\n]*:\n```[\s\S]*?\n```)\n+)+/;
   function cleanTitle(text) {
     const t = String(text || '');
     const rest = t.replace(PREAMBLE_RE, '');
