@@ -20,12 +20,16 @@ import { supportsSecondarySidebar } from './core/vscodeVersion';
 import { CodexViewProvider, NO_SECONDARY_KEY, Prefs, VIEW_ID, VIEW_ID_SECONDARY } from './panel';
 import { processProxyEnv, proxyConfig } from './proxy';
 import { ChatPlace, cwdForWorkspace, FsOps, repoIdOf } from './core/repoIdentity';
+import { limitAlerts, LimitFired, LimitSnapshot } from './core/limits';
+import { osNotify } from './core/osNotify';
 import { CodexSession, SessionHost } from './session';
 import { fsPathOf, WorkspaceBridge } from './workspace';
 
 let session: CodexSession | undefined;
 /** workspaceState key: id of the chat that was open in this project. */
 const LAST_THREAD_KEY = 'codexPanel.lastThread';
+/** globalState key: the 80% / 90% limit messages already shown (0.14.1), per window; cleared again when usage falls below a level. */
+const LIMIT_KEY = 'codexPanel.limitAlerts';
 /** globalState key: where each chat was (folder, branch) when its last message was sent; the newest PLACES_MAX (0.13.1). */
 const PLACES_KEY = 'codexPanel.chatPlaces';
 const PLACES_MAX = 2000;
@@ -137,6 +141,18 @@ export function activate(ctx: vscode.ExtensionContext): void {
       return to;
     },
     branchAt: (cwd) => branches?.branchAt(cwd) ?? null,
+    // 0.14.1: 80% and 90% of a Codex limit window: one message per level (VS Code, or a system notification when VS Code is in the background)
+    limitsChanged: (snap) => {
+      const r = limitAlerts(snap as LimitSnapshot, ctx.globalState.get<LimitFired>(LIMIT_KEY, {}));
+      void ctx.globalState.update(LIMIT_KEY, r.fired);
+      for (const a of r.alerts) {
+        log('[limit] ' + a.text);
+        const msg = 'Codexter: ' + a.text;
+        if (vscode.window.state.focused) { void vscode.window.showWarningMessage(msg); continue; }
+        const link = vscode.env.uriScheme + '://' + ctx.extension.id + '/open';
+        void osNotify('Codexter', a.text, link).then((err) => { if (err) void vscode.window.showWarningMessage(msg); });
+      }
+    },
     lastPlace: (id) => ctx.globalState.get<Record<string, ChatPlace>>(PLACES_KEY, {})[id],
     rememberPlace: (id, place) => {
       const all = { ...ctx.globalState.get<Record<string, ChatPlace>>(PLACES_KEY, {}) };

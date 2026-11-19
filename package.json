@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter: chat for OpenAI Codex (unofficial)",
   "description": "Unofficial chat panel for OpenAI Codex and GPT models with your ChatGPT subscription: a chat per project and git branch, tabs, history search, commit messages. Not affiliated with OpenAI.",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "publisher": "UnrealDeveloper",
   "repository": {
     "type": "git",

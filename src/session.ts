@@ -69,6 +69,8 @@ export interface SessionHost {
   renamed?(threadId: string, name: string): void;
   /** 0.13.0: the folder an opened chat runs in (a chat of another copy of the same repository runs in this window's copy) */
   adjustCwd?(cwd: string): string;
+  /** 0.14.1: a new rate limit snapshot of the account (for the 80% / 90% alerts) */
+  limitsChanged?(snap: Json): void;
   /** 0.13.1: the git branch checked out at a folder (null: none or not known yet) */
   branchAt?(cwd: string): string | null;
   /** 0.13.1: where the chat was when its last message was sent, and remembering it */
@@ -432,7 +434,10 @@ export class CodexSession {
   refreshRateLimits(): void {
     const c = this.client;
     if (!c || !this.connected) return;
-    c.readRateLimits().then((r) => this.emit({ kind: 'rateLimits', data: r }), () => { /* optional */ });
+    c.readRateLimits().then((r) => {
+      this.emit({ kind: 'rateLimits', data: r });
+      this.host.limitsChanged?.(r.rateLimits || r);
+    }, () => { /* optional */ });
   }
 
   // ---- sign-in and Windows sandbox ----
@@ -588,6 +593,7 @@ export class CodexSession {
     } else if (method === 'item/completed') {
       if (params.item && params.item.type === 'fileChange') this.host.refreshHook(this._threadCwd);
     }
+    if (method === 'account/rateLimits/updated') this.host.limitsChanged?.(params.rateLimits || params);
     if (!FORWARD_PREFIXES.some((p) => method.startsWith(p))) return;
     this.emit({ kind: 'notification', method, params });
   }

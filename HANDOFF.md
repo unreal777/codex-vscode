@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.14.0)
+## Status (0.14.1)
+
+- 0.14.1: a message at 80% and at 90% of a Codex limit window (once per level, again after a reset). See "0.14.1".
 
 - 0.14.0: a turn's steps fold while it runs (last 3 in view) and answered approvals / auto-review checks fold too. See "0.14.0".
 
@@ -88,6 +90,15 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.14.1
+
+- Limit alerts (`core/limits.ts limitAlerts`, pure, tested in `src/test/limits.test.ts`). The app-server's rate limit snapshot
+  (`account/rateLimits/read` on connect and `refreshRateLimits`, `account/rateLimits/updated`) goes to the host through
+  `SessionHost.limitsChanged`; the page's footer already showed the same numbers. Per window (`limitId|windowDurationMins`) a level
+  fires once: 80 and 90. A jump past both sends only 90; a level counts again once the usage falls below it (a reset).
+  Memory: globalState `codexPanel.limitAlerts`, at most 20 windows. Shown as a VS Code warning, or a system notification when VS Code
+  is in the background (`osNotify`, falls back to the VS Code warning). Not yet seen on a real account near the limit.
 
 ## 0.14.0
 
