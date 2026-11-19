@@ -118,6 +118,7 @@
     setDictation: 'Dictation (microphone button), experimental',
     setDictationHint: "Your words come back as text in the input. Dictation runs OpenAI's voice model (the Codex voice mode), not the model above, and spends tokens of your ChatGPT plan the whole time the microphone is on. A Codex update may break it.",
     setCommitEffort: 'Reasoning effort for commit messages, AI search and chat names', setCommitEffortHint: 'Low is fast and enough.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
+    preview: 'Preview', previewTitle: 'Open this HTML in a tab of its own (a static preview, no scripts)',
     setMore: 'More settings…',
     setSearch: 'Search settings…', setNoMatch: (q) => 'No setting matches "' + q + '".',
     setGModel: 'Model', setGQuick: 'Quick model', setGChat: 'Chat', setGDictation: 'Dictation', setGSystem: 'System',
@@ -350,10 +351,15 @@
 
   // ---------- markdown ----------
   const PATH_RE = /^(?:[A-Za-z]:)?[\w@.\-\\/]*[\\/][\w@.\-\\/ ]*\.[A-Za-z0-9]{1,8}(?::\d+(?:[-:]\d+)?)?$|^[\w@.\-]+\.(?:java|js|ts|tsx|jsx|py|xml|json|md|yml|yaml|properties|gradle|html|css|sql|cs|go|rs|kt|c|cpp|h|txt)(?::\d+(?:[-:]\d+)?)?$/;
+  let htmlState = null;   // the open tags of the answer being rendered (one renderMd call)
   function setupMarkdown() {
     if (!window.marked) return;
     const r = new marked.Renderer();
-    r.html = (html) => esc(typeof html === 'string' ? html : (html && html.text) || '');
+    // raw HTML in an answer: rebuilt from an allowlist (web/htmlsafe.js), never passed through; without that script it stays text
+    r.html = (html) => {
+      const raw = typeof html === 'string' ? html : (html && html.text) || '';
+      return window.CodexHtml && htmlState ? CodexHtml.token(htmlState, raw) : esc(raw);
+    };
     r.image = (href, title, text) => esc(text || '');
     r.link = (href, title, text) => {
       if (/^(https?:|mailto:)/i.test(href || '')) return '<a href="' + esc(href) + '" data-url="' + esc(href) + '">' + text + '</a>';
@@ -372,14 +378,21 @@
           ? hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
           : esc(code);
       } catch (e) { body = esc(code); }
-      return '<div class="codeblock"><div class="head"><span>' + esc(lang || 'text') + '</span><button class="copy" type="button">' +
-        STR.copy + '</button></div><pre><code class="hljs">' + body + '</code></pre></div>';
+      // VS Code: an html block can be opened as a preview in an editor tab of its own (no scripts there), never in the chat
+      const prev = host === 'vscode' && (lang === 'html' || lang === 'htm') ? '<button class="preview" type="button" title="' + esc(STR.previewTitle) + '">' + esc(STR.preview) + '</button>' : '';
+      return '<div class="codeblock"><div class="head"><span>' + esc(lang || 'text') + '</span><span class="acts">' + prev + '<button class="copy" type="button">' +
+        STR.copy + '</button></span></div><pre><code class="hljs">' + body + '</code></pre></div>';
     };
     marked.use({ renderer: r, gfm: true, breaks: false });
   }
-  function renderMd(el, text) {
-    if (window.marked) el.innerHTML = marked.parse(text || '');
-    else el.textContent = text || '';
+  // streaming: the answer is not finished, so a half-written html tag at its end is held back until it is complete
+  function renderMd(el, text, streaming) {
+    if (window.marked) {
+      htmlState = window.CodexHtml ? CodexHtml.create() : null;
+      let out = '';
+      try { out = marked.parse(streaming && htmlState ? CodexHtml.holdBack(text || '') : text || ''); if (htmlState) out += CodexHtml.finish(htmlState); } finally { htmlState = null; }
+      el.innerHTML = out;
+    } else el.textContent = text || '';
     if (window.CodexLinks) CodexLinks.linkify(el, state.cwd);
   }
 
@@ -880,7 +893,7 @@
         break;
       case 'item/agentMessage/delta': {
         const n = agentNode(p.itemId, ''); n.m.text += p.delta;
-        if (!n.timer) n.timer = setTimeout(() => { n.timer = null; renderMd($('.md', n.el), n.m.text); sideFeed.scrollTop = sideFeed.scrollHeight; }, 70);
+        if (!n.timer) n.timer = setTimeout(() => { n.timer = null; renderMd($('.md', n.el), n.m.text, true); sideFeed.scrollTop = sideFeed.scrollHeight; }, 70);
         break;
       }
       case 'item/completed':
@@ -1120,7 +1133,7 @@
       rec.timer = null;
       // a review's findings block is never shown as text: the cards come when the turn ends (attachReview)
       const shown = window.CodexReview && !rec.rawBlock ? CodexReview.hideBlock(d.text) : { text: d.text, hidden: false };
-      renderMd(rec.md, shown.text);
+      renderMd(rec.md, shown.text, !rec.final);
       if (shown.hidden && !rec.final) rec.md.append(h('div', { class: 'rv-wait' }, h('span', { class: 'spinner' }), h('span', { text: STR.reviewWait })));
       scrollDown();
     };
@@ -3559,6 +3572,12 @@
       copyText(code ? code.textContent : '');
       copy.textContent = STR.copied;
       setTimeout(() => { copy.textContent = STR.copy; }, 1200);
+      return;
+    }
+    const pv = t.closest && t.closest('button.preview');
+    if (pv) {
+      const code = $('code', pv.closest('.codeblock'));
+      if (code) bridge.post({ type: 'htmlPreview', html: code.textContent });
       return;
     }
     const fl = t.closest && t.closest('a.filelink');

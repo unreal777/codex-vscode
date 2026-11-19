@@ -1,5 +1,5 @@
 /* Dev mock of the Java side: replays a recorded fixture through window.codexUi.receive.
- * Query: ?fixture=recorded-edit|recorded-hello|recorded-think|synthetic-approval|synthetic-autoreview|synthetic-review
+ * Query: ?fixture=recorded-edit|recorded-hello|recorded-think|synthetic-approval|synthetic-autoreview|synthetic-review|synthetic-html
  *        (synthetic-review: the answer ends with a findings block of 5 findings; "Send answers to Codex" gets a short reply)
  *        &other=1 (after the first message the active editor moves to another project: banner)
  *        &speed=2 (faster)  &autoplay=0 (wait for you to press Send)  &theme=dark|light

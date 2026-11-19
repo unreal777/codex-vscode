@@ -16,6 +16,7 @@ import { migratePermissions, normalizePermissions } from './core/permissions';
 import { DiffProvider } from './diff';
 import { ChatActivity } from './chatActivity';
 import { ImageEditor } from './imageEditor';
+import { HtmlPreview } from './htmlPreview';
 import { McpSettings } from './mcpSettings';
 import { MentionSearch } from './mentions';
 import { CodexSession, SendRequest } from './session';
@@ -124,6 +125,7 @@ export class CodexViewProvider implements vscode.WebviewViewProvider, vscode.Dis
   activity: ChatActivity | null = null;
   /** Set by the owner: the editor tab for attached pictures (view, draw, write). */
   images: ImageEditor | null = null;
+  previews: HtmlPreview | null = null;
 
   constructor(
     readonly viewId: string,
@@ -498,6 +500,9 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
         if (u && (u.startsWith('http://') || u.startsWith('https://'))) void vscode.env.openExternal(vscode.Uri.parse(u, true));
         break;
       }
+      case 'htmlPreview':
+        if (typeof m.html === 'string' && m.html.length) this.previews?.open(m.html);
+        break;
       case 'openSettings':
         this.openSettings();
         break;

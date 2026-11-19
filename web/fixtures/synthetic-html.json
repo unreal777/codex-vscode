@@ -1,0 +1,121 @@
+[
+ {
+  "_recvMs": 0,
+  "id": 2,
+  "result": {
+   "data": [
+    {
+     "id": "gpt-demo",
+     "model": "gpt-demo",
+     "displayName": "GPT Demo",
+     "hidden": false,
+     "isDefault": true,
+     "defaultReasoningEffort": "medium",
+     "supportedReasoningEfforts": [
+      {
+       "reasoningEffort": "low",
+       "description": "low"
+      },
+      {
+       "reasoningEffort": "medium",
+       "description": "medium"
+      },
+      {
+       "reasoningEffort": "high",
+       "description": "high"
+      }
+     ]
+    }
+   ],
+   "nextCursor": null
+  }
+ },
+ {
+  "_recvMs": 300,
+  "method": "turn/started",
+  "params": {
+   "threadId": "thread-links",
+   "turn": {
+    "id": "turn-links",
+    "items": [],
+    "itemsView": "notLoaded",
+    "status": "inProgress",
+    "error": null,
+    "startedAt": 1,
+    "completedAt": null,
+    "durationMs": null
+   }
+  }
+ },
+ {
+  "_recvMs": 350,
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "userMessage",
+    "id": "u1",
+    "clientId": null,
+    "content": [
+     {
+      "type": "text",
+      "text": "Show a table as HTML.",
+      "text_elements": []
+     }
+    ]
+   },
+   "threadId": "thread-links",
+   "turnId": "turn-links"
+  }
+ },
+ {
+  "_recvMs": 650,
+  "method": "item/started",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "a1",
+    "text": "",
+    "phase": "final_answer",
+    "memoryCitation": null,
+    "delivery": null,
+    "questions": null
+   },
+   "threadId": "thread-links",
+   "turnId": "turn-links"
+  }
+ },
+ {
+  "_recvMs": 750,
+  "method": "item/completed",
+  "params": {
+   "item": {
+    "type": "agentMessage",
+    "id": "a1",
+    "text": "Here is the table:\n\n<table><tr><th>Name</th><th>Qty</th></tr><tr><td>Apple</td><td>3</td></tr><tr><td colspan=\"2\" align=\"center\">Total: <b>3</b></td></tr></table>\n\nMixed with **markdown**, <kbd>Ctrl</kbd>+<kbd>C</kbd>, a<br>line break and <mark>marked</mark> text.\n\n<details><summary>More</summary>\n\nHidden *details* here.\n\n</details>\n\nHostile bits: <img src=x onerror=alert(1)> <a href=\"javascript:alert(1)\">fake link</a> <button onclick=\"x()\">Allow</button> <style>body{display:none}</style> <div style=\"position:fixed;inset:0\">overlay</div> end.\n\n```html\n<h1>Preview me</h1>\n<p style=\"color:green\">A static page</p>\n```\n",
+    "phase": "final_answer",
+    "memoryCitation": null,
+    "delivery": null,
+    "questions": null
+   },
+   "threadId": "thread-links",
+   "turnId": "turn-links"
+  }
+ },
+ {
+  "_recvMs": 800,
+  "method": "turn/completed",
+  "params": {
+   "threadId": "thread-links",
+   "turn": {
+    "id": "turn-links",
+    "items": [],
+    "itemsView": "summary",
+    "status": "completed",
+    "error": null,
+    "startedAt": 1,
+    "completedAt": 20,
+    "durationMs": 4000
+   }
+  }
+ }
+]

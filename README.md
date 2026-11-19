@@ -192,7 +192,8 @@ Find them under the gear > **MCP servers**. Codex uses the same servers in the C
 ![A chat: reasoning, a command, approvals, a plan and the changed file with Inline / Diff / Open](media/readme/chat.gif)
 
 Everything you expect from a Codex chat is there too:
-- streaming Markdown answers with clickable `file:line` links;
+- streaming Markdown answers with clickable `file:line` links; HTML in an answer (a table, `<b>`, `<br>`, `<details>`) is shown as such,
+  but only a safe subset: no links, images, buttons, scripts or styles. A ```` ```html ```` block has a **Preview** button that opens it as a static page in an editor tab;
 - cards for reasoning, commands, MCP calls and file changes;
 - **Allow**, **Allow for session** or **Deny** on approvals;
 - the plan checklist and a combined diff of the turn;

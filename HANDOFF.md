@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.11.0)
+## Status (0.12.0)
+
+- 0.12.0: HTML in answers is rendered through an allowlist sanitizer; **Preview** button on html code blocks. See "0.12.0".
 
 - 0.11.0: the panel's settings in collapsible groups with a search field. See "0.11.0".
 
@@ -75,6 +77,31 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.12.0
+
+- Raw HTML in an answer used to be shown as text (`r.html = esc(...)` in `setupMarkdown`) on purpose: answers can carry text of untrusted pages
+  (prompt injection) and rendered HTML could fake Codexter's UI (a fake Allow button, a disguised link). Now `web/htmlsafe.js` (`window.CodexHtml`,
+  loaded before `app.js`; listed in `index.html`, `dev.html`, `src/core/webScripts.ts`, `scripts/sync-web.mjs`) rebuilds every html token of marked from an
+  allowlist, on strings, with no DOM (so `src/test/html.test.ts` runs it in node):
+  - allowed tags: `table thead tbody tfoot tr th td caption colgroup col b strong i em u s del ins mark code kbd samp sub sup br hr p ul ol li dl dt dd details
+    summary blockquote h1-h6 pre span div`. Attributes: `colspan`/`rowspan` (1-3 digits, only td/th), `span` (col/colgroup), `align` (left|right|center|justify),
+    `open` (details); every attribute is rebuilt from a validated value, nothing else is copied (no style / class / id / on* / href / src).
+  - any other tag (`a img svg math form input button iframe object embed style script link meta base`...) loses its tag and keeps its text, escaped;
+    comments and `<!DOCTYPE>` vanish; text entities are decoded once, then escaped (`&amp;lt;` is not shown).
+  - marked hands block html as one token and inline html tag by tag, so one render shares a stack of open tags (`CodexHtml.create/token/finish`): stray closers are
+    dropped, `<li>`/`<td>`/`<tr>` end the previous one, depth is capped at 40, what is still open at the end is closed. Safety does not depend on nesting.
+  - streaming: `renderMd(el, text, streaming)` first cuts a half-written tag off the end (`CodexHtml.holdBack`: `<tab`, `<td colspan="`), so no `<tab` flashes;
+    the finished answer is always rendered whole. Used by the agent message (`!rec.final`) and the Clarify side chat; review cards and the rest use the same `renderMd`.
+  - Tables look like markdown tables (the `.md table / th / td` CSS applies to both).
+  - markdown links and images still go through `r.link` / `r.image` (unchanged).
+- **Preview** button on ```` ```html ```` / ```` ```htm ```` code blocks (VS Code host only): posts `htmlPreview`, `panel.ts` hands it to `src/htmlPreview.ts`, an editor-area
+  webview (one tab, replaced by the next preview) with `enableScripts: false`, no forms, no command URIs, no local resource roots and the CSP of `src/core/htmlPreview.ts`
+  (`default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'; frame-src 'none'`, the first thing in the document). Longer than 500 000 characters is cut.
+  Never inside the chat feed. A link clicked in the preview is VS Code's normal external link handling.
+- Dev page: `?fixture=synthetic-html&host=vscode` (table, inline tags, hostile bits, an html block with Preview). Checked: dark and light, the Clarify side chat (the question and the
+  mock answer with inline html), the review cards.
+- Tests: `src/test/html.test.ts` (allowed tags and attributes, hostile input, structure repair, marked integration, every prefix of a streaming answer, preview CSP).
 
 ## 0.11.0
 

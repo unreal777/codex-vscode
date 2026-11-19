@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { BranchChats } from './branchChats';
 import { ChatActivity } from './chatActivity';
 import { ImageEditor } from './imageEditor';
+import { HtmlPreview } from './htmlPreview';
 import { generateCommitMessage } from './commitMessage';
 import { DEFAULT_QUICK_MODEL, mcpServerNames, readCodexConfig, runCodexExec } from './core/commitMessage';
 import { micSupported, startWindowsRecorder } from './core/micRecorder';
@@ -168,7 +169,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
   const act = activity;
   const images = new ImageEditor(ctx.extensionUri);
   ctx.subscriptions.push(images);
-  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; p.activity = act; p.images = images; });
+  const previews = new HtmlPreview();
+  ctx.subscriptions.push(previews);
+  providers.forEach((p) => { p.onActive = (x) => { lastActive = x; }; p.takeLastThread = takeLastThread; p.mcpFind = mcpFind; p.activity = act; p.images = images; p.previews = previews; });
   act.publish();
   // a click on a system notification opens vscode://UnrealDeveloper.codex-panel/open?thread=<id>
   ctx.subscriptions.push(vscode.window.registerUriHandler({
