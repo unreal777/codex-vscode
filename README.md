@@ -233,6 +233,8 @@ The panel opens in the secondary side bar (VS Code 1.106+; the activity bar befo
 
 ## Settings
 
+The gear in the panel opens the settings in folding groups (Model, Quick model, Chat, Instructions, Code review, MCP servers, Dictation, System); the search field on top filters them by name and description.
+
 | Setting | Default | |
 | --- | --- | --- |
 | `codexPanel.defaultModel` | Codex default | Model a new chat starts with |

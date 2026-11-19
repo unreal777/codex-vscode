@@ -5,5 +5,6 @@
   'use strict';
   const api = acquireVsCodeApi();
   window.__codexPost = (s) => api.postMessage(s);
+  window.__codexState = { get: () => api.getState(), set: (o) => api.setState(o) };   // webview state: survives hiding the view
   window.addEventListener('message', (e) => { if (window.codexUi) window.codexUi.receive(e.data); });
 })();

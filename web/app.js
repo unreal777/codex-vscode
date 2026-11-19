@@ -119,6 +119,8 @@
     setDictationHint: "Your words come back as text in the input. Dictation runs OpenAI's voice model (the Codex voice mode), not the model above, and spends tokens of your ChatGPT plan the whole time the microphone is on. A Codex update may break it.",
     setCommitEffort: 'Reasoning effort for commit messages, AI search and chat names', setCommitEffortHint: 'Low is fast and enough.', setFontSize: 'Font size', setFontSizeHint: 'Everything in the panel scales with it.', vscodeFontSize: 'Like VS Code',
     setMore: 'More settings…',
+    setSearch: 'Search settings…', setNoMatch: (q) => 'No setting matches "' + q + '".',
+    setGModel: 'Model', setGQuick: 'Quick model', setGChat: 'Chat', setGDictation: 'Dictation', setGSystem: 'System',
     instrTitle: 'Instructions', instrHint: 'How Codex should answer in every new chat, e.g. briefly, in plain language. AGENTS.md files always apply too.',
     instrCodex: 'Codex\u2019s own', instrCodexter: 'Only in Codexter',
     instrCodexHint: 'developer_instructions of ~/.codex/config.toml: the Codex CLI and the Eclipse plugin use them too.',
@@ -387,7 +389,7 @@
     items: new Map(), approvals: new Map(),
     models: [], prefs: { model: '', effort: '', permissions: 'ask' },
     // IDE settings (init.settings / event settings): the model and effort a new chat starts with, and the models the picker hides
-    settings: { defaultModel: '', defaultReasoningEffort: '', defaultPermissions: '', hiddenModels: [], fontSize: 0 }, defaultsApplied: false, settingsOpen: false,
+    settings: { defaultModel: '', defaultReasoningEffort: '', defaultPermissions: '', hiddenModels: [], fontSize: 0 }, defaultsApplied: false, settingsOpen: false, setQuery: '',
     modelsOpen: false,   // the models multi-select of the settings view is open
     turn: null, planMode: false, planUsed: false, images: [], goal: null, plugins: { items: null, loading: false, error: null, at: 0 },
     project: '', active: null, reviews: new Map(),
@@ -457,7 +459,9 @@
     '<div id="hist-list"></div></div></div>' +
     '<div id="settings" class="hidden" role="dialog" aria-label="' + esc(STR.settings) + '"><div class="set-head">' +
     '<button class="icon-btn" id="set-back" type="button" title="' + esc(STR.settingsBack) + '" aria-label="' + esc(STR.settingsBack) + '">' + ICON.back + '</button>' +
-    '<h2>' + esc(STR.settings) + '</h2></div><div id="set-body"></div></div>' +
+    '<h2>' + esc(STR.settings) + '</h2></div>' +
+    '<div class="set-search"><input id="set-q" type="search" autocomplete="off" spellcheck="false" placeholder="' + esc(STR.setSearch) + '" aria-label="' + esc(STR.setSearch) + '"></div>' +
+    '<div id="set-body"></div></div>' +
     '<div id="cxstatus" class="hidden"></div>' +
     '<div id="feed"></div>' +
     '<div id="dock"><div id="sandbox" class="hidden"></div><div id="signin" class="hidden"></div><div id="plan" class="hidden"></div><div id="xproj" class="hidden"></div><div id="goal" class="hidden"></div><div id="chips"></div>' +
@@ -2206,7 +2210,7 @@
   }
 
   // ---------- in-panel settings: default model / effort, models of the picker ----------
-  const setBox = $('#settings'), setBody = $('#set-body'), gearBtn = $('#btn-set');
+  const setBox = $('#settings'), setBody = $('#set-body'), gearBtn = $('#btn-set'), setQ = $('#set-q');
   const listedModels = () => state.models.filter((m) => !m.hidden);   // everything Codex does not hide itself
   function saveSettings(patch) {
     state.settings = normSettings(Object.assign({}, state.settings, patch));
@@ -2220,14 +2224,43 @@
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
   }
+  // The settings are thematic groups (collapsible, the open ones are remembered) and a search field above them (#set-q, outside #set-body).
+  // Webview state: VS Code keeps it for the view (media/vscode-bridge.js); elsewhere (dev page, Eclipse) localStorage, wrapped in try/catch.
+  const uiStore = {
+    read() {
+      try {
+        if (window.__codexState) return window.__codexState.get() || {};
+        const s = window.localStorage.getItem('codexter.ui');
+        const o = s ? JSON.parse(s) : {};
+        return o && typeof o === 'object' ? o : {};
+      } catch (e) { return {}; }
+    },
+    write(patch) {
+      try {
+        const o = Object.assign(uiStore.read(), patch);
+        if (window.__codexState) window.__codexState.set(o); else window.localStorage.setItem('codexter.ui', JSON.stringify(o));
+      } catch (e) { /* no storage: the groups simply start as default next time */ }
+    }
+  };
+  const setGroups = (() => {   // group key -> open (only what the user set)
+    const o = uiStore.read().setGroups, out = {};
+    if (o && typeof o === 'object') for (const k in o) if (typeof o[k] === 'boolean') out[k] = o[k];
+    return out;
+  })();
+  const groupOpen = (key) => (key in setGroups ? setGroups[key] : key === 'model');   // the model group starts open, the rest closed
   function renderSettings() {
     if (!state.settingsOpen) return;
-    const ae = document.activeElement, keep = ae && ae.id && setBody.contains(ae) ? ae.id : null;
-    const st = state.settings, models = listedModels();
+    const ae = document.activeElement, keep = ae && ae.id && setBody.contains(ae) ? ae.id : null, scroll = setBody.scrollTop;
+    const st = state.settings, models = listedModels(), vs = host === 'vscode';
     setBody.innerHTML = '';
     const field = (id, label, hint, control) => h('div', { class: 'set-field' }, h('label', { for: id, text: label }), control,
       h('div', { class: 'hint', id: id + '-hint', text: hint }));
-    // 1. default model
+    // groups in display order: {key, title, items: [{s: text to search, el}]}
+    const byKey = {};
+    const group = (key, title) => { byKey[key] = { title, items: [] }; return byKey[key].items; };
+    const add = (items, search, el) => { items.push({ s: String(search).toLowerCase(), el }); };
+    const gModel = group('model', STR.setGModel), gQuick = group('quick', STR.setGQuick), gChat = group('chat', STR.setGChat);
+    // default model
     const selM = h('select', { id: 'set-model', 'aria-describedby': 'set-model-hint' }, h('option', { value: '', text: STR.codexDefault }));
     models.forEach((m) => selM.append(h('option', { value: m.model, text: (m.displayName || m.model) + (userHidden(m.model) ? STR.hiddenMark : '') })));
     if (st.defaultModel && !models.some((m) => m.model === st.defaultModel)) selM.append(h('option', { value: st.defaultModel, text: st.defaultModel }));
@@ -2236,18 +2269,21 @@
       const m = modelFor(selM.value), ok = (m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : []).includes(st.defaultReasoningEffort);
       saveSettings({ defaultModel: selM.value, defaultReasoningEffort: ok ? st.defaultReasoningEffort : '' });
     });
-    // 2. default effort: only what the model of choice supports
+    add(gModel, STR.setDefaultModel + ' ' + STR.setDefaultModelHint, field('set-model', STR.setDefaultModel, STR.setDefaultModelHint, selM));
+    // default effort: only what the model of choice supports
     const m0 = modelFor(st.defaultModel), efforts = m0 ? (m0.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : [];
     const selE = h('select', { id: 'set-effort', 'aria-describedby': 'set-effort-hint' }, h('option', { value: '', text: STR.modelDefaultEffort }));
     efforts.forEach((e) => selE.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
     selE.value = efforts.includes(st.defaultReasoningEffort) ? st.defaultReasoningEffort : '';
     selE.addEventListener('change', () => saveSettings({ defaultReasoningEffort: selE.value }));
-    // 3. default permissions ('' = keep the last used)
+    add(gModel, STR.setDefaultEffort + ' ' + STR.setDefaultEffortHint, field('set-effort', STR.setDefaultEffort, STR.setDefaultEffortHint, selE));
+    // default permissions ('' = keep the last used)
     const selP = h('select', { id: 'set-perms', 'aria-describedby': 'set-perms-hint' }, h('option', { value: '', text: STR.keepLastPerms }));
     PERMS.forEach((k) => selP.append(h('option', { value: k, text: STR.permLabels[k] })));
     selP.value = st.defaultPermissions;
     selP.addEventListener('change', () => saveSettings({ defaultPermissions: selP.value }));
-    // 4. models of the picker: a compact multi-select (at least one stays visible)
+    add(gModel, STR.setDefaultPerms + ' ' + STR.setDefaultPermsHint, field('set-perms', STR.setDefaultPerms, STR.setDefaultPermsHint, selP));
+    // models of the picker: a compact multi-select (at least one stays visible)
     const visible = models.filter((m) => !userHidden(m.model));
     const msText = !models.length ? STR.setNoModels : visible.length === models.length ? STR.setAllModels : visible.map((m) => m.displayName || m.model).join(', ');
     const msBtn = h('button', { type: 'button', id: 'set-ms', class: 'set-ms-btn', 'aria-haspopup': 'true', 'aria-expanded': String(state.modelsOpen),
@@ -2265,15 +2301,9 @@
       });
       msList.append(h('label', { class: 'set-model', for: 'set-m' + i, title: m.description || null }, cb, h('span', { class: 'mt', text: m.displayName || m.model })));
     });
-    const ms = h('div', { class: 'set-ms' }, msBtn, msList);
-    // 5. font size (0 = like VS Code)
-    const base = baseFontSize(), sizes = [10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24];
-    if (st.fontSize && !sizes.includes(st.fontSize)) sizes.push(st.fontSize);
-    const selF = h('select', { id: 'set-font', 'aria-describedby': 'set-font-hint' }, h('option', { value: '0', text: STR.vscodeFontSize + ' (' + base + ')' }));
-    sizes.sort((a, b) => a - b).forEach((n) => selF.append(h('option', { value: String(n), text: String(n) })));
-    selF.value = String(st.fontSize);
-    selF.addEventListener('change', () => saveSettings({ fontSize: Number(selF.value) }));
-    // 6. commit messages (Source Control button): own model / effort, a fast one is enough
+    add(gModel, STR.setModels + ' ' + STR.setModelsHint + ' ' + models.map((m) => m.displayName || m.model).join(' '),
+      field('set-ms', STR.setModels, STR.setModelsHint, h('div', { class: 'set-ms' }, msBtn, msList)));
+    // quick model: commit messages, AI search and chat names, a fast one is enough
     const selCM = h('select', { id: 'set-cmodel', 'aria-describedby': 'set-cmodel-hint' }, h('option', { value: '', text: STR.codexDefault }));
     models.forEach((m) => selCM.append(h('option', { value: m.model, text: m.displayName || m.model })));
     if (st.commitMessageModel && !models.some((m) => m.model === st.commitMessageModel)) selCM.append(h('option', { value: st.commitMessageModel, text: st.commitMessageModel }));
@@ -2282,46 +2312,41 @@
       const m = modelFor(selCM.value), ok = (m ? (m.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : []).includes(st.commitMessageEffort);
       saveSettings({ commitMessageModel: selCM.value, commitMessageEffort: ok ? st.commitMessageEffort : '' });
     });
+    add(gQuick, STR.setCommitModel + ' ' + STR.setCommitModelHint, field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM));
     const mc = modelFor(st.commitMessageModel), cEfforts = mc ? (mc.supportedReasoningEfforts || []).map((e) => e.reasoningEffort) : [];
     if (st.commitMessageEffort && !cEfforts.includes(st.commitMessageEffort)) cEfforts.push(st.commitMessageEffort);
     const selCE = h('select', { id: 'set-ceffort', 'aria-describedby': 'set-ceffort-hint' }, h('option', { value: '', text: STR.modelDefaultEffort }));
     cEfforts.forEach((e) => selCE.append(h('option', { value: e, text: EFFORT_LABEL[e] || e })));
     selCE.value = st.commitMessageEffort;
     selCE.addEventListener('change', () => saveSettings({ commitMessageEffort: selCE.value }));
-    setBody.append(field('set-model', STR.setDefaultModel, STR.setDefaultModelHint, selM), field('set-effort', STR.setDefaultEffort, STR.setDefaultEffortHint, selE),
-      field('set-perms', STR.setDefaultPerms, STR.setDefaultPermsHint, selP), field('set-ms', STR.setModels, STR.setModelsHint, ms),
-      field('set-font', STR.setFontSize, STR.setFontSizeHint, selF),
-      field('set-cmodel', STR.setCommitModel, STR.setCommitModelHint, selCM), field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE),
-      h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
-    if (host === 'vscode') {
-      setBody.insertBefore(renderInstructions(), $('#set-more'));
-      setBody.insertBefore(renderContextSettings(), $('#set-more'));
-      setBody.insertBefore(renderReviewSettings(), $('#set-more'));
-      // system notifications (VS Code in the background) on / off
-      const cbN = h('input', { type: 'checkbox', id: 'set-notify', 'aria-describedby': 'set-notify-hint' });
-      cbN.checked = st.systemNotifications;
-      cbN.addEventListener('change', () => saveSettings({ systemNotifications: cbN.checked }));
-      setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-notify' }, cbN, h('span', { text: STR.setNotify })),
-        h('div', { class: 'hint', id: 'set-notify-hint', text: STR.setNotifyHint })), $('#set-more'));
-      // open the panel when VS Code starts
-      const cbS = h('input', { type: 'checkbox', id: 'set-startup', 'aria-describedby': 'set-startup-hint' });
-      cbS.checked = st.openOnStartup;
-      cbS.addEventListener('change', () => saveSettings({ openOnStartup: cbS.checked }));
-      setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-startup' }, cbS, h('span', { text: STR.setStartup })),
-        h('div', { class: 'hint', id: 'set-startup-hint', text: STR.setStartupHint })), $('#set-more'));
-      // AI chat names (the quick model above) and dictation (a voice model of its own), right under the quick model
+    add(gQuick, STR.setCommitEffort + ' ' + STR.setCommitEffortHint, field('set-ceffort', STR.setCommitEffort, STR.setCommitEffortHint, selCE));
+    if (vs) {   // AI chat names (the quick model above)
       const selN = h('select', { id: 'set-names', 'aria-describedby': 'set-names-hint' });
       ['auto', 'first', 'off'].forEach((k) => selN.append(h('option', { value: k, text: STR.autoNameLabels[k] })));
       selN.value = st.autoChatNames;
       selN.addEventListener('change', () => saveSettings({ autoChatNames: selN.value }));
-      const after = $('#set-ceffort-hint').parentElement.nextSibling;
-      setBody.insertBefore(field('set-names', STR.setAutoNames, STR.setAutoNamesHint, selN), after);
-      if (state.dictation) {
+      add(gQuick, STR.setAutoNames + ' ' + STR.setAutoNamesHint, field('set-names', STR.setAutoNames, STR.setAutoNamesHint, selN));
+    }
+    // chat: font size (0 = like VS Code), context limit
+    const base = baseFontSize(), sizes = [10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24];
+    if (st.fontSize && !sizes.includes(st.fontSize)) sizes.push(st.fontSize);
+    const selF = h('select', { id: 'set-font', 'aria-describedby': 'set-font-hint' }, h('option', { value: '0', text: STR.vscodeFontSize + ' (' + base + ')' }));
+    sizes.sort((a, b) => a - b).forEach((n) => selF.append(h('option', { value: String(n), text: String(n) })));
+    selF.value = String(st.fontSize);
+    selF.addEventListener('change', () => saveSettings({ fontSize: Number(selF.value) }));
+    add(gChat, STR.setFontSize + ' ' + STR.setFontSizeHint, field('set-font', STR.setFontSize, STR.setFontSizeHint, selF));
+    if (vs) {
+      add(gChat, STR.ctxTitle + ' ' + STR.ctxCompactAt + ' ' + STR.ctxHint, renderContextSettings());
+      add(group('instr', STR.instrTitle), STR.instrTitle + ' ' + STR.instrHint + ' AGENTS.md developer_instructions config.toml', renderInstructions());
+      add(group('review', STR.setReview), STR.setReview + ' ' + STR.setReviewHint(REVIEW_FILE_NAME), renderReviewSettings());
+      add(group('mcp', STR.mcpTitle), STR.mcpTitle + ' ' + STR.mcpHint + ' ' + STR.mcpVsTitle + ' ' + STR.mcpFindTitle + ' mcp.json', renderMcp());
+      if (state.dictation) {   // dictation (a voice model of its own)
+        const gDict = group('dictation', STR.setGDictation);
         const cbD = h('input', { type: 'checkbox', id: 'set-dict', 'aria-describedby': 'set-dict-hint' });
         cbD.checked = st.dictation;
         cbD.addEventListener('change', () => saveSettings({ dictation: cbD.checked }));
-        setBody.insertBefore(h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-dict' }, cbD, h('span', { text: STR.setDictation })),
-          h('div', { class: 'hint warn', id: 'set-dict-hint', text: STR.setDictationHint })), after);
+        add(gDict, STR.setDictation + ' ' + STR.setDictationHint, h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-dict' }, cbD, h('span', { text: STR.setDictation })),
+          h('div', { class: 'hint warn', id: 'set-dict-hint', text: STR.setDictationHint })));
         if (st.dictation && (state.dictLangs || []).length) {   // the languages: a compact multi-select like the models of the picker
           const all = state.dictLangs, chosen = all.filter((l) => st.dictationLanguages.includes(l.code));
           const btn = h('button', { type: 'button', id: 'set-dl', class: 'set-ms-btn', 'aria-haspopup': 'true', 'aria-expanded': String(!!state.dictLangsOpen),
@@ -2341,13 +2366,54 @@
             });
             list.append(h('label', { class: 'set-model', for: 'set-dl-' + l.code }, cb, h('span', { class: 'mt', text: l.name + ' ' }), h('span', { class: 'dl-code', text: l.code })));
           });
-          setBody.insertBefore(field('set-dl', STR.setDictLangs, STR.setDictLangsHint, h('div', { class: 'set-ms' }, btn, list)), after);
+          add(gDict, STR.setDictLangs + ' ' + STR.setDictLangsHint, field('set-dl', STR.setDictLangs, STR.setDictLangsHint, h('div', { class: 'set-ms' }, btn, list)));
         }
       }
-      setBody.insertBefore(renderMcp(), $('#set-more'));
+      const gSys = group('system', STR.setGSystem);   // system notifications (VS Code in the background) and the panel at startup
+      const cbN = h('input', { type: 'checkbox', id: 'set-notify', 'aria-describedby': 'set-notify-hint' });
+      cbN.checked = st.systemNotifications;
+      cbN.addEventListener('change', () => saveSettings({ systemNotifications: cbN.checked }));
+      add(gSys, STR.setNotify + ' ' + STR.setNotifyHint, h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-notify' }, cbN, h('span', { text: STR.setNotify })),
+        h('div', { class: 'hint', id: 'set-notify-hint', text: STR.setNotifyHint })));
+      const cbS = h('input', { type: 'checkbox', id: 'set-startup', 'aria-describedby': 'set-startup-hint' });
+      cbS.checked = st.openOnStartup;
+      cbS.addEventListener('change', () => saveSettings({ openOnStartup: cbS.checked }));
+      add(gSys, STR.setStartup + ' ' + STR.setStartupHint, h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-startup' }, cbS, h('span', { text: STR.setStartup })),
+        h('div', { class: 'hint', id: 'set-startup-hint', text: STR.setStartupHint })));
     }
+    // order of the groups on screen
+    const ORDER = ['model', 'quick', 'chat', 'instr', 'review', 'mcp', 'dictation', 'system'];
+    const tokens = (state.setQuery || '').toLowerCase().split(/\s+/).filter(Boolean), searching = tokens.length > 0;
+    let shownGroups = 0;
+    ORDER.forEach((key) => {
+      const g = byKey[key];
+      if (!g) return;
+      const title = g.title;
+      const items = searching ? g.items.filter((it) => { const hay = (title + ' ' + it.s).toLowerCase(); return tokens.every((t) => hay.includes(t)); }) : g.items;
+      if (!items.length) return;
+      shownGroups++;
+      const open = searching || groupOpen(key);
+      const body = h('div', { class: 'set-gb' + (open ? '' : ' hidden'), id: 'set-gb-' + key, role: 'group', 'aria-label': title }, items.map((it) => it.el));
+      const sec = h('section', { class: 'set-group' + (open ? ' open' : '') + (searching ? ' searching' : '') });
+      const head = h('button', { type: 'button', class: 'set-gh', id: 'set-gh-' + key, 'aria-expanded': String(open), 'aria-controls': 'set-gb-' + key },
+        h('span', { class: 'c', html: ICON.caret }), h('span', { class: 't', text: title }));
+      head.addEventListener('click', () => {
+        if (searching) return;   // a search shows every match open
+        const on = !groupOpen(key);
+        setGroups[key] = on;
+        uiStore.write({ setGroups: Object.assign({}, setGroups) });
+        sec.classList.toggle('open', on);
+        body.classList.toggle('hidden', !on);
+        head.setAttribute('aria-expanded', String(on));
+      });
+      sec.append(h('h3', { class: 'set-gt' }, head), body);
+      setBody.append(sec);
+    });
+    if (searching && !shownGroups) setBody.append(h('div', { class: 'hint set-none', role: 'status', text: STR.setNoMatch(state.setQuery.trim()) }));
+    setBody.append(h('button', { class: 'set-link', type: 'button', id: 'set-more', text: STR.setMore, onclick: () => bridge.post({ type: 'openSettings' }) }));
+    setBody.scrollTop = scroll;
     const again = keep && document.getElementById(keep);
-    if (again && !again.disabled) {
+    if (again && !again.disabled && again.offsetParent !== null) {
       again.focus();
       if (keep === 'set-instr' && state.instr.caret != null) again.setSelectionRange(state.instr.caret, state.instr.caret);
     }
@@ -2391,7 +2457,7 @@
       : ins.error && src === 'codex' ? h('div', { class: 'mcp-note bad', role: 'status', text: ins.error })
       : ins.note ? h('div', { class: 'mcp-note', role: 'status', text: ins.note }) : null;
     return h('div', { class: 'set-field instr' },
-      h('div', { class: 'set-sec', text: STR.instrTitle }), h('div', { class: 'hint', text: STR.instrHint }),
+      h('div', { class: 'hint', text: STR.instrHint }),
       h('div', { class: 'instr-src', role: 'radiogroup', 'aria-label': STR.instrTitle }, radio('codex', STR.instrCodex), radio('codexter', STR.instrCodexter)),
       h('div', { class: 'hint', text: src === 'codex' ? STR.instrCodexHint : STR.instrCodexterHint }),
       ta, presets, h('div', { class: 'mcp-findrow instr-actions' }, saveB, agents), status);
@@ -2406,7 +2472,7 @@
       : [h('div', { class: 'hint', text: STR.setReviewNone(f.project) }),
         h('div', { class: 'mcp-findrow instr-actions' }, h('button', { class: 'mcp-btn primary', type: 'button', id: 'set-review-create', text: STR.setReviewCreate(name), title: f.path,
           onclick: () => bridge.post({ type: 'reviewFileCreate', text: CodexReview.TEMPLATE }) }))];
-    return h('div', { class: 'set-field instr', id: 'set-review' }, h('div', { class: 'set-sec', text: STR.setReview }), h('div', { class: 'hint', text: STR.setReviewHint(name) }), ...body);
+    return h('div', { class: 'set-field instr', id: 'set-review' }, h('div', { class: 'hint', text: STR.setReviewHint(name) }), ...body);
   }
   function onReviewFile(ev) {
     state.rvFile = ev;
@@ -2421,7 +2487,7 @@
     choices.sort((a, b) => a - b).forEach((n) => sel.append(h('option', { value: String(n), text: Math.round(n / 1000) + 'k tokens' })));
     sel.value = String(st.autoCompactTokens || 0);
     sel.addEventListener('change', () => saveSettings({ autoCompactTokens: parseInt(sel.value, 10) || 0 }));
-    return h('div', { class: 'set-field' }, h('div', { class: 'set-sec', text: STR.ctxTitle }),
+    return h('div', { class: 'set-field' },
       h('label', { for: 'set-compact', text: STR.ctxCompactAt }), sel, h('div', { class: 'hint', id: 'set-compact-hint', text: STR.ctxHint }));
   }
   function onCodexInstructions(ev) {
@@ -2473,7 +2539,7 @@
     const findState = mc.finding ? h('div', { class: 'mcp-note', role: 'status' }, h('span', { class: 'spinner' }), h('span', { text: STR.mcpFinding }))
       : mc.findError ? h('div', { class: 'mcp-note bad', role: 'status', text: mc.findError }) : null;
     return h('div', { class: 'set-field mcp' },
-      h('div', { class: 'set-sec', text: STR.mcpTitle }), h('div', { class: 'hint', text: STR.mcpHint }), list, note(''),
+      h('div', { class: 'hint', text: STR.mcpHint }), list, note(''),
       h('div', { class: 'set-sub', text: STR.mcpVsTitle }), vs,
       h('div', { class: 'set-sub', text: STR.mcpFindTitle }), h('div', { class: 'mcp-findrow' }, q, findBtn),
       h('div', { class: 'hint', text: STR.mcpFindHint }), findState);
@@ -2491,6 +2557,7 @@
     state.settingsOpen = open == null ? !was : !!open;
     if (state.settingsOpen === was) return;
     state.modelsOpen = false;
+    if (state.settingsOpen) { state.setQuery = ''; setQ.value = ''; }
     setBox.classList.toggle('hidden', !state.settingsOpen);
     gearBtn.setAttribute('aria-expanded', String(state.settingsOpen));
     ['#topbar', '#feed', '#dock'].forEach((sel) => { $(sel).toggleAttribute('inert', state.settingsOpen); });
@@ -2514,10 +2581,12 @@
     const b = document.getElementById('set-ms');
     if (focusBtn && b) b.focus();
   }
+  setQ.addEventListener('input', () => { state.setQuery = setQ.value; renderSettings(); });
   setBox.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     e.preventDefault(); e.stopPropagation();
-    if (state.modelsOpen) closeModelList(true); else toggleSettings(false);
+    if (e.target === setQ && setQ.value) { setQ.value = ''; state.setQuery = ''; renderSettings(); }   // Esc clears the search first
+    else if (state.modelsOpen) closeModelList(true); else toggleSettings(false);
   });
   // a click outside the models multi-select closes it
   setBox.addEventListener('mousedown', (e) => { if (state.modelsOpen && !e.target.closest('.set-ms')) closeModelList(false); });

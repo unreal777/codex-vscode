@@ -664,7 +664,26 @@ button.rename-ai:disabled { cursor: progress; }
 #settings { position: absolute; inset: 0; z-index: 25; display: flex; flex-direction: column; background: var(--bg); }
 .set-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border); flex: none; }
 .set-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
-#set-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 16px; max-width: 640px; width: 100%; }
+#set-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 14px 16px; display: flex; flex-direction: column; gap: 4px; max-width: 640px; width: 100%; }
+.set-search { flex: none; padding: 8px 14px 4px; max-width: 640px; width: 100%; box-sizing: border-box; }
+#set-q { width: 100%; box-sizing: border-box; height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); outline: 0; font: inherit; }
+#set-q:focus { border-color: var(--accent); }
+/* thematic groups: a header button that folds the group */
+.set-group { border-bottom: 1px solid var(--border); }
+.set-gt { margin: 0; font-size: inherit; font-weight: 600; }
+.set-gh { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 2px; border: 0; background: transparent; color: var(--fg); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.set-gh:hover { color: var(--accent); }
+.set-gh:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; border-radius: 4px; }
+.set-gh .c { flex: none; display: inline-flex; transition: transform .12s; transform: rotate(-90deg); }
+.set-gh .c svg { width: 12px; height: 12px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.set-group.open .set-gh .c { transform: none; }
+.set-group.searching .set-gh { cursor: default; }
+.set-group.searching .set-gh:hover { color: var(--fg); }
+.set-gb { display: flex; flex-direction: column; gap: 14px; padding: 2px 2px 14px 18px; }
+.set-gb.hidden { display: none; }
+.set-none { padding: 10px 2px; }
+#set-more { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .set-gh .c { transition: none; } }
 .set-field { display: flex; flex-direction: column; gap: 4px; }
 .set-field > label { font-weight: 600; padding: 0; }
 .set-field > label.set-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }

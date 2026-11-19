@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.10.0)
+## Status (0.11.0)
+
+- 0.11.0: the panel's settings in collapsible groups with a search field. See "0.11.0".
 
 - 0.10.0: code review triage, MCP tool approvals, Clarify side chats (also under plans), README GIFs for review and Clarify.
   Their notes are the last entries of "0.9.0".
@@ -73,6 +75,18 @@ never edit that folder from here (its Java core is still a useful reference for 
 - The web UI is this project's own: `web/` is the source, `scripts/sync-web.mjs` copies it to `media/web/` (generated, do not edit).
   `web/dev.html` + `dev-bridge.js` + `fixtures/` run the page in a plain browser (`python -m http.server` in `web/`), URL params
   `&settings=1` (open the settings view), `&fail=1` (thread actions answer an error), `&nosettings=1`.
+
+## 0.11.0
+
+- Settings view (`renderSettings` in `web/app.js`): the long list is now thematic groups, each a header button that folds its body
+  (Model, Quick model, Chat, Instructions, Code review, MCP servers, Dictation, System; Dictation only when the dictation feature is there,
+  the VS Code-only ones only with host `vscode`). A search field `#set-q` sits above `#set-body` (outside it, so typing is not interrupted by the
+  re-render): every word must occur in the group title or in the label / hint of a setting; matching groups show open, the others hide,
+  "No setting matches" when nothing is left; Esc clears the search first, opening the settings clears it. Keys and behaviour of the settings are unchanged.
+- Which groups are open is remembered (only what the user toggled; "Model" starts open, the rest closed): `uiStore` in `web/app.js`, VS Code webview
+  state through `window.__codexState` (`media/vscode-bridge.js`: `getState/setState`), localStorage on the dev page, both wrapped in try/catch.
+- The section titles inside Instructions / Code review / MCP / Context were dropped (the group header is the title).
+- Checked on `web/dev.html?host=vscode&settings=1`: dark and light, 320 px and 520 px wide.
 
 ## 0.9.0
 

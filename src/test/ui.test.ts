@@ -212,7 +212,7 @@ test('secondary side bar: version switch at 1.106', () => {
 test('package.json: both view homes, one context key, engines unchanged, commands target both views', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.engines.vscode, '^1.90.0');
-  assert.equal(pkg.version, '0.10.0');
+  assert.equal(pkg.version, '0.11.0');
   const c = pkg.contributes;
   assert.equal(c.viewsContainers.secondarySidebar[0].id, 'codexPanelSecondary');
   assert.equal(c.viewsContainers.secondarySidebar[0].when, '!codexPanel.noSecondarySidebar');
@@ -229,4 +229,16 @@ test('package.json: both view homes, one context key, engines unchanged, command
   assert.ok(pkg.activationEvents.includes('onStartupFinished'), 'the context key must be set on old VS Code versions too');
   const keys = c.keybindings.map((k: { command: string }) => k.command);
   assert.ok(keys.includes('codexPanel.open'));
+});
+
+// ---------------- settings in groups with a search (0.11.0) ----------------
+
+test('settings view: thematic groups, a search field outside the re-rendered body, state kept in the webview state', () => {
+  const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+  for (const key of ['model', 'quick', 'chat', 'instr', 'review', 'mcp', 'dictation', 'system']) assert.ok(app.includes("'" + key + "'"), 'group ' + key);
+  assert.ok(app.includes('id="set-q"'), 'the search field exists');
+  assert.ok(/<div id="set-body">/.test(app) && app.indexOf('id="set-q"') < app.indexOf('<div id="set-body">'), 'the field sits above #set-body, so renderSettings does not rebuild it');
+  const bridge = fs.readFileSync(path.join(root, 'media', 'vscode-bridge.js'), 'utf8');
+  assert.ok(bridge.includes('__codexState') && bridge.includes('getState') && bridge.includes('setState'), 'VS Code webview state is offered to the page');
+  assert.ok(/try \{[\s\S]*localStorage[\s\S]*\} catch/.test(app), 'browser storage is wrapped in try/catch');
 });
