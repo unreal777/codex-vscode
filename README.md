@@ -126,7 +126,7 @@ Something in a long answer is unclear, but asking in the chat would pull it off 
 
 ![Source Control: the Codexter button writes the commit message from the staged changes](media/readme/commit.gif)
 
-- The Codexter button in the **Source Control** view (or *Codexter: Generate commit message*) writes the message from the staged changes. With nothing staged, it uses all changes.
+- The Codexter button in the **Source Control** view (or *Codexter: Generate commit message*) writes the message from the staged changes. With nothing staged, it uses all changes, new files included.
 - It runs a fast model of its own (`commitMessageModel`, GPT-6 Luna by default), separate from the chat.
 - The run is read-only and stays out of your History.
 

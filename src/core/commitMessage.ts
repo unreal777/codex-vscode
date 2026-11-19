@@ -15,27 +15,52 @@ export interface CommitInput {
   diff: string;
   /** true: the staged changes; false: nothing is staged, so all changes */
   staged: boolean;
-  /** new files git does not track yet (not in the diff) */
+  /** new files git does not track yet (their text is appended to the diff by the caller, see newFilesDiff) */
   untracked: string[];
   /** subjects of the latest commits, newest first (to copy the project's style and language) */
   recentSubjects: string[];
 }
 
+/** Longest text of one new (untracked) file put into the diff, and the largest file read at all. */
+export const MAX_NEW_FILE_CHARS = 8_000;
+export const MAX_NEW_FILE_BYTES = 512 * 1024;
+
+/** New files git does not track yet as "new file" diffs (the git extension's diff leaves them out). Binary text (a NUL) is skipped. */
+export function newFilesDiff(files: { path: string; text: string }[]): string {
+  const out: string[] = [];
+  for (const f of files) {
+    if (f.text.includes('\0')) continue;
+    const t = f.text.replace(/\r\n/g, '\n');
+    const cut = t.length > MAX_NEW_FILE_CHARS;
+    const lines = (cut ? t.slice(0, MAX_NEW_FILE_CHARS) : t).replace(/\n$/, '').split('\n');
+    out.push('diff --git a/' + f.path + ' b/' + f.path, 'new file', '--- /dev/null', '+++ b/' + f.path, ...lines.map((l) => '+' + l));
+    if (cut) out.push('[... file cut, ' + (t.length - MAX_NEW_FILE_CHARS) + ' more characters]');
+  }
+  return out.join('\n');
+}
+
 export function buildPrompt(i: CommitInput): string {
   const diff = i.diff.length > MAX_DIFF_CHARS ? i.diff.slice(0, MAX_DIFF_CHARS) + '\n[... diff cut, ' + (i.diff.length - MAX_DIFF_CHARS) + ' more characters]' : i.diff;
   const parts = [
-    'Write a git commit message for the ' + (i.staged ? 'staged changes' : 'changes (nothing is staged, so all changes are committed)') + ' below.',
+    // no "nothing is staged" here: models tended to answer with exactly that instead of a message
+    'Write a git commit message for the ' + (i.staged ? 'staged changes' : 'changes in the working tree (all of them will be committed)') + ' below.',
     'Rules:',
     '- Do not run commands or change files; everything you need is in this message.',
+    '- Always describe the changes shown; never answer that there is nothing to commit.',
     '- First line: a short summary in the imperative mood, at most 72 characters.',
     '- If the change needs more explanation, add a blank line and a short body (plain text or "- " bullets, lines up to 72 characters).',
     '- Follow the style and language of the recent commit subjects if there are any.',
     '- Answer with the commit message only: no code fences, no quotes, no preamble.',
   ];
   if (i.recentSubjects.length) parts.push('', 'Recent commit subjects:', ...i.recentSubjects.map((s) => '- ' + s));
-  if (i.untracked.length) parts.push('', 'New untracked files (content not shown):', ...i.untracked.map((f) => '- ' + f));
+  if (i.untracked.length) parts.push('', 'New untracked files (their text is in the diff, except binary or very large ones):', ...i.untracked.map((f) => '- ' + f));
   parts.push('', 'Diff:', diff.trim() === '' ? '(empty)' : diff);
   return parts.join('\n');
+}
+
+/** An answer that is no commit message but a status line ("nothing staged to commit", "No changes to commit."). */
+export function isNoChangesAnswer(msg: string): boolean {
+  return /^(?:there (?:is|are) )?(?:nothing|no changes?)\b[^\n]{0,40}\b(?:staged|commit|to describe)\b[^\n]*$/i.test(msg.trim());
 }
 
 /** Strips what models like to wrap around the message: code fences, surrounding quotes, "Commit message:" labels, trailing spaces. */

@@ -5,7 +5,11 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.12.0)
+## Status (0.12.1)
+
+- 0.12.1: Generate commit message with nothing staged: new untracked files go into the diff with their text (`newFilesDiff`,
+  text files up to 512 KB, 8000 characters each, at most 50), the prompt no longer says "nothing is staged" (the model echoed it
+  as the message), and an answer like "nothing staged to commit" is shown as an error, not put into the box (`isNoChangesAnswer`).
 
 - 0.12.0: HTML in answers is rendered through an allowlist sanitizer; **Preview** button on html code blocks. See "0.12.0".
 

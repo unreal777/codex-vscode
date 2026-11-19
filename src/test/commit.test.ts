@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { buildPrompt, cleanMessage, execArgs, MAX_DIFF_CHARS, mcpServerNames, runCodexExec } from '../core/commitMessage';
+import { buildPrompt, cleanMessage, execArgs, isNoChangesAnswer, MAX_DIFF_CHARS, MAX_NEW_FILE_CHARS, mcpServerNames, newFilesDiff, runCodexExec } from '../core/commitMessage';
 import { tmpDir } from './helpers';
 
 test('buildPrompt: staged / all changes, recent subjects, untracked files, long diffs are cut', () => {
@@ -14,10 +14,27 @@ test('buildPrompt: staged / all changes, recent subjects, untracked files, long 
   assert.ok(p.endsWith('diff --git a/x b/x'));
   assert.ok(!p.includes('untracked'));
   const all = buildPrompt({ diff: 'x'.repeat(MAX_DIFF_CHARS + 10), staged: false, untracked: ['src/new.ts'], recentSubjects: [] });
-  assert.match(all, /nothing is staged/);
-  assert.match(all, /New untracked files \(content not shown\):\n- src\/new\.ts/);
+  assert.match(all, /changes in the working tree/);
+  assert.ok(!/nothing is staged/i.test(all));   // the model used to echo it back as the "message"
+  assert.match(all, /never answer that there is nothing to commit/);
+  assert.match(all, /New untracked files \(their text is in the diff[^\n]*\n- src\/new\.ts/);
   assert.match(all, /\[\.\.\. diff cut, 10 more characters\]/);
   assert.ok(!all.includes('Recent commit subjects'));
+});
+
+test('0.12.1: new untracked files go into the diff with their text (binary skipped, long ones cut)', () => {
+  const d = newFilesDiff([{ path: 'src/a.ts', text: 'one\r\ntwo\n' }, { path: 'img.png', text: 'PNG\0\0' }, { path: 'big.txt', text: 'x'.repeat(MAX_NEW_FILE_CHARS + 5) }]);
+  assert.match(d, /^diff --git a\/src\/a\.ts b\/src\/a\.ts\nnew file\n--- \/dev\/null\n\+\+\+ b\/src\/a\.ts\n\+one\n\+two\n/);
+  assert.ok(!d.includes('img.png'));
+  assert.match(d, /\[\.\.\. file cut, 5 more characters\]$/);
+  assert.equal(newFilesDiff([]), '');
+});
+
+test('0.12.1: a "nothing staged" status line is not taken as a commit message', () => {
+  for (const s of ['nothing staged to commit', 'Nothing to commit.', 'No changes to commit', 'There are no changes staged.', 'nothing to describe'])
+    assert.ok(isNoChangesAnswer(s), s);
+  for (const s of ['Add commit message fallback to all changes', 'Fix: nothing staged to commit when only new files changed\n\n- read untracked files', 'No-op cleanup in the commit view'])
+    assert.ok(!isNoChangesAnswer(s), s);
 });
 
 test('cleanMessage: fences, labels, quotes, trailing spaces', () => {

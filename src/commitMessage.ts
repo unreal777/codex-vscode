@@ -2,9 +2,10 @@
 // read-only `codex exec` run (not in the chat history) and puts the answer into the commit message box.
 // The sparkle inside the commit box (Copilot) uses the proposed scm/inputBox menu, which a published extension can not use, so the
 // button sits in the view title (scm/title) instead.
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { buildPrompt, runCodexExec } from './core/commitMessage';
+import { buildPrompt, isNoChangesAnswer, MAX_NEW_FILE_BYTES, newFilesDiff, runCodexExec } from './core/commitMessage';
 import { Located } from './core/locator';
 
 // The parts of the git extension API (vscode.git, getAPI(1)) used here
@@ -83,7 +84,18 @@ export async function generateCommitMessage(deps: CommitDeps, arg?: unknown): Pr
   try {
     await vscode.window.withProgress({ location: vscode.ProgressLocation.SourceControl, title: 'Codexter: writing commit message' }, () =>
       vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: '$(sync~spin) Codexter: writing commit message' }, async () => {
-        const diff = await r.diff(staged);
+        let diff = await r.diff(staged);
+        if (untracked.length) {   // git diff leaves new files out: add their text, else the message would be written from names alone
+          const files: { path: string; text: string }[] = [];
+          for (const rel of untracked.slice(0, 50)) {
+            try {
+              const full = path.join(root, rel);
+              if ((await fs.promises.stat(full)).size <= MAX_NEW_FILE_BYTES) files.push({ path: rel, text: await fs.promises.readFile(full, 'utf8') });
+            } catch { /* gone or a folder: the name is still listed */ }
+          }
+          const added = newFilesDiff(files);
+          if (added) diff = diff.trim() ? diff.replace(/\s+$/, '') + '\n' + added : added;
+        }
         let recent: string[] = [];
         try { recent = (await r.log({ maxEntries: 10 })).map((c) => c.message.split('\n')[0]).filter(Boolean); } catch { /* new repository */ }
         const located = deps.locateCodex();
@@ -91,6 +103,7 @@ export async function generateCommitMessage(deps: CommitDeps, arg?: unknown): Pr
           command: located.command(), cwd: root, env: deps.env(), prompt: buildPrompt({ diff, staged, untracked, recentSubjects: recent }),
           model: deps.model(), effort: deps.effort(), mcpOff: deps.mcpOff(), timeoutMs: 180_000, log: deps.log,
         });
+        if (isNoChangesAnswer(msg)) throw new Error('Codex answered "' + msg.trim() + '" instead of a message. Please try again.');
         r.inputBox.value = msg;
       }));
   } catch (e) {
