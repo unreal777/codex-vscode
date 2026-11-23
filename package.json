@@ -2,7 +2,7 @@
   "name": "codex-panel",
   "displayName": "Codexter: chat for OpenAI Codex (unofficial)",
   "description": "Unofficial chat panel for OpenAI Codex and GPT models with your ChatGPT subscription: a chat per project and git branch, tabs, history search, commit messages. Not affiliated with OpenAI.",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "publisher": "UnrealDeveloper",
   "repository": {
     "type": "git",
@@ -471,6 +471,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "When a reply ends (or a chat asks for an approval) while VS Code is in the background, show a notification of the system (Windows, macOS, Linux) instead of VS Code's own. A click opens the chat."
+        },
+        "codexPanel.followActiveProject": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "A chat that was started in another project moves to the project of the active editor with your next message (Codex then works there and is told that the chat moved). Off: the chat stays in the project it started in, and a banner offers a new chat in the active project."
         },
         "codexPanel.openOnStartup": {
           "type": "boolean",

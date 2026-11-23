@@ -255,6 +255,7 @@ The gear in the panel opens the settings in folding groups (Model, Quick model, 
 | `codexPanel.instructions` | empty | Codexter's own instructions |
 | `codexPanel.autoCompactTokens` | 0 (Codex's) | Compact a chat when its context reaches this many tokens |
 | `codexPanel.systemNotifications` | on | Notifications of the system while VS Code is in the background |
+| `codexPanel.followActiveProject` | on | A chat started in another project moves to the project of the active editor with your next message (Codex is told); off = it stays and a banner offers a new chat there |
 | `codexPanel.openOnStartup` | off | Open the Codexter panel when VS Code starts |
 | `codexPanel.fontSize` | 0 (like VS Code) | Font size of the panel |
 | `codexPanel.autosave` | on | Save modified editors before a message is sent |

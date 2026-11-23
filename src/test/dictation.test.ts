@@ -211,7 +211,7 @@ test('dictation: setting, recorder script, page and panel are wired', () => {
   const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
   assert.ok(ext.includes("startRecorder: micSupported() ?"));
   // the panel's own settings (gear) show it too, with the warning; off hides the button
-  assert.ok(panel.includes("dictation: o?.dictation !== false") && panel.includes("'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup'];"));
+  assert.ok(panel.includes("dictation: o?.dictation !== false") && panel.includes("'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup', 'followActiveProject'];"));
   assert.ok(app.includes("saveSettings({ dictation: cbD.checked })") && app.includes("class: 'hint warn', id: 'set-dict-hint'"));
   assert.ok(app.includes("!(state.dictation && state.settings.dictation)") && app.includes("saveSettings({ autoChatNames: selN.value })"));
   assert.ok(app.includes("'<i></i>'.repeat(21)"), 'the meter: 21 bars');
@@ -219,5 +219,5 @@ test('dictation: setting, recorder script, page and panel are wired', () => {
   assert.ok(app.includes("saveSettings({ dictationLanguages: anyCb.checked ? [] : ['en'] })"), 'any language = an empty list');
   assert.ok(ext.includes("dictationLanguages: () => cfg().get<unknown>('dictationLanguages', DEFAULT_LANGUAGES)"));
   assert.ok(panel.includes("dictationLangs: LANGUAGES.map((l) => ({ code: l.code, name: l.name }))"));
-  assert.ok(panel.includes("'autoChatNames', 'dictationLanguages', 'openOnStartup'];"));
+  assert.ok(panel.includes("'autoChatNames', 'dictationLanguages', 'openOnStartup', 'followActiveProject'];"));
 });

@@ -88,7 +88,7 @@ test('settings and page: new keys, Compact in the footer, the instructions secti
   assert.equal(props['codexPanel.instructions'].editPresentation, 'multilineText');
   assert.equal(props['codexPanel.autoCompactTokens'].default, 0);
   const panel = fs.readFileSync(path.join(root, 'src', 'panel.ts'), 'utf8');
-  assert.ok(panel.includes("'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup'];"));
+  assert.ok(panel.includes("'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup', 'followActiveProject'];"));
   assert.ok(panel.includes("keyPath: 'developer_instructions', value: text.trim() === '' ? null : text.trim()"));
   const app = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
   assert.ok(app.includes('<button id="f-compact" class="hidden" type="button"></button>'));

@@ -5,7 +5,9 @@ Visible name is **Codexter** since 0.4.0. The extension id is `UnrealDeveloper.c
 Read this first when you continue. Product spec: `CONCEPT.md`. This is a separate project from the Eclipse plugin in `..\codex-panel`:
 never edit that folder from here (its Java core is still a useful reference for session, installer and history logic).
 
-## Status (0.15.0)
+## Status (0.15.1)
+
+- 0.15.1: a chat used from another project follows the active editor's project (setting `followActiveProject`, default on). See "0.15.1".
 
 - 0.15.0: MCP settings > Your browser: Codex uses the open Chrome (DevTools MCP --autoConnect) or picked tabs (Playwright MCP --extension). See "0.15.0".
 
@@ -153,6 +155,17 @@ never edit that folder from here (its Java core is still a useful reference for 
 - Not handled: copies without a remote (each folder is its own repository), the same branch checked out in two copies at once (both
   windows open the same chat), the History's project filter still lists such a chat under the folder it was started in.
   Not yet checked in two real VS Code windows. Tests: `src/test/repo.test.ts`.
+
+## 0.15.1
+
+- Until now a chat kept the folder it started in (`onSend`: "the thread keeps its cwd"), so a chat opened while working in another project wrote into the old one;
+  the banner "Active editor is in X. New chat there" was the only help. Now `codexPanel.followActiveProject` (default on, also in the gear, group System):
+  `panel.ts onSend` asks `followTarget` (`src/core/followProject.ts`, tested) with the thread's folder and `WorkspaceBridge.activeProjectPath()` (the open
+  workspace folder of the active / last file editor, no fallback to the first folder). Different project -> `session.moveTo(path)` sets the thread cwd,
+  `turn/start` passes it, and the existing `moveNote` (0.13.1) puts the one hidden line "the chat moved to folder ..." in front of the message.
+  Same project, a sub-folder of it, an active file in no open folder, or the setting off: the chat stays.
+- Page: with the setting on the banner says "This chat moves there with your next message." and the active file chip stays (it belongs to the project the chat moves to).
+- Not verified live (needs two open folders in one window and a real turn): that Codex keeps the new cwd for later turns; the page shows the project of `cwdEvent` after the send.
 
 ## 0.12.0
 

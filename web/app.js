@@ -252,6 +252,8 @@
     webSearch: 'Web search',
     toolCall: 'Tool',
     activeIn: 'Active editor is in',
+    activeMoves: 'This chat moves there with your next message.', setFollow: 'Follow the active project',
+    setFollowHint: 'A chat started in another project moves to the project of the active editor with your next message, and Codex is told. Off: it stays where it started and a banner offers a new chat there.',
     newChatThere: 'New chat there',
     threadProject: 'Project of this chat: ',
     autoReview: 'Auto-review',
@@ -1736,18 +1738,20 @@
     const a = state.active;
     return !!(state.threadId && a && a.projectPath && normPath(a.projectPath) !== normPath(state.cwd));
   }
-  // File chip (only for the thread's project) and the "New chat there" banner.
+  // The next message moves this chat to the project of the active editor (setting "Follow the active project", default on).
+  const followsActive = () => state.settings.followActiveProject !== false;
+  // File chip (only for the thread's project, or when the chat follows) and the "New chat there" banner.
   function syncActive() {
     const a = state.active;
     state.contexts = state.contexts.filter((c) => c.kind !== 'file');
     // no second chip when the active file is attached already (dropped or picked)
     const attached = a && state.contexts.some((c) => c.kind === 'mention' && normPath(c.path) === normPath(a.path));
-    if (a && !attached && a.path !== state.dismissedFile && !foreignActive()) state.contexts.unshift(Object.assign({ kind: 'file' }, a));
+    if (a && !attached && a.path !== state.dismissedFile && (!foreignActive() || followsActive())) state.contexts.unshift(Object.assign({ kind: 'file' }, a));
     renderChips();
     const b = $('#xproj');
     b.innerHTML = '';
     if (foreignActive()) {
-      b.append(h('span', { class: 't', text: STR.activeIn + ' ' + (a.project || basename(a.projectPath)) + '.' }),
+      b.append(h('span', { class: 't', text: STR.activeIn + ' ' + (a.project || basename(a.projectPath)) + '.' + (followsActive() ? ' ' + STR.activeMoves : '') }),
         h('button', { class: 'btn', type: 'button', text: STR.newChatThere, onclick: () => bridge.post({ type: 'newChat' }) }));
     }
     b.classList.toggle('hidden', !foreignActive());
@@ -2222,7 +2226,7 @@
     systemNotifications: !(o && o.systemNotifications === false),
     instructionsSource: o && o.instructionsSource === 'codexter' ? 'codexter' : 'codex', instructions: String((o && o.instructions) || ''),
     autoCompactTokens: Number.isFinite(o && o.autoCompactTokens) && o.autoCompactTokens > 0 ? Math.round(o.autoCompactTokens) : 0,
-    openOnStartup: !!(o && o.openOnStartup === true),
+    openOnStartup: !!(o && o.openOnStartup === true), followActiveProject: !(o && o.followActiveProject === false),
     dictation: !(o && o.dictation === false), dictationLanguages: Array.isArray(o && o.dictationLanguages) ? o.dictationLanguages.map(String) : ['en'], autoChatNames: ['auto', 'first', 'off'].includes(o && o.autoChatNames) ? o.autoChatNames : 'auto' });
   // ---------- font size: the whole page is zoomed, so the px sizes of app.css scale too ----------
   let pageZoom = 1;
@@ -2271,7 +2275,7 @@
       defaultPermissions: st.defaultPermissions, hiddenModels: st.hiddenModels.slice(), fontSize: st.fontSize,
       commitMessageModel: st.commitMessageModel, commitMessageEffort: st.commitMessageEffort, systemNotifications: st.systemNotifications,
       instructionsSource: st.instructionsSource, instructions: st.instructions, autoCompactTokens: st.autoCompactTokens,
-      openOnStartup: st.openOnStartup, dictation: st.dictation, dictationLanguages: st.dictationLanguages.slice(), autoChatNames: st.autoChatNames });
+      openOnStartup: st.openOnStartup, followActiveProject: st.followActiveProject, dictation: st.dictation, dictationLanguages: st.dictationLanguages.slice(), autoChatNames: st.autoChatNames });
     applyFontSize();
     if (chatIsEmpty()) applyDefaults(); else fillModels();   // an open chat keeps its model
     renderSettings();
@@ -2430,6 +2434,11 @@
       const cbS = h('input', { type: 'checkbox', id: 'set-startup', 'aria-describedby': 'set-startup-hint' });
       cbS.checked = st.openOnStartup;
       cbS.addEventListener('change', () => saveSettings({ openOnStartup: cbS.checked }));
+      const cbF = h('input', { type: 'checkbox', id: 'set-follow', 'aria-describedby': 'set-follow-hint' });
+      cbF.checked = st.followActiveProject;
+      cbF.addEventListener('change', () => { saveSettings({ followActiveProject: cbF.checked }); syncActive(); });
+      add(gSys, STR.setFollow + ' ' + STR.setFollowHint, h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-follow' }, cbF, h('span', { text: STR.setFollow })),
+        h('div', { class: 'hint', id: 'set-follow-hint', text: STR.setFollowHint })));
       add(gSys, STR.setStartup + ' ' + STR.setStartupHint, h('div', { class: 'set-field' }, h('label', { class: 'set-check', for: 'set-startup' }, cbS, h('span', { text: STR.setStartup })),
         h('div', { class: 'hint', id: 'set-startup-hint', text: STR.setStartupHint })));
     }

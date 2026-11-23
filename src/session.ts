@@ -294,6 +294,11 @@ export class CodexSession {
   get threadId(): string | null { return this._threadId; }
   /** Working directory the current thread was started (or resumed) with; null before the first message. */
   get threadCwd(): string | null { return this._threadCwd; }
+
+  /** The chat goes on in another folder (follow the active project): the next turn runs there, and the message says so (moveNote). */
+  moveTo(cwd: string): void {
+    if (this._threadId !== null) this._threadCwd = normalizeDrive(cwd);
+  }
   get isRunning(): boolean { return this.turnId !== null; }
   get historyQuery(): string { return this._historyQuery; }
   get historyCwds(): string[] { return [...this._historyCwds]; }

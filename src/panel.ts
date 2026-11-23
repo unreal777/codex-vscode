@@ -17,6 +17,7 @@ import { DiffProvider } from './diff';
 import { ChatActivity } from './chatActivity';
 import { ImageEditor } from './imageEditor';
 import { HtmlPreview } from './htmlPreview';
+import { followTarget } from './core/followProject';
 import { McpSettings } from './mcpSettings';
 import { MentionSearch } from './mentions';
 import { CodexSession, SendRequest } from './session';
@@ -70,9 +71,11 @@ export interface PanelSettings {
   dictationLanguages: string[];
   /** open the panel when VS Code starts */
   openOnStartup: boolean;
+  /** a chat used from another project moves to the project of the active editor (default on) */
+  followActiveProject: boolean;
 }
 const SETTING_KEYS = ['defaultModel', 'defaultReasoningEffort', 'defaultPermissions', 'hiddenModels', 'fontSize', 'commitMessageModel', 'commitMessageEffort',
-  'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup'];
+  'systemNotifications', 'instructionsSource', 'instructions', 'autoCompactTokens', 'dictation', 'autoChatNames', 'dictationLanguages', 'openOnStartup', 'followActiveProject'];
 const AUTO_NAMES = ['auto', 'first', 'off'];
 const EFFORTS = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 /** '' = a new chat keeps the permissions used last */
@@ -90,7 +93,7 @@ export function sanitizeSettings(o: Json | null | undefined): PanelSettings {
     systemNotifications: o?.systemNotifications !== false, ...sanitizeContextSettings(o),
     dictation: o?.dictation !== false, autoChatNames: AUTO_NAMES.includes(s(o?.autoChatNames)) ? s(o?.autoChatNames) : 'auto',
     dictationLanguages: Array.isArray(o?.dictationLanguages) ? parseLanguages(o?.dictationLanguages).codes : DEFAULT_LANGUAGES.slice(),
-    openOnStartup: o?.openOnStartup === true };
+    openOnStartup: o?.openOnStartup === true, followActiveProject: o?.followActiveProject !== false };
 }
 
 /** Font size of the panel in px: 0 = VS Code's own (UI) font size, else a whole number 8..32. */
@@ -702,9 +705,13 @@ ${WEB_SCRIPTS.map((p) => script(['web', ...p.split('/')])).join('\n')}
   }
 
   private async onSend(m: Json): Promise<void> {
-    // The thread keeps the cwd it started with, whatever editor is active now.
+    // The thread keeps the cwd it started with, unless codexPanel.followActiveProject (default on) moves it to the project of the active editor.
     let folder: vscode.WorkspaceFolder | undefined;
     if (this.session.threadId !== null && this.session.threadCwd !== null) {
+      const cur = this.session.threadCwd;
+      const to = followTarget(vscode.workspace.getConfiguration('codexPanel').get<boolean>('followActiveProject', true), cur,
+        this.ws.folderAt(cur) ? fsPathOf(this.ws.folderAt(cur)!.uri) : null, this.ws.activeProjectPath());
+      if (to) this.session.moveTo(to);
       this.cwd = this.session.threadCwd;
       folder = this.ws.folderAt(this.cwd);
     } else {

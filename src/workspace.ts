@@ -58,6 +58,14 @@ export class WorkspaceBridge {
     return { path: this.workspaceDir() };
   }
 
+  /** Folder (path) of the open workspace folder that holds the file of the active editor (else the last file editor); null when there is none: no fallback. */
+  activeProjectPath(): string | null {
+    const ed = vscode.window.activeTextEditor ?? this.lastFileEditor;
+    if (!ed || ed.document.uri.scheme !== 'file') return null;
+    const f = vscode.workspace.getWorkspaceFolder(ed.document.uri);
+    return f && f.uri.scheme === 'file' ? fsPathOf(f.uri) : null;
+  }
+
   /** Workspace folder whose location equals or contains the directory (deepest wins), else undefined. */
   folderAt(dir: string | null | undefined): vscode.WorkspaceFolder | undefined {
     if (!dir) return undefined;
